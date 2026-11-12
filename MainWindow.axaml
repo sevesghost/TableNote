@@ -1,0 +1,100 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="TableNote.MainWindow"
+        Title="TableNote"
+        Width="720" Height="480"
+        MinWidth="480" MinHeight="300"
+        Topmost="False" ShowInTaskbar="False"
+        Background="#FFF6C2"
+        WindowStartupLocation="CenterScreen">
+  <Window.Styles>
+    <Style Selector="Button.tool">
+      <Setter Property="Background" Value="#F0D78A"/>
+      <Setter Property="Foreground" Value="#3B3222"/>
+      <Setter Property="Padding" Value="8,4"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="BorderBrush" Value="#D4B86A"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="CheckBox.tool">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="#3B3222"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="4,0,8,0"/>
+    </Style>
+  </Window.Styles>
+
+  <LayoutTransformControl x:Name="ZoomHost">
+  <DockPanel Margin="12,10">
+    <TextBlock x:Name="ModeNotice" DockPanel.Dock="Top"
+               TextWrapping="Wrap" FontSize="12" Foreground="#A05A12"
+               Margin="0,0,0,6" IsVisible="False"/>
+
+    <ScrollViewer x:Name="ToolScroll" DockPanel.Dock="Top"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Disabled"
+                  Margin="0,0,0,4">
+      <StackPanel x:Name="EditTools" Orientation="Horizontal">
+        <Button x:Name="AddRowButton" Classes="tool" Content="+ Row" ToolTip.Tip="Add row (F5)"/>
+        <Button x:Name="DeleteRowButton" Classes="tool" Content="− Row" ToolTip.Tip="Delete row (F6)"/>
+        <Button x:Name="AddColumnButton" Classes="tool" Content="+ Column" ToolTip.Tip="Add column (F7)"/>
+        <Button x:Name="DeleteColumnButton" Classes="tool" Content="− Column" ToolTip.Tip="Delete column (F8)"/>
+        <CheckBox x:Name="TopmostBox" Classes="tool" Content="Always on top" ToolTip.Tip="Keep the window on top"/>
+        <CheckBox x:Name="LockBox" Classes="tool" Content="Lock position" Margin="4,0,16,0"
+                  ToolTip.Tip="Locked: dragging doesn't move the window"/>
+        <Button x:Name="HelpButton" Classes="tool" Content="?" ToolTip.Tip="Help"/>
+        <Button x:Name="LogButton" Classes="tool" Content="Change log" ToolTip.Tip="Change log"/>
+        <Button x:Name="BackgroundButton" Classes="tool" Content="Pin to desktop"
+                ToolTip.Tip="View only, clicks pass through (Windows)"/>
+        <Button x:Name="CopyAllButton" Classes="tool" Content="Copy table"/>
+        <Button x:Name="CopyHeadersButton" Classes="tool" Content="Copy with headers"/>
+        <Button x:Name="ExportButton" Classes="tool" Content="Export" ToolTip.Tip="Save the table as .txt / .csv / .xlsx"/>
+        <CheckBox x:Name="LaunchBox" Classes="tool" Content="Launch at sign-in"/>
+        <CheckBox x:Name="HideDoneBox" Classes="tool" Content="Hide done rows"/>
+        <CheckBox x:Name="MuteSoundBox" Classes="tool" Content="Mute reminders"
+                  ToolTip.Tip="No sound when a reminder pops up (the popup still shows)"/>
+        <Button x:Name="SortDueButton" Classes="tool" Content="Sort by due"
+                ToolTip.Tip="Sort rows by the nearest due date"/>
+        <Button x:Name="LanguageButton" Classes="tool" Content="EN/TH" Margin="10,0,6,0"
+                ToolTip.Tip="Change the display language"/>
+        <Button x:Name="ZoomOutButton" Classes="tool" Content="A−" ToolTip.Tip="Zoom out (Ctrl+−)"/>
+        <Button x:Name="ZoomResetButton" Classes="tool" Content="100%" ToolTip.Tip="Reset zoom (Ctrl+0)"/>
+        <Button x:Name="ZoomInButton" Classes="tool" Content="A+" ToolTip.Tip="Zoom in (Ctrl++)"/>
+      </StackPanel>
+    </ScrollViewer>
+
+    <TextBlock x:Name="StatusText" DockPanel.Dock="Bottom"
+               Margin="0,8,0,0" FontSize="12" Foreground="#6B5E48"
+               TextWrapping="Wrap" Text="Autosave"/>
+
+    <!-- Horizontal scrolling only out here; rows scroll vertically inside RowsList so that only the
+         visible rows are realized (VirtualizingStackPanel). -->
+    <ScrollViewer x:Name="TableScroll"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Disabled"
+                  Margin="0,4,0,0">
+      <DockPanel x:Name="TableHost" HorizontalAlignment="Left">
+        <Grid x:Name="TableGrid" DockPanel.Dock="Top"/>
+        <TextBlock x:Name="EmptyText" DockPanel.Dock="Top" Margin="8,10" IsVisible="False" Foreground="#3B3222"/>
+        <ItemsControl x:Name="RowsList">
+          <ItemsControl.Template>
+            <ControlTemplate>
+              <ScrollViewer x:Name="PART_ScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <ItemsPresenter x:Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}"/>
+              </ScrollViewer>
+            </ControlTemplate>
+          </ItemsControl.Template>
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
+      </DockPanel>
+    </ScrollViewer>
+  </DockPanel>
+  </LayoutTransformControl>
+</Window>
