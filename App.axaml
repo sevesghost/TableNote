@@ -1,0 +1,27 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="TableNote.App"
+             RequestedThemeVariant="Light">
+  <Application.Styles>
+    <FluentTheme />
+    <Style Selector="Window">
+      <Setter Property="FontFamily" Value="avares://TableNote/Assets/Fonts#Noto Sans Thai" />
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="FontFamily" Value="avares://TableNote/Assets/Fonts#Noto Sans Thai" />
+    </Style>
+    <Style Selector="TextBlock">
+      <Setter Property="FontFamily" Value="avares://TableNote/Assets/Fonts#Noto Sans Thai" />
+    </Style>
+    <Style Selector="Button">
+      <Setter Property="FontFamily" Value="avares://TableNote/Assets/Fonts#Noto Sans Thai" />
+    </Style>
+    <Style Selector="CheckBox">
+      <Setter Property="FontFamily" Value="avares://TableNote/Assets/Fonts#Noto Sans Thai" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="FontFamily" Value="avares://TableNote/Assets/Fonts#Noto Sans Thai" />
+    </Style>
+  </Application.Styles>
+</Application>
