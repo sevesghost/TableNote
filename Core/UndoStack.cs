@@ -196,6 +196,7 @@ public static class Snapshot
         public List<string> ColumnIds { get; set; } = [];
         public Dictionary<string, ColumnSetting> ColumnSettings { get; set; } = new(); // v2.4.0
         public Dictionary<string, RowStyle> RowStyles { get; set; } = new();
+        public List<ColumnGroup> ColumnGroups { get; set; } = []; // collapsible groups (create / ungroup / toggle)
         public List<List<string>> Rows { get; set; } = [];
         public List<string> RowIds { get; set; } = [];
         public List<int> ColumnWidths { get; set; } = [];
@@ -218,6 +219,7 @@ public static class Snapshot
             ColumnIds = doc.ColumnIds.ToList(),
             ColumnSettings = ColumnSettingsOps.Clone(doc.ColumnSettings), // v2.4.0
             RowStyles = RowStyleOps.Clone(doc.RowStyles),
+            ColumnGroups = ColumnGroupOps.Clone(doc.ColumnGroups),
             Rows = doc.Rows.Select(r => r.ToList()).ToList(),
             RowIds = doc.RowIds.ToList(),
             ColumnWidths = doc.ColumnWidths.ToList(),
@@ -257,6 +259,7 @@ public static class Snapshot
         doc.ColumnWidths = d.ColumnWidths;
         doc.ColumnSettings = ColumnSettingsOps.Clone(d.ColumnSettings); // v2.4.0
         doc.RowStyles = RowStyleOps.Clone(d.RowStyles);
+        ColumnGroupOps.RestoreGroups(doc, d.ColumnGroups);
         doc.RowIds = order;
         doc.Rows = order.Select(id => snapRows[id].ToList()).ToList();
         doc.Recurrence = new Dictionary<string, string>(d.Recurrence, StringComparer.Ordinal);
@@ -272,6 +275,7 @@ public static class Snapshot
         doc.EnsureColumnRoles();
         doc.EnsureRowIds();
         doc.EnsureColumnIds();
+        ColumnGroupOps.Sanitize(doc);
     }
 
     public static NoteDocument CloneLite(NoteDocument doc)

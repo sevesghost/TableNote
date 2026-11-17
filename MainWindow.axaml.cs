@@ -1168,13 +1168,13 @@ public partial class MainWindow : Window
         grid.ColumnDefinitions.Clear();
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(RowLabelWidth)));
         for (var i = 0; i < _session.Doc.Columns.Count; i++)
-            grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(_session.Doc.ColumnWidth(i))));
+            grid.ColumnDefinitions.Add(GroupColumnDefinition(i));
     }
 
     /// <summary>Column resize: header + the few realized rows (others pick the width up when realized).</summary>
     private void ApplyColumnWidth(int column)
     {
-        var w = new GridLength(_session.Doc.ColumnWidth(column));
+        var w = GroupColumnLength(column);
         if (column + 1 < TableGrid.ColumnDefinitions.Count) TableGrid.ColumnDefinitions[column + 1].Width = w;
         foreach (var c in RowsList.GetRealizedContainers())
             if (c is ContentPresenter { Child: Grid g } && column + 1 < g.ColumnDefinitions.Count)
@@ -1250,7 +1250,7 @@ public partial class MainWindow : Window
         grid.Children.Add(border);
         for (var c = 0; c < _session.Doc.Columns.Count; c++)
         {
-            var cell = MakeCell(rowIndex, c, rowBg.cell);
+            var cell = GroupCell(rowIndex, c, rowBg.cell);
             Grid.SetColumn(cell, c + 1);
             grid.Children.Add(cell);
         }
@@ -1276,6 +1276,7 @@ public partial class MainWindow : Window
 
     private Control MakeHeader(int column)
     {
+        if (TryHiddenHeader(column, out var hiddenHeader)) return hiddenHeader;
         var box = MakeTextBox(_session.Doc.Columns[column], header: true, -1, column, HeaderBg);
         _headerBoxes.Add(box);
         var thumb = new Border { Width = 6, Background = GridLine, Cursor = ResizeCursor };
@@ -1299,8 +1300,12 @@ public partial class MainWindow : Window
         };
         thumb.PointerReleased += (_, e) => { origin = null; e.Pointer.Capture(null); };
 
-        var grid = new Grid { ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) } };
-        Grid.SetColumn(thumb, 1);
+        var grid = new Grid();
+        var slot = AddGroupToggle(grid, column);
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        Grid.SetColumn(box, slot);
+        Grid.SetColumn(thumb, slot + 1);
         grid.Children.Add(box);
         grid.Children.Add(thumb);
         return WithColumnGrip(column, box, grid); // v2.4.0: drag grip + column menu
@@ -1898,6 +1903,7 @@ public partial class MainWindow : Window
     {
         row = Math.Clamp(row, 0, Math.Max(0, _session.Doc.Rows.Count - 1));
         column = Math.Clamp(column, 0, Math.Max(0, _session.Doc.Columns.Count - 1));
+        column = NearestVisibleGroupColumn(column);
         _session.ChooseCell(row, column);
         var vi = _visibleRows.IndexOf(row);
         if (vi < 0) return;

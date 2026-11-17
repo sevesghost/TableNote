@@ -57,6 +57,8 @@ public sealed class NoteDocument
     public List<string> ColumnIds { get; set; } = [];
     /// <summary>v2.4.0: column type/options by column id ("columnSettings"). No entry = text column.</summary>
     public Dictionary<string, ColumnSetting> ColumnSettings { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>Collapsible groups ("columnGroups"). Empty for files saved before the field existed.</summary>
+    public List<ColumnGroup> ColumnGroups { get; set; } = [];
     /// <summary>v2.4.0: row colour/highlight by row id ("rowStyles"). No entry = normal row.</summary>
     public Dictionary<string, RowStyle> RowStyles { get; set; } = new(StringComparer.Ordinal);
     public List<List<string>> Rows { get; set; } = [];
@@ -262,6 +264,7 @@ public sealed class NoteDocument
         if (index < ColumnIds.Count) ColumnIds.RemoveAt(index);
         foreach (var row in Rows)
             if (index < row.Count) row.RemoveAt(index);
+        ColumnGroupOps.Sanitize(this); // dropped parent → group removed; dropped child → id removed; cells of the rest stay
         return true;
     }
 
@@ -399,6 +402,7 @@ public sealed class NoteDocument
         if (dueIdx >= 0 && (migrate || dueIdx >= widthsBefore) && ColumnWidths[dueIdx] == 140) ColumnWidths[dueIdx] = 200;
 
         Version = Math.Max(Version, CurrentVersion); // never downgrade a newer file
+        ColumnGroupOps.Sanitize(this); // unknown ids dropped; never rewrites cell text
         return clipped;
     }
 

@@ -30,6 +30,8 @@ public static class NoteStore
         /// <summary>v2.4.0: parsed leniently per entry, like reminders.</summary>
         public JsonElement? ColumnSettings { get; set; }
         public JsonElement? RowStyles { get; set; }
+        /// <summary>Collapsible column groups. Absent in files from before this field — those load with none.</summary>
+        public List<ColumnGroup>? ColumnGroups { get; set; }
     }
 
     /// <summary>Problems found while reading optional sections (logged, not shown as "file corrupt").</summary>
@@ -101,7 +103,8 @@ public static class NoteStore
     {
         "version", "columns", "rows", "launchAtLogin", "trayNoticeShown", "columnWidths", "viewMode", "window",
         "hideDone", "snoozes", "recurrence", "rowIds", "columnIds", "columnRoles", "muteSound", "acknowledged", "reminders",
-        "columnSettings", "rowStyles" // v2.4.0
+        "columnSettings", "rowStyles", // v2.4.0
+        "columnGroups" // collapsible column groups; missing on older files
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)
@@ -297,6 +300,25 @@ public static class NoteStore
         return map;
     }
 
+    /// <summary>Lenient parse of "columnGroups". A bad section or entry is skipped; the table still opens.</summary>
+    internal static List<ColumnGroup> ParseColumnGroups(JsonElement? el)
+    {
+        var list = new List<ColumnGroup>();
+        if (el is not { } e || e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return list;
+        if (e.ValueKind != JsonValueKind.Array) { LastLoadIssues.Add("columnGroups: not an array, all skipped"); return list; }
+        var n = 0;
+        foreach (var item in e.EnumerateArray())
+        {
+            n++;
+            if (item.ValueKind != JsonValueKind.Object) { LastLoadIssues.Add($"columnGroups[{n}]: not an object, skipped"); continue; }
+            var parent = (GetString(item, "parentId", "columnGroups.") ?? "").Trim();
+            var children = GetStringList(item, "childIds");
+            var expanded = GetBool(item, "expanded", true, "columnGroups.");
+            list.Add(new ColumnGroup { ParentId = parent, ChildIds = children, Expanded = expanded });
+        }
+        return list;
+    }
+
     private static void LogIssues(string path)
     {
         if (LastLoadIssues.Count == 0) return;
@@ -464,6 +486,7 @@ public static class NoteStore
                 Reminders = ParseReminders(Prop(root, "reminders")),
                 ColumnSettings = ParseColumnSettings(Prop(root, "columnSettings")), // v2.4.0
                 RowStyles = ParseRowStyles(Prop(root, "rowStyles")),
+                ColumnGroups = ParseColumnGroups(Prop(root, "columnGroups")),
                 Window = new WindowMemory
                 {
                     Width = win is { } a ? GetInt(a, "width", 720, true, "window.") : 720,
@@ -670,6 +693,7 @@ public static class NoteStore
             Reminders = JsonSerializer.SerializeToElement(doc.Reminders, Options),
             ColumnSettings = JsonSerializer.SerializeToElement(doc.ColumnSettings, Options), // v2.4.0
             RowStyles = JsonSerializer.SerializeToElement(doc.RowStyles, Options),
+            ColumnGroups = ColumnGroupOps.Clone(doc.ColumnGroups),
             Window = new WindowDto
             {
                 Width = doc.Window.Width,
