@@ -148,6 +148,7 @@ public partial class MainWindow : Window
 
         InitColors();
         ApplyZoom();
+        InitMenuBar();
         ApplyLanguageTexts();
         Rebuild();
         UpdateStatus();
@@ -985,6 +986,7 @@ public partial class MainWindow : Window
         RenderAlertBoxes();
         ApplyColorButtonText();
         ApplyImageExportTexts();
+        ApplyMenuBarTexts();
     }
 
     private void SetZoom(int scale)
@@ -1131,6 +1133,7 @@ public partial class MainWindow : Window
         if (!_ignoreText) CommitFocusedEdit();
         using var _uiScope = UiActivity.Scope("rebuild table");
         _headerBoxes.Clear();
+        ClearMenuHeaderBoxes();
         TableGrid.Children.Clear();
         TableGrid.RowDefinitions.Clear();
         TableGrid.ColumnDefinitions.Clear();
@@ -1292,6 +1295,7 @@ public partial class MainWindow : Window
         var box = MakeTextBox(_session.Doc.Columns[column], header: true, -1, column, HeaderBg);
         PaintColumnHeader(box, column);
         _headerBoxes.Add(box);
+        RememberMenuHeaderBox(column, box);
         var thumb = new Border { Width = 6, Background = GridLine, Cursor = ResizeCursor };
         Point? origin = null;
         var startWidth = 0;
