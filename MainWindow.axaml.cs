@@ -127,6 +127,7 @@ public partial class MainWindow : Window
         DeleteColumnButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("delete.undo_column"), DeleteColumnAsync));
         SortDueButton.Click += (_, _) => SortByDue();
         ExportButton.Click += async (_, _) => await ExportAsync();
+        InitImageExport();
         LanguageButton.Click += (_, _) => SwitchLanguage(Localizer.Next(Localizer.Current));
         ZoomOutButton.Click += (_, _) => SetZoom(_settings.Scale - AppSettings.ScaleStep);
         ZoomInButton.Click += (_, _) => SetZoom(_settings.Scale + AppSettings.ScaleStep);
@@ -983,6 +984,7 @@ public partial class MainWindow : Window
         ToolTip.SetTip(ZoomInButton, T("tip.zoom_in"));
         RenderAlertBoxes();
         ApplyColorButtonText();
+        ApplyImageExportTexts();
     }
 
     private void SetZoom(int scale)

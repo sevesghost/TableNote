@@ -81,7 +81,7 @@ public static partial class T
         using (var saved = JsonDocument.Parse(File.ReadAllText(oldPath)))
         {
             Ok("saving an old file does not invent cellDetails", !saved.RootElement.TryGetProperty("cellDetails", out _));
-            Ok("saving an old file does not bump version", saved.RootElement.GetProperty("version").GetInt32() == 5);
+            Ok("saving an old file writes version 6", saved.RootElement.GetProperty("version").GetInt32() == 6);
             Ok("saving an old file keeps the unknown field", saved.RootElement.TryGetProperty("futureBox", out var box) && box.GetProperty("x").GetInt32() == 1);
             Ok("saving an old file keeps the row", saved.RootElement.GetProperty("rows")[0][0].GetString() == "kept");
         }
@@ -118,7 +118,7 @@ public static partial class T
         Ok("unknown kind keeps axis and series", savedChart.GetProperty("kind").GetString() == "chart"
             && savedChart.GetProperty("axis").GetString() == "y" && savedChart.GetProperty("series").GetArrayLength() == 2);
         Ok("table marker is written back", details.GetProperty("tables").GetProperty("r1/c1").GetProperty("marker").GetBoolean());
-        Ok("version stays 5 when details are present", json.RootElement.GetProperty("version").GetInt32() == 5);
+        Ok("version is 6 when details are present", json.RootElement.GetProperty("version").GetInt32() == 6);
     }
 
     public static void TestCellDetailBadBlockAndMoves()

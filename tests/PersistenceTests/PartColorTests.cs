@@ -19,7 +19,7 @@ public static partial class T
             Ok("PartColors", v5load.Warning == null && v5.GetCell(0, 0) == "a", "v5 opens");
             NoteStore.Save(Path.Combine(dir5, "note.json"), v5);
             var again5 = NoteStore.Load(Path.Combine(dir5, "note.json")).Document;
-            Ok("PartColors", again5.Version == 5 && again5.GetCell(0, 0) == "a", "v5 stays v5");
+            Ok("PartColors", again5.Version == NoteDocument.CurrentVersion && again5.GetCell(0, 0) == "a", "v5 data stays, file becomes current");
         }
         finally { try { Directory.Delete(dir5, true); } catch { /* temp */ } }
 

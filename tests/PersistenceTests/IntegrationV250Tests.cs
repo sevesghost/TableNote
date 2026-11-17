@@ -33,7 +33,7 @@ public static partial class T
         var doc = loaded.Document;
         Ok("v2.4.2 file opens with no warning", loaded.Warning == null, loaded.Warning ?? "");
         Ok("v2.4.2 file has no load issues", loaded.Issues.Count == 0, string.Join(" | ", loaded.Issues));
-        Ok("v2.4.2 version stays 5", doc.Version == 5 && NoteDocument.CurrentVersion == 5);
+        Ok("v2.4.2 file opens and normalize moves it to version 6", doc.Version == 6 && NoteDocument.CurrentVersion == 6);
         Ok("v2.4.2 rows and headers are intact",
             doc.Columns.SequenceEqual(new[] { "หัวข้อ", "รายละเอียด", "สถานะ", "กำหนดส่ง" }) &&
             doc.Rows.Count == 2 &&
@@ -61,8 +61,8 @@ public static partial class T
         var again = NoteStore.Load(path);
         var saved = again.Document;
         Ok("v2.4.2 round-trip still opens cleanly", again.Warning == null && again.Issues.Count == 0, string.Join(" | ", again.Issues));
-        Ok("v2.4.2 round-trip keeps version 5 and the table",
-            saved.Version == 5 &&
+        Ok("v2.4.2 round-trip keeps the table at version 6",
+            saved.Version == 6 &&
             saved.Rows.Count == 2 && saved.Rows[0][0] == "งานประชุม" && saved.Rows[0][1] == "รายละเอียด, มีจุลภาค" &&
             saved.Rows[1][2] == "done" && saved.RowIds[1] == "r2" && saved.ColumnIds[2] == "c-status");
         Ok("v2.4.2 round-trip keeps settings, style, reminder, repeat and the unknown field",
@@ -75,8 +75,8 @@ public static partial class T
             CellDetailOps.IsEmpty(saved.CellDetails) && saved.AlertBoxes.Count == 0 &&
             saved.ColumnGroups.Count == 0 && saved.PartColors.Count == 0 && saved.RowHeights.Count == 0);
         using var json = JsonDocument.Parse(File.ReadAllText(path));
-        Ok("v2.4.2 save writes version 5 and does not invent cellDetails",
-            json.RootElement.GetProperty("version").GetInt32() == 5 &&
+        Ok("v2.4.2 save writes version 6 and does not invent cellDetails",
+            json.RootElement.GetProperty("version").GetInt32() == 6 &&
             !json.RootElement.TryGetProperty("cellDetails", out _));
     }
 
@@ -130,6 +130,71 @@ public static partial class T
                 whole != null && whole.Contains(childName) && whole.Contains("HIDDEN-CHILD-XYZ"));
             Ok("Excel copy of a selection that covers the collapsed column includes its cell",
                 selection != null && selection.Contains("HIDDEN-CHILD-XYZ") && selection.Contains("Parent"));
+        }
+        finally { Localizer.SetLanguage(prev); }
+    }
+
+    public static void TestImageUsesPartColorsAndSkipsCollapsedColumns()
+    {
+        var prev = Localizer.Current;
+        try
+        {
+            Localizer.SetLanguage("en");
+            var doc = NoteDocument.CreateDefault();
+            doc.Rows.Clear();
+            doc.RowIds.Clear();
+            doc.Rows.Add(["Parent", "body", "", "2026-12-01 09:00"]);
+            doc.EnsureRowIds();
+            doc.EnsureColumnIds();
+            var created = ColumnGroupOps.Create(doc, 0, 1);
+            Ok("image group created", created.Ok, created.Error ?? "");
+            var parent = doc.ColumnIds.IndexOf(doc.ColumnGroups[0].ParentId);
+            var child = doc.ColumnIds.IndexOf(doc.ColumnGroups[0].ChildIds[0]);
+            doc.SetCellRaw(0, child, "HIDDEN-IMG");
+            doc.SetColumnWidth(child, 180);
+            ColumnGroupOps.Toggle(doc, parent);
+            var rowId = doc.RowIdAt(0);
+            var parentId = doc.ColumnIdAt(parent);
+            var childId = doc.ColumnIdAt(child);
+            PartColorOps.Assign(doc.PartColors, PartColorKeys.Cell(rowId, parentId), "#112233", "#445566");
+            PartColorOps.Assign(doc.PartColors, PartColorKeys.Cell(rowId, childId), "#FF00EE", "#00FF00");
+            PartColorOps.Assign(doc.PartColors, PartColorKeys.Alert("box-9"), "#ABCDEF", "#111111");
+            PartColorOps.Assign(doc.PartColors, PartColorKeys.Header, "#222222", "#333333");
+            PartColorOps.Assign(doc.PartColors, PartColorKeys.HeaderColumn(parentId), "#010203", null);
+            PartColorOps.Assign(doc.PartColors, PartColorKeys.RowNum(rowId), "#778899", "#999999");
+            PartColorOps.Assign(doc.PartColors, PartColorKeys.Table, "#F00F00", "#0F0F0F");
+            SizeSpec.ApplyRowHeights(doc, [0], 80);
+
+            var paints = ImagePartColors.From(doc);
+            Ok("alert colour is not a cell colour",
+                paints.CellColors.Values.All(v => v != "#ABCDEF") && paints.CellTextColors.Values.All(v => v != "#111111"));
+            Ok("section:table is not copied into the picture",
+                paints.CellColors.Values.All(v => v != "#F00F00") && !paints.HeaderColors.Values.Any(h => h?.Background == "#F00F00"));
+            Ok("row-number text colour is not the row-number fill",
+                paints.RowNumberColors.TryGetValue(0, out var rowFill) && rowFill == "#778899");
+            Ok("header falls back to section:header and the column bg wins",
+                paints.HeaderColors.TryGetValue(parent, out var header) && header != null
+                && header.Background == "#010203" && header.Text == "#333333");
+
+            var plan = ViewImage.Plan(doc, new ViewImageOptions
+            {
+                RespectHideDone = false,
+                IsHidden = ColumnGroupOps.IsHidden,
+                RowHeight = SizeSpec.StoredRowHeight,
+                CellColors = paints.CellColors,
+                CellTextColors = paints.CellTextColors,
+                HeaderColors = paints.HeaderColors,
+                RowNumberColors = paints.RowNumberColors
+            });
+            Ok("image omits the collapsed column", !plan.Headers.Contains(doc.Columns[child]) && plan.Headers.Contains(doc.Columns[parent]));
+            var shown = plan.Headers.ToList().IndexOf(doc.Columns[parent]);
+            Ok("image paints the visible cell background and text",
+                shown >= 0 && plan.Rows[0].Cells[shown].Fill == "#112233" && plan.Rows[0].Cells[shown].Foreground == "#445566");
+            Ok("image paints the merged header",
+                plan.HeaderFills[shown] == "#010203" && plan.HeaderForegrounds[shown] == "#333333");
+            Ok("image paints the row-number background", plan.Rows[0].LabelFill == "#778899");
+            Ok("image uses the saved row height", plan.Rows[0].Height == 80);
+            Ok("collapsed cell colour is not in the picture", plan.Rows[0].Cells.All(c => c.Fill != "#FF00EE" && c.Text != "HIDDEN-IMG"));
         }
         finally { Localizer.SetLanguage(prev); }
     }

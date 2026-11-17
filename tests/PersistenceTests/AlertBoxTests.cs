@@ -75,8 +75,8 @@ public static partial class T
             loaded.AlertBoxes[1].Extra.TryGetValue("color", out var color) && color.GetString() == "#112233");
         using var json = JsonDocument.Parse(File.ReadAllText(p));
         var arr = json.RootElement.GetProperty("alertBoxes");
-        Ok("format version stays 5 and alertBoxes is the saved order",
-            json.RootElement.GetProperty("version").GetInt32() == 5 &&
+        Ok("format version is 6 and alertBoxes is the saved order",
+            json.RootElement.GetProperty("version").GetInt32() == NoteDocument.CurrentVersion &&
             arr.GetArrayLength() == 2 &&
             arr[0].GetProperty("id").GetString() == ids[1] &&
             arr[1].GetProperty("color").GetString() == "#112233");
@@ -92,12 +92,12 @@ public static partial class T
         old.Document.AlertBoxes.Add(AlertBoxOps.Create("Hi", "there"));
         var oldPath = Path.Combine(oldDir, "note.json");
         NoteStore.Save(oldPath, old.Document);
-        Ok("saving alert boxes does not bump the format or write note.v5.bak",
-            NoteDocument.CurrentVersion == 5 && !Directory.GetFiles(oldDir, "note.v5*.bak").Any() &&
-            JsonDocument.Parse(File.ReadAllText(oldPath)).RootElement.GetProperty("version").GetInt32() == 5);
+        Ok("saving a v5 file writes version 6",
+            NoteDocument.CurrentVersion == 6 &&
+            JsonDocument.Parse(File.ReadAllText(oldPath)).RootElement.GetProperty("version").GetInt32() == 6);
         var reloaded = NoteStore.Load(oldPath).Document;
         Ok("a file written by this build reloads the box",
-            reloaded.Version == 5 && reloaded.AlertBoxes.Count == 1 && reloaded.AlertBoxes[0].Title == "Hi" && reloaded.Rows[0][0] == "a");
+            reloaded.Version == 6 && reloaded.AlertBoxes.Count == 1 && reloaded.AlertBoxes[0].Title == "Hi" && reloaded.Rows[0][0] == "a");
 
         var issues = new List<string>();
         const string bad = """

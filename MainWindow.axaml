@@ -52,6 +52,8 @@
         <Button x:Name="CopyAllButton" Classes="tool" Content="Copy table"/>
         <Button x:Name="CopyHeadersButton" Classes="tool" Content="Copy with headers"/>
         <Button x:Name="ExportButton" Classes="tool" Content="Export" ToolTip.Tip="Save the table as .txt / .csv / .xlsx"/>
+        <Button x:Name="ExportImageButton" Classes="tool" Content="Export image" ToolTip.Tip="Save the current view as a PNG or JPEG image"/>
+        <Button x:Name="PrintButton" Classes="tool" Content="Print" ToolTip.Tip="Print the current view"/>
         <CheckBox x:Name="LaunchBox" Classes="tool" Content="Launch at sign-in"/>
         <CheckBox x:Name="HideDoneBox" Classes="tool" Content="Hide done rows"/>
         <CheckBox x:Name="MuteSoundBox" Classes="tool" Content="Mute reminders"

@@ -3,10 +3,10 @@ namespace TableNote;
 /// <summary>In-memory note table. v5 adds stable column ids. v4 adds reminders. v3 adds column roles.</summary>
 public sealed class NoteDocument
 {
-    /// <summary>5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).
-    /// Column groups, cell details, alert boxes, and partColors are optional fields with empty defaults.
-    /// The format version stays 5. A higher file version is not downgraded.</summary>
-    public const int CurrentVersion = 5;
+    /// <summary>6 = 2.5.0 (column groups, cell details, alert boxes, partColors, row heights).
+    /// 5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).
+    /// A 2.4.2 file (version 5) still opens; the first save writes 6 and keeps its data.</summary>
+    public const int CurrentVersion = 6;
     public const int DefaultRowCount = 4;
     /// <summary>User-editable column cap; system roles may push AbsoluteMaxColumns.</summary>
     public const int MaxUserColumns = 30;

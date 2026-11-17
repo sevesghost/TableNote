@@ -152,7 +152,7 @@ public static partial class T
         var p = Path.Combine(dir, "note.json");
         NoteStore.Save(p, bare.Document);
         Ok("saving an auto-only note does not add rowHeights", !File.ReadAllText(p).Contains("\"rowHeights\""));
-        Ok("saved version is still 5", NoteStore.Load(p).Document.Version == 5 && NoteDocument.CurrentVersion == 5);
+        Ok("saved version is 6", NoteStore.Load(p).Document.Version == 6 && NoteDocument.CurrentVersion == 6);
 
         var (bad, _) = LoadJson("badheight", """
             {"version":5,"columns":["A","B","C","D"],"columnRoles":["title","detail","status","due"],
