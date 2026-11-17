@@ -144,6 +144,15 @@ static class MenuBarHeadless
         ok("view mode disables both spots even when the columns are missing",
             viewSpots.Count == 2 && viewSpots.All(s => s.IsEnabled == false),
             string.Join(" | ", viewSpots.Select(s => $"{s.Tag} enabled={s.IsEnabled}")));
+        typeof(MainWindow).GetMethod("ShowAddColumnMenu", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
+        Pump(window);
+        var flyout = (MenuFlyout)typeof(MainWindow).GetField("_addColumnFlyout", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+        var flyoutSpecial = flyout.Items.OfType<MenuItem>()
+            .Where(i => i.Header?.ToString() is "Add status column" or "Add reminder date column")
+            .ToList();
+        ok("view mode disables status and reminder items in the + Column menu",
+            flyoutSpecial.Count == 2 && flyoutSpecial.All(i => i.IsEnabled == false),
+            string.Join(" | ", flyoutSpecial.Select(i => $"{i.Header} enabled={i.IsEnabled}")));
         tableEn.Close();
         Pump(window);
         typeof(MainWindow).GetField("_view", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, ViewMode.Edit);

@@ -5,6 +5,8 @@ namespace TableNote;
 /// <summary>The "+ Column" menu: a normal column, or the status / reminder date column when it is missing.</summary>
 public partial class MainWindow
 {
+    private MenuFlyout? _addColumnFlyout;
+
     private void InitColumnToggle()
     {
         AddColumnButton.Click += (_, _) => ShowAddColumnMenu();
@@ -13,13 +15,16 @@ public partial class MainWindow
     private void ShowAddColumnMenu()
     {
         var flyout = new MenuFlyout();
+        _addColumnFlyout = flyout;
+        var edit = _view == ViewMode.Edit;
         foreach (var choice in SystemColumnToggle.AddChoices(_session.Doc))
         {
             var role = choice.Role;
+            var special = role is ColumnRoles.Status or ColumnRoles.Due;
             var item = new MenuItem
             {
                 Header = AddChoiceHeader(choice),
-                IsEnabled = choice.Enabled
+                IsEnabled = choice.Enabled && (!special || edit)
             };
             if (!choice.Enabled && choice.DisabledReasonKey != null)
                 ToolTip.SetTip(item, DisabledReason(role));
