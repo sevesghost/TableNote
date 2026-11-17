@@ -1168,13 +1168,19 @@ public partial class MainWindow : Window
         grid.ColumnDefinitions.Clear();
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(RowLabelWidth)));
         for (var i = 0; i < _session.Doc.Columns.Count; i++)
-            grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(_session.Doc.ColumnWidth(i))));
+        {
+            // Collapsed children stay in the grid (same index) at width 0 so selection math does not shift.
+            var hidden = ColumnGroupOps.IsHidden(_session.Doc, i);
+            var def = new ColumnDefinition(new GridLength(hidden ? 0 : _session.Doc.ColumnWidth(i)));
+            if (hidden) { def.MinWidth = 0; def.MaxWidth = 0; }
+            grid.ColumnDefinitions.Add(def);
+        }
     }
 
     /// <summary>Column resize: header + the few realized rows (others pick the width up when realized).</summary>
     private void ApplyColumnWidth(int column)
     {
-        var w = new GridLength(_session.Doc.ColumnWidth(column));
+        var w = new GridLength(ColumnGroupOps.IsHidden(_session.Doc, column) ? 0 : _session.Doc.ColumnWidth(column));
         if (column + 1 < TableGrid.ColumnDefinitions.Count) TableGrid.ColumnDefinitions[column + 1].Width = w;
         foreach (var c in RowsList.GetRealizedContainers())
             if (c is ContentPresenter { Child: Grid g } && column + 1 < g.ColumnDefinitions.Count)
@@ -1250,7 +1256,10 @@ public partial class MainWindow : Window
         grid.Children.Add(border);
         for (var c = 0; c < _session.Doc.Columns.Count; c++)
         {
-            var cell = MakeCell(rowIndex, c, rowBg.cell);
+            // Hidden child: no editor, so its text cannot be cleared from the view. The value stays in the row.
+            var cell = ColumnGroupOps.IsHidden(_session.Doc, c)
+                ? new Border { Width = 0, MinWidth = 0, IsVisible = false, IsHitTestVisible = false }
+                : MakeCell(rowIndex, c, rowBg.cell);
             Grid.SetColumn(cell, c + 1);
             grid.Children.Add(cell);
         }
@@ -1276,6 +1285,12 @@ public partial class MainWindow : Window
 
     private Control MakeHeader(int column)
     {
+        if (ColumnGroupOps.IsHidden(_session.Doc, column))
+        {
+            var stub = new Border { Width = 0, MinWidth = 0, IsVisible = false, IsHitTestVisible = false };
+            _headerBoxes.Add(stub);
+            return stub;
+        }
         var box = MakeTextBox(_session.Doc.Columns[column], header: true, -1, column, HeaderBg);
         _headerBoxes.Add(box);
         var thumb = new Border { Width = 6, Background = GridLine, Cursor = ResizeCursor };
@@ -1299,8 +1314,19 @@ public partial class MainWindow : Window
         };
         thumb.PointerReleased += (_, e) => { origin = null; e.Pointer.Capture(null); };
 
-        var grid = new Grid { ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) } };
-        Grid.SetColumn(thumb, 1);
+        var grid = new Grid();
+        var slot = 0;
+        if (ColumnGroupOps.IsParent(_session.Doc, column))
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            var toggle = MakeGroupToggle(column);
+            Grid.SetColumn(toggle, slot++);
+            grid.Children.Add(toggle);
+        }
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        Grid.SetColumn(box, slot);
+        Grid.SetColumn(thumb, slot + 1);
         grid.Children.Add(box);
         grid.Children.Add(thumb);
         return WithColumnGrip(column, box, grid); // v2.4.0: drag grip + column menu
@@ -1887,6 +1913,21 @@ public partial class MainWindow : Window
         _highlightedRow = active;
     }
 
+    /// <summary>Collapsed child columns have no editor; land on the nearest column that is actually shown.</summary>
+    private int NearestVisibleColumn(int column)
+    {
+        var n = _session.Doc.Columns.Count;
+        if (n == 0) return 0;
+        column = Math.Clamp(column, 0, n - 1);
+        if (!ColumnGroupOps.IsHidden(_session.Doc, column)) return column;
+        for (var d = 1; d < n; d++)
+        {
+            if (column + d < n && !ColumnGroupOps.IsHidden(_session.Doc, column + d)) return column + d;
+            if (column - d >= 0 && !ColumnGroupOps.IsHidden(_session.Doc, column - d)) return column - d;
+        }
+        return column;
+    }
+
     private void FocusActiveCell()
     {
         var r = Math.Max(0, _session.ActiveRow);
@@ -1898,6 +1939,7 @@ public partial class MainWindow : Window
     {
         row = Math.Clamp(row, 0, Math.Max(0, _session.Doc.Rows.Count - 1));
         column = Math.Clamp(column, 0, Math.Max(0, _session.Doc.Columns.Count - 1));
+        column = NearestVisibleColumn(column);
         _session.ChooseCell(row, column);
         var vi = _visibleRows.IndexOf(row);
         if (vi < 0) return;
