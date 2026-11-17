@@ -76,6 +76,66 @@ static int LooseInk(string sample)
         }
     return maxY >= minY ? maxY - minY + 1 : 0;
 }
+static byte[] InflatePdfImage(byte[] pdf)
+{
+    var filter = System.Text.Encoding.ASCII.GetBytes("/Filter /FlateDecode");
+    var at = IndexOf(pdf, filter, 0);
+    if (at < 0) throw new InvalidOperationException("pdf has no flate image");
+    var lengthKey = System.Text.Encoding.ASCII.GetBytes("/Length ");
+    var lengthAt = IndexOf(pdf, lengthKey, at);
+    if (lengthAt < 0) throw new InvalidOperationException("pdf image length missing");
+    var n = 0;
+    for (var i = lengthAt + lengthKey.Length; i < pdf.Length && pdf[i] is >= (byte)'0' and <= (byte)'9'; i++)
+        n = n * 10 + (pdf[i] - (byte)'0');
+    var streamKey = System.Text.Encoding.ASCII.GetBytes("stream\n");
+    var streamAt = IndexOf(pdf, streamKey, at);
+    if (streamAt < 0) throw new InvalidOperationException("pdf image stream missing");
+    var start = streamAt + streamKey.Length;
+    using var src = new MemoryStream(pdf, start, n);
+    using var zlib = new System.IO.Compression.ZLibStream(src, System.IO.Compression.CompressionMode.Decompress);
+    using var raw = new MemoryStream();
+    zlib.CopyTo(raw);
+    return raw.ToArray();
+}
+static (byte R, byte G, byte B) PdfPixel(byte[] rgb, int width, int x, int y)
+{
+    var i = (y * width + x) * 3;
+    if (i < 0 || i + 2 >= rgb.Length) return (0, 0, 0);
+    return (rgb[i], rgb[i + 1], rgb[i + 2]);
+}
+static int IndexOf(byte[] data, byte[] needle, int start)
+{
+    for (var i = start; i + needle.Length <= data.Length; i++)
+    {
+        var ok = true;
+        for (var j = 0; j < needle.Length; j++)
+            if (data[i + j] != needle[j]) { ok = false; break; }
+        if (ok) return i;
+    }
+    return -1;
+}
+static (int X, int Y) FirstPoint(SKBitmap bmp, string hex)
+{
+    var e = Hex(hex);
+    for (var y = 0; y < bmp.Height; y++)
+        for (var x = 0; x < bmp.Width; x++)
+        {
+            var c = bmp.GetPixel(x, y);
+            if (c.Red == e.Red && c.Green == e.Green && c.Blue == e.Blue) return (x, y);
+        }
+    return (-1, -1);
+}
+static int FirstY(SKBitmap bmp, string hex)
+{
+    var e = Hex(hex);
+    for (var y = 0; y < bmp.Height; y++)
+        for (var x = 0; x < bmp.Width; x++)
+        {
+            var c = bmp.GetPixel(x, y);
+            if (c.Red == e.Red && c.Green == e.Green && c.Blue == e.Blue) return y;
+        }
+    return -1;
+}
 static (int MinY, int MaxY, int Count) Ink(SKBitmap bmp, ViewRect cell, string fill, string grid)
 {
     var fillC = Hex(fill);
@@ -316,9 +376,88 @@ OnUi(() =>
     printDoc.RowStyles[printDoc.RowIds[0]] = new RowStyle { Color = "#010203" };
     var print = ViewImage.RenderPrintPng(printDoc, new ViewImageOptions { Now = new DateTime(2026, 1, 1) });
     using var pbmp = Decode(print);
-    Ok("print page is page width", pbmp.Width == 794, pbmp.Width.ToString());
+    var printSpec = new ViewPrintSpec();
+    Ok("print page is page width", pbmp.Width == printSpec.PixelWidth, pbmp.Width.ToString());
     Ok("print margin is white", Same(At(pbmp, 2, 2), "#FFFFFF"));
     Ok("print keeps the row color and the wide table", Any(pbmp, "#010203"));
+    var paged = Doc();
+    paged.SetColumnWidth(0, 120);
+    paged.SetColumnWidth(1, 120);
+    paged.SetColumnWidth(2, 120);
+    paged.SetColumnWidth(3, 120);
+    Row(paged, "one", "", "", "");
+    Row(paged, "two", "", "", "");
+    Row(paged, "three", "", "", "");
+    paged.RowStyles[paged.RowIds[0]] = new RowStyle { Color = "#111111" };
+    paged.RowStyles[paged.RowIds[1]] = new RowStyle { Color = "#222222" };
+    paged.RowStyles[paged.RowIds[2]] = new RowStyle { Color = "#333333" };
+    var pageOpt = new ViewImageOptions { Now = new DateTime(2026, 1, 1), RowHeight = (_, _) => 400, RespectHideDone = false };
+    var pagePlan = ViewImage.Plan(paged, pageOpt);
+    var pageSlices = ViewImage.PlanPages(pagePlan, printSpec);
+    Ok("rows that fit are not split across pages",
+        pageSlices.Count >= 2 && pageSlices.All(s => !s.Clipped) && pageSlices.Sum(s => s.Count) == 3,
+        string.Join(";", pageSlices.Select(s => s.Start + "+" + s.Count + (s.Clipped ? " clip" : ""))));
+    var seenRow = new bool[3];
+    var rowOnce = true;
+    foreach (var slice in pageSlices)
+        for (var r = 0; r < slice.Count; r++)
+        {
+            var index = slice.Start + r;
+            if (index < 0 || index > 2 || seenRow[index]) rowOnce = false;
+            else seenRow[index] = true;
+        }
+    Ok("each fitting row is on exactly one page", rowOnce && seenRow.All(v => v));
+    var pagePngs = ViewImage.RenderPrintPages(paged, pageOpt, printSpec);
+    using var page1 = Decode(pagePngs[0]);
+    using var page2 = Decode(pagePngs[1]);
+    Ok("200 dpi page is 1654 by 2339",
+        printSpec.Dpi == 200 && printSpec.PixelWidth == 1654 && printSpec.PixelHeight == 2339
+        && page1.Width == 1654 && page1.Height == 2339 && page2.Width == 1654 && page2.Height == 2339,
+        $"{page1.Width}x{page1.Height}");
+    var headerY = FirstY(page2, ViewImage.HeaderFill);
+    var movedY = FirstY(page2, "#333333");
+    Ok("page 2 repeats the header above its first row", headerY > 20 && movedY > headerY, $"header {headerY} row {movedY}");
+    Ok("a row that fits stays whole on one page",
+        Any(page1, "#111111") && !Any(page2, "#111111") && !Any(page1, "#333333") && Any(page2, "#333333"));
+    var pdf = ViewPrintPdf.FromPngs(pagePngs, printSpec.Dpi);
+    var pdfHead = System.Text.Encoding.ASCII.GetString(pdf, 0, Math.Min(700, pdf.Length));
+    Ok("multiple pages are one pdf job", pdf.Length > 100 && pdfHead.StartsWith("%PDF") && pdfHead.Contains("/Count " + pagePngs.Count));
+    var pdfRgb = InflatePdfImage(pdf);
+    var spot = FirstPoint(page2, ViewImage.HeaderFill);
+    var pngPx = page2.GetPixel(spot.X, spot.Y);
+    var pdfPx = PdfPixel(pdfRgb, page2.Width, spot.X, spot.Y);
+    Ok("pdf page keeps the print colours",
+        spot.X >= 0 && pdfRgb.Length == page2.Width * page2.Height * 3
+        && pdfPx.R == pngPx.Red && pdfPx.G == pngPx.Green && pdfPx.B == pngPx.Blue
+        && !(pngPx.Red == pngPx.Blue && pngPx.Green == pngPx.Blue),
+        $"at {spot.X},{spot.Y} png {pngPx.Red:X2}{pngPx.Green:X2}{pngPx.Blue:X2} pdf {pdfPx.R:X2}{pdfPx.G:X2}{pdfPx.B:X2}");
+
+    var tall = Doc();
+    Row(tall, "huge", "", "", "");
+    var tallOpt = new ViewImageOptions { Now = new DateTime(2026, 1, 1), RowHeight = (_, _) => 5000, RespectHideDone = false };
+    var tallSpec = new ViewPrintSpec { PageWidth = 420, PageHeight = 240, Dpi = 96, Margin = 8 };
+    var tallPlan = ViewImage.Plan(tall, tallOpt);
+    var tallSlices = ViewImage.PlanPages(tallPlan, tallSpec);
+    Ok("a row taller than a page may be sliced",
+        tallSlices.Count > 1 && tallSlices.All(s => s.Clipped) && tallSlices.Sum(s => s.ClipHeight) == tallPlan.Rows[0].Height,
+        string.Join(",", tallSlices.Select(s => s.ClipHeight.ToString())));
+    var tallPages = ViewImage.RenderPrintPages(tall, tallOpt, tallSpec);
+    using var tall2 = Decode(tallPages[1]);
+    Ok("a sliced row still repeats the header", tallPages.Count == tallSlices.Count && FirstY(tall2, ViewImage.HeaderFill) > 0);
+
+    var kept = ViewPrintFiles.Write(print, ".png");
+    var preview = new ViewPrintWindow(kept);
+    preview.Show();
+    Dispatcher.UIThread.RunJobs();
+    preview.Close();
+    Dispatcher.UIThread.RunJobs();
+    Ok("temp print file is not deleted when the preview closes", File.Exists(kept), kept);
+    var fresh = ViewPrintFiles.Write(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, ".png");
+    File.SetLastWriteTimeUtc(kept, DateTime.UtcNow.AddHours(-2));
+    ViewPrintFiles.CleanupExpired();
+    Ok("print temp files older than an hour are removed", !File.Exists(kept) && File.Exists(fresh));
+    try { File.Delete(fresh); } catch { /* temp */ }
+
     var shell = ViewImage.TryShellPrint(Path.Combine(Path.GetTempPath(), "missing-table.png"));
     Ok("missing print file fails cleanly", shell.Kind == ViewPrintKind.Failed);
     var real = Path.Combine(Path.GetTempPath(), "tn-print-" + Guid.NewGuid().ToString("N") + ".png");
@@ -345,7 +484,7 @@ OnUi(() =>
     var livePage = ViewImage.PrintPage(live);
     using (var lp = Decode(livePage))
     {
-        Ok("print of a live capture fits the page width", lp.Width == 794, lp.Width.ToString());
+        Ok("print of a live capture fits the page width", lp.Width == new ViewPrintSpec().PixelWidth, lp.Width.ToString());
         Ok("print of a live capture keeps that colour", Any(lp, "#112233"));
     }
 

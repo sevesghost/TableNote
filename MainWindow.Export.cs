@@ -144,18 +144,23 @@ public partial class MainWindow
         StatusText.Text = Localizer.T("print.running");
         try
         {
-            var pages = ViewImage.RenderPrintPages(_session.Doc, CaptureOptions());
+            ViewPrintFiles.CleanupExpired();
+            var spec = new ViewPrintSpec();
+            var pages = ViewImage.RenderPrintPages(_session.Doc, CaptureOptions(), spec);
             var paths = new List<string>(pages.Count);
             foreach (var page in pages)
+                paths.Add(ViewPrintFiles.Write(page, ".png"));
+            // Several pages go out as one PDF so the Windows print verb is a single job.
+            // The preview still shows the PNGs. Closing the preview does not delete either file.
+            string? job = null;
+            if (pages.Count > 1)
             {
-                var pagePath = Path.Combine(Path.GetTempPath(), "TableNote-print-" + Guid.NewGuid().ToString("N") + ".png");
-                await File.WriteAllBytesAsync(pagePath, page);
-                paths.Add(pagePath);
+                try { job = ViewPrintFiles.Write(ViewPrintPdf.FromPngs(pages, spec.Dpi), ".pdf"); }
+                catch (Exception ex) { AppLog.Write("export", "combined print file skipped: " + ex.Message); }
             }
-            var dlg = new ViewPrintWindow(paths);
+            var dlg = new ViewPrintWindow(paths, job);
             await dlg.ShowDialog(this);
             StatusText.Text = Localizer.T("print.preview_title");
-            foreach (var pagePath in paths) { try { File.Delete(pagePath); } catch { /* closed */ } }
         }
         catch (Exception ex)
         {
@@ -170,17 +175,20 @@ public partial class MainWindow
     }
 }
 
-/// <summary>Print preview. The page image has no toolbar; Print uses the Windows shell verb on that PNG.</summary>
+/// <summary>Print preview. Print sends one PDF when there are several pages, otherwise the page PNG. Closing does not delete those files.</summary>
 public sealed class ViewPrintWindow : Window
 {
     private readonly IReadOnlyList<string> _paths;
+    private readonly string? _job;
+    private readonly List<Bitmap> _bitmaps = new();
     private readonly TextBlock _status;
 
     public ViewPrintWindow(string pngPath) : this([pngPath]) { }
 
-    public ViewPrintWindow(IReadOnlyList<string> pngPaths)
+    public ViewPrintWindow(IReadOnlyList<string> pngPaths, string? jobPath = null)
     {
         _paths = pngPaths;
+        _job = string.IsNullOrEmpty(jobPath) ? null : jobPath;
         Title = Localizer.T("print.preview_title");
         Width = 960;
         Height = 720;
@@ -205,12 +213,7 @@ public sealed class ViewPrintWindow : Window
         };
         print.Click += (_, _) =>
         {
-            ViewPrintResult result = new(ViewPrintKind.Unavailable, null);
-            foreach (var page in _paths)
-            {
-                result = ViewImage.TryShellPrint(page);
-                if (result.Kind != ViewPrintKind.Sent) break;
-            }
+            var result = SendToPrinter();
             _status.Text = result.Kind switch
             {
                 ViewPrintKind.Sent => Localizer.T("print.sent"),
@@ -240,14 +243,27 @@ public sealed class ViewPrintWindow : Window
             }
         };
         DockPanel.SetDock(bar, Dock.Top);
+        Closed += (_, _) => DisposeBitmaps();
         var pages = new StackPanel { Spacing = 16 };
-        foreach (var page in _paths)
-            pages.Children.Add(new Image
+        try
+        {
+            foreach (var page in _paths)
             {
-                Source = new Bitmap(page),
-                Stretch = Stretch.None,
-                HorizontalAlignment = HorizontalAlignment.Center
-            });
+                var bitmap = new Bitmap(page);
+                _bitmaps.Add(bitmap);
+                pages.Children.Add(new Image
+                {
+                    Source = bitmap,
+                    Stretch = Stretch.None,
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+            }
+        }
+        catch
+        {
+            DisposeBitmaps();
+            throw;
+        }
         Content = new DockPanel
         {
             Children =
@@ -262,6 +278,36 @@ public sealed class ViewPrintWindow : Window
                 }
             }
         };
+    }
+
+    /// <summary>
+    /// One shell print. A multi-page preview prints the combined PDF when that file exists.
+    /// A failed PDF falls back to the page images. Nothing here deletes the temp files.
+    /// </summary>
+    private ViewPrintResult SendToPrinter()
+    {
+        if (_job != null)
+        {
+            var job = ViewImage.TryShellPrint(_job);
+            if (job.Kind != ViewPrintKind.Failed) return job;
+        }
+        if (_paths.Count == 0) return new ViewPrintResult(ViewPrintKind.Failed, "missing file");
+        ViewPrintResult result = new(ViewPrintKind.Unavailable, null);
+        foreach (var page in _paths)
+        {
+            result = ViewImage.TryShellPrint(page);
+            if (result.Kind != ViewPrintKind.Sent) break;
+        }
+        return result;
+    }
+
+    private void DisposeBitmaps()
+    {
+        foreach (var bitmap in _bitmaps)
+        {
+            try { bitmap.Dispose(); } catch { /* already disposed */ }
+        }
+        _bitmaps.Clear();
     }
 }
 
