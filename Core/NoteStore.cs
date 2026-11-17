@@ -32,6 +32,8 @@ public static class NoteStore
         public JsonElement? RowStyles { get; set; }
         /// <summary>Collapsible column groups. Absent in files from before this field — those load with none.</summary>
         public List<ColumnGroup>? ColumnGroups { get; set; }
+        /// <summary>Optional alert boxes, in order. Missing → empty. Parsed leniently per entry.</summary>
+        public JsonElement? AlertBoxes { get; set; }
     }
 
     /// <summary>Problems found while reading optional sections (logged, not shown as "file corrupt").</summary>
@@ -105,7 +107,8 @@ public static class NoteStore
         "hideDone", "snoozes", "recurrence", "rowIds", "columnIds", "columnRoles", "muteSound", "acknowledged", "reminders",
         "columnSettings", "rowStyles", // v2.4.0
         "columnGroups", // collapsible column groups; missing on older files
-        "cellDetails" // nested detail tables; document version is unchanged until the integrator bumps it
+        "cellDetails", // nested detail tables; document version is unchanged until the integrator bumps it
+        "alertBoxes" // optional; missing or bad → no boxes
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)
@@ -506,6 +509,7 @@ public static class NoteStore
                 RowStyles = ParseRowStyles(Prop(root, "rowStyles")),
                 ColumnGroups = ParseColumnGroups(Prop(root, "columnGroups")),
                 CellDetails = cellDetails,
+                AlertBoxes = AlertBoxOps.Parse(Prop(root, "alertBoxes"), LastLoadIssues.Add),
                 Window = new WindowMemory
                 {
                     Width = win is { } a ? GetInt(a, "width", 720, true, "window.") : 720,
@@ -726,6 +730,7 @@ public static class NoteStore
             ColumnSettings = JsonSerializer.SerializeToElement(doc.ColumnSettings, Options), // v2.4.0
             RowStyles = JsonSerializer.SerializeToElement(doc.RowStyles, Options),
             ColumnGroups = ColumnGroupOps.Clone(doc.ColumnGroups),
+            AlertBoxes = AlertBoxOps.ToElement(doc.AlertBoxes),
             Window = new WindowDto
             {
                 Width = doc.Window.Width,

@@ -66,6 +66,8 @@ public sealed class NoteDocument
     /// The document version is not bumped here; a build that does not know the field keeps it in ExtraFields.
     /// </summary>
     public CellDetailStore CellDetails { get; set; } = new();
+    /// <summary>Optional "alertBoxes" list in display order. Missing in the file means none. Each <see cref="AlertBox.Id"/> is stable. Not a format-version bump.</summary>
+    public List<AlertBox> AlertBoxes { get; set; } = [];
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();
     public bool LaunchAtLogin { get; set; }
@@ -390,6 +392,10 @@ public sealed class NoteDocument
 
         EnsureRowIds();
         EnsureColumnIds();
+        ColumnGroups ??= [];
+        CellDetails ??= new();
+        AlertBoxes ??= [];
+        if (AlertBoxOps.Normalize(AlertBoxes)) clipped = true;
         Window ??= new WindowMemory();
         Window.Width = Math.Clamp(Window.Width <= 0 ? 780 : Window.Width, 340, 5000);
         Window.Height = Math.Clamp(Window.Height <= 0 ? 520 : Window.Height, 300, 5000);

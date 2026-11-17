@@ -89,7 +89,8 @@ public partial class MainWindow : Window
         _loadWarning = loaded.Warning ?? startupMsg;
         _confirm = new DialogDeleteConfirm(this);
         InitSettings(); // v2.4.0: column settings item in the header menu
-        InitDetailPopup(); // detail button + nested table; wraps the column/row menu hooks
+        InitDetailPopup(); // detail button + nested table; wraps the column/row menu hooks (settings and groups stay)
+        InitAlertBoxes();
 
         MinWidth = 480;
         MinHeight = 300;
@@ -406,6 +407,7 @@ public partial class MainWindow : Window
         {
             // A TextBox being edited with its own undo history handles Ctrl+Z itself (U9).
             if (FocusedEditingBox() is { CanUndo: true }) return;
+            if (FocusedAlertTextBox() is { CanUndo: true }) return;
             CommitFocusedEdit();
             e.Handled = true;
             DoUndo();
@@ -415,6 +417,7 @@ public partial class MainWindow : Window
             (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.KeyModifiers.HasFlag(KeyModifiers.Shift) && e.Key == Key.Z))
         {
             if (FocusedEditingBox() is { CanRedo: true }) return;
+            if (FocusedAlertTextBox() is { CanRedo: true }) return;
             CommitFocusedEdit();
             e.Handled = true;
             DoRedo();
@@ -976,6 +979,7 @@ public partial class MainWindow : Window
         ToolTip.SetTip(ZoomOutButton, T("tip.zoom_out"));
         ToolTip.SetTip(ZoomResetButton, T("tip.zoom_reset"));
         ToolTip.SetTip(ZoomInButton, T("tip.zoom_in"));
+        RenderAlertBoxes();
     }
 
     private void SetZoom(int scale)
@@ -2201,6 +2205,7 @@ public partial class MainWindow : Window
         IsHitTestVisible = edit;
         CanResize = edit && !_session.Doc.Window.Locked;
         Rebuild();
+        RenderAlertBoxes();
     }
 
     /// <summary>v2.4.2: taskbar button for the current mode (TaskbarPresence): edit = shown, background = tray only.</summary>
