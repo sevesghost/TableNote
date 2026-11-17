@@ -217,6 +217,7 @@ public static class ReminderPopup
         };
         refresh.Start();
         watch.Start();
+        ApplyPopupChrome(s); // v2.5: saved reminder-window colors (no-op when unset)
         return s;
     }
 
@@ -264,8 +265,49 @@ public static class ReminderPopup
         s.Window.Width = Math.Min(480 * s.Zoom, 960);
     }
 
+    private static readonly IBrush PopupDefaultBg = new SolidColorBrush(Color.Parse("#FFF6C2"));
+    private static readonly IBrush CardDefaultBg = new SolidColorBrush(Color.Parse("#FFFDF6"));
+    private static readonly IBrush CardTitleFg = new SolidColorBrush(Color.Parse("#3B3222"));
+
     private static string LabelText(DueTask t, DateTime now) => (t.Offset > 0 ? "⏰ " : "🔔 ") + t.WhenLabel(now);
     private static IBrush LabelBrush(DueTask t) => new SolidColorBrush(Color.Parse(t.Offset > 0 ? "#1F5FA8" : "#B03A1A"));
+
+    /// <summary>v2.5: re-apply saved colors to the open reminder window (no-op when it is closed).</summary>
+    public static void Restyle()
+    {
+        if (_current is not { IsClosed: false } s) return;
+        try
+        {
+            ApplyPopupChrome(s);
+            foreach (var (id, row) in s.Rows)
+                if (s.Pending.TryGetValue(id, out var task)) PaintCard(row.Block, row.Label, task);
+        }
+        catch (Exception ex) { AppLog.Write("popup", "restyle failed: " + ex.Message); }
+    }
+
+    private static void ApplyPopupChrome(State s)
+    {
+        var part = PartColorStore.Get(PartColorKeys.Popup);
+        s.Window.Background = PartColorPainter.TryBrush(part?.Background) ?? PopupDefaultBg;
+        if (PartColorPainter.TryBrush(part?.Foreground) is { } fg) s.CloseButton.Foreground = fg;
+        else s.CloseButton.ClearValue(Avalonia.Controls.Primitives.TemplatedControl.ForegroundProperty);
+    }
+
+    /// <summary>Card background/text: notify:{rowId} wins per channel, then the default card, then the built-in colors.</summary>
+    private static void PaintCard(Border block, TextBlock due, DueTask task)
+    {
+        var part = PartColorOps.Merge(
+            PartColorStore.Get(PartColorKeys.Notify(task.RowId)),
+            PartColorStore.Get(PartColorKeys.PopupCard));
+        block.Background = PartColorPainter.TryBrush(part?.Background) ?? CardDefaultBg;
+        var fg = PartColorPainter.TryBrush(part?.Foreground);
+        if (block.Child is not Panel panel) return;
+        foreach (var child in panel.Children)
+        {
+            if (child is not TextBlock tb) continue;
+            tb.Foreground = ReferenceEquals(tb, due) ? fg ?? LabelBrush(task) : fg ?? CardTitleFg;
+        }
+    }
 
     private static void AddOrReplace(State s, DueTask task)
     {
@@ -274,7 +316,7 @@ public static class ReminderPopup
             // Same task again (e.g. a later fire): update in place, no second row.
             s.Pending[task.RowId] = task;
             existing.Label.Text = LabelText(task, DateTime.Now);
-            existing.Label.Foreground = LabelBrush(task);
+            PaintCard(existing.Block, existing.Label, task);
             return;
         }
         s.Pending[task.RowId] = task;
@@ -328,6 +370,7 @@ public static class ReminderPopup
         block.Child = new StackPanel { Children = { title, due, detail, rowBtns } };
         s.List.Children.Add(block);
         s.Rows[rowId] = (block, due);
+        PaintCard(block, due, task); // v2.5: per-task color (notify:{rowId}), else the default card
     }
 
     private static void Remove(State s, string rowId)
@@ -366,7 +409,7 @@ public static class ReminderPopup
             if (s.Rows.TryGetValue(cur.RowId, out var r))
             {
                 r.Label.Text = LabelText(cur, now);
-                r.Label.Foreground = LabelBrush(cur);
+                PaintCard(r.Block, r.Label, cur); // keeps a custom card color across the 15 s refresh
             }
         }
         if (becameDue.Count > 0)

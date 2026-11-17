@@ -70,6 +70,7 @@ public partial class MainWindow
             {
                 var box = MakeTextBox(_session.Doc.GetCell(row, column), false, row, column, bg);
                 box.TextAlignment = TextAlignment.Right;
+                PaintNumberCell(box, row, column); // before normalFg, so a non-number returns to the chosen text color
                 var normalFg = box.Foreground;
                 void Check()
                 {

@@ -12,7 +12,8 @@ namespace TableNote;
 /// <summary>
 /// User-managed alert boxes above the table. Add, edit title and text, delete, drag the grip to reorder,
 /// or use the Up / Down buttons (keyboard reachable; no drag required). Order and text are the list on
-/// <see cref="NoteDocument.AlertBoxes"/> and are saved with note.json. Ids are stable. Colours are not set here.
+/// <see cref="NoteDocument.AlertBoxes"/> and are saved with note.json. Ids are stable.
+/// A box's color is <c>partColors["alert:{id}"]</c> only; it is not stored on the box.
 /// </summary>
 public partial class MainWindow
 {
@@ -149,6 +150,13 @@ public partial class MainWindow
         grid.Children.Add(fields);
         grid.Children.Add(buttons);
         card.Child = grid;
+        var part = PartColorStore.Get(PartColorKeys.Alert(id));
+        if (PartColorPainter.TryBrush(part?.Background) is { } bg) card.Background = bg;
+        if (PartColorPainter.TryBrush(part?.Foreground) is { } fg)
+        {
+            title.Foreground = fg;
+            body.Foreground = fg;
+        }
         return card;
     }
 

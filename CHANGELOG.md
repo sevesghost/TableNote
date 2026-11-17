@@ -4,6 +4,8 @@ All notable changes to TableNote. [ภาษาไทย](CHANGELOG.th.md)
 
 - **Unreleased**
   - New: user-managed alert boxes above the table. Add a box, edit its title and text, delete it (the delete dialog asks first; this can't be undone), drag the ⋮⋮ grip to reorder, or use Up / Down without dragging. Content and order are saved in `note.json` (optional `alertBoxes`, format version stays 5, stable `id` per box). A missing or corrupt `alertBoxes` value is skipped and the table still opens. Unknown fields on a box are kept so a later per-box colour can use the same id. Alert-box edits are not part of Ctrl+Z.
+  - New: **Colors** on the toolbar opens an RGB / hex picker for the selected cell (background and text), the row number, column headers, and the main sections (window, toolbar, status bar, notice banner, table). The reminder window and each reminder card can be colored too. Choices are saved in `note.json` under optional `partColors` (the format version stays 5; a file without the field uses the built-in colors) and restored on startup. Reset clears a part back to its built-in color.
+  - An alert box is colored by its stable id in `partColors` as `alert:{id}` only. That still works when `alertBoxes` is a known list. A file with no `alertBoxes` still opens.
 - **2.4.2** (12 November 2026)
   - New: English is the primary language. All UI text lives in `lang/en.json` and `lang/th.json`; add a language by adding a JSON file (see CONTRIBUTING.md). Export labels, dates (`yyyy-MM-dd`, `yyyy-MM-dd HH:mm`), and the log are language-independent or English.
   - New: taskbar icon while editing, tray icon only when attached to the desktop background; the mode is kept after restart.

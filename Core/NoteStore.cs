@@ -34,6 +34,8 @@ public static class NoteStore
         public List<ColumnGroup>? ColumnGroups { get; set; }
         /// <summary>Optional alert boxes, in order. Missing → empty. Parsed leniently per entry.</summary>
         public JsonElement? AlertBoxes { get; set; }
+        /// <summary>v2.5. Optional. Missing, null, or a bad value leaves every part on its built-in color.</summary>
+        public JsonElement? PartColors { get; set; }
     }
 
     /// <summary>Problems found while reading optional sections (logged, not shown as "file corrupt").</summary>
@@ -108,7 +110,8 @@ public static class NoteStore
         "columnSettings", "rowStyles", // v2.4.0
         "columnGroups", // collapsible column groups; missing on older files
         "cellDetails", // nested detail tables; document version is unchanged until the integrator bumps it
-        "alertBoxes" // optional; missing or bad → no boxes
+        "alertBoxes", // optional; missing or bad → no boxes
+        "partColors" // v2.5, optional. An alert box color is alert:{id} here, not on the box.
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)
@@ -323,6 +326,26 @@ public static class NoteStore
         return list;
     }
 
+    /// <summary>v2.5: "partColors" is optional. Missing, null, or a wrong type leaves the defaults; bad entries are skipped.</summary>
+    private static Dictionary<string, PartColor> ParsePartColors(JsonElement? el)
+    {
+        if (el is not { } e || e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return new Dictionary<string, PartColor>(StringComparer.Ordinal);
+        if (e.ValueKind != JsonValueKind.Object)
+        {
+            LastLoadIssues.Add("partColors: not an object, all skipped");
+            return new Dictionary<string, PartColor>(StringComparer.Ordinal);
+        }
+        return PartColorOps.ParseMap(e);
+    }
+
+    private static JsonElement PartColorsElement(NoteDocument doc)
+    {
+        var node = PartColorOps.ToJson(doc.PartColors);
+        using var parsed = JsonDocument.Parse(node?.ToJsonString() ?? "{}");
+        return parsed.RootElement.Clone();
+    }
+
     private static void LogIssues(string path)
     {
         if (LastLoadIssues.Count == 0) return;
@@ -510,6 +533,7 @@ public static class NoteStore
                 ColumnGroups = ParseColumnGroups(Prop(root, "columnGroups")),
                 CellDetails = cellDetails,
                 AlertBoxes = AlertBoxOps.Parse(Prop(root, "alertBoxes"), LastLoadIssues.Add),
+                PartColors = ParsePartColors(Prop(root, "partColors")),
                 Window = new WindowMemory
                 {
                     Width = win is { } a ? GetInt(a, "width", 720, true, "window.") : 720,
@@ -521,7 +545,8 @@ public static class NoteStore
                     Topmost = DesktopPlacement.EffectiveTopmost(layer)
                 }
             };
-            // Keep fields this version doesn't know (e.g. from a newer TableNote) so saving doesn't drop them.
+            // Keep fields this version doesn't know so saving doesn't drop them.
+            // A higher version still opens and is not downgraded. partColors and alertBoxes are optional known fields.
             foreach (var prop in root.EnumerateObject())
                 if (!KnownFields.Contains(prop.Name))
                     doc.ExtraFields[prop.Name] = prop.Value.Clone();
@@ -731,6 +756,7 @@ public static class NoteStore
             RowStyles = JsonSerializer.SerializeToElement(doc.RowStyles, Options),
             ColumnGroups = ColumnGroupOps.Clone(doc.ColumnGroups),
             AlertBoxes = AlertBoxOps.ToElement(doc.AlertBoxes),
+            PartColors = PartColorsElement(doc),
             Window = new WindowDto
             {
                 Width = doc.Window.Width,

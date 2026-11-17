@@ -144,6 +144,7 @@ public partial class MainWindow : Window
         Program.EditRequested += () => Dispatcher.UIThread.Post(ShowEditor);
         ToolTip.SetTip(StatusText, Localizer.T("ui.saved_path", _path));
 
+        InitColors();
         ApplyZoom();
         ApplyLanguageTexts();
         Rebuild();
@@ -980,6 +981,7 @@ public partial class MainWindow : Window
         ToolTip.SetTip(ZoomResetButton, T("tip.zoom_reset"));
         ToolTip.SetTip(ZoomInButton, T("tip.zoom_in"));
         RenderAlertBoxes();
+        ApplyColorButtonText();
     }
 
     private void SetZoom(int scale)
@@ -1231,9 +1233,10 @@ public partial class MainWindow : Window
         ApplyColumnDefinitions(grid);
         if (rowIndex < 0 || rowIndex >= _session.Doc.Rows.Count) return;
         var rowBg = RowBackground(rowIndex);
+        var rowLabel = RowLabelColors(rowIndex);
         var border = new Border
         {
-            Background = LabelBrushFor(rowIndex, rowBg.label),
+            Background = rowLabel.Background,
             BorderBrush = GridLine,
             BorderThickness = new Thickness(1),
             Child = new TextBlock
@@ -1241,7 +1244,7 @@ public partial class MainWindow : Window
                 Text = (rowIndex + 1).ToString(),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                Foreground = TextFg, FontFamily = AppFonts.Thai, Margin = new Thickness(4, 0)
+                Foreground = rowLabel.Foreground, FontFamily = AppFonts.Thai, Margin = new Thickness(4, 0)
             }
         };
         border.PointerPressed += (_, e) =>
@@ -1283,6 +1286,7 @@ public partial class MainWindow : Window
     {
         if (TryHiddenHeader(column, out var hiddenHeader)) return hiddenHeader;
         var box = MakeTextBox(_session.Doc.Columns[column], header: true, -1, column, HeaderBg);
+        PaintColumnHeader(box, column);
         _headerBoxes.Add(box);
         var thumb = new Border { Width = 6, Background = GridLine, Cursor = ResizeCursor };
         Point? origin = null;
@@ -1328,6 +1332,8 @@ public partial class MainWindow : Window
         else
             control = MakeTypedCell(row, column, bg) ?? // v2.4.0: number / choice / check columns
                       MakeTextBox(_session.Doc.GetCell(row, column), false, row, column, bg);
+
+        PaintDataCell(control, row, column);
 
         var statusCol = _session.Doc.StatusColumnIndex();
         if (statusCol >= 0 && TaskStatuses.IsDone(_session.Doc.GetCell(row, statusCol)))
@@ -1852,7 +1858,7 @@ public partial class MainWindow : Window
                 if (c is ContentPresenter { Child: Grid { Tag: int r } g } && g.Children.FirstOrDefault() is Border b &&
                     !(focused != null && focused.GetVisualAncestors().Contains(g)) && // never under the caret; next minute
 
-                    r < _session.Doc.Rows.Count && !ReferenceEquals(b.Background, LabelBrushFor(r, RowBackground(r).label)))
+                    r < _session.Doc.Rows.Count && !ReferenceEquals(b.Background, LabelBrushFor(r, RowNumberBackground(r))))
                     stale.Add(r);
             foreach (var r in stale) RefreshRow(r);
         }
@@ -1893,7 +1899,7 @@ public partial class MainWindow : Window
         foreach (var c in RowsList.GetRealizedContainers())
             if (c is ContentPresenter { Child: Grid { Tag: int r } g } && (r == active || r == _highlightedRow) &&
                 g.Children.FirstOrDefault() is Border b && r < _session.Doc.Rows.Count)
-                b.Background = LabelBrushFor(r, RowBackground(r).label);
+                b.Background = LabelBrushFor(r, RowNumberBackground(r));
         _highlightedRow = active;
     }
 

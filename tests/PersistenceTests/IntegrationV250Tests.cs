@@ -50,7 +50,8 @@ public static partial class T
         Ok("v2.4.2 file has empty defaults for the new fields",
             doc.ColumnGroups.Count == 0 &&
             CellDetailOps.IsEmpty(doc.CellDetails) &&
-            doc.AlertBoxes.Count == 0);
+            doc.AlertBoxes.Count == 0 &&
+            doc.PartColors.Count == 0);
         Ok("v2.4.2 unknown field is kept",
             doc.ExtraFields.TryGetValue("futureWidget", out var extra) && extra.GetProperty("keep").GetInt32() == 1);
 
@@ -69,8 +70,9 @@ public static partial class T
             saved.Reminders["r1"].Offsets.SequenceEqual(new[] { 60, 15 }) &&
             saved.Recurrence["r2"] == "weekly" &&
             saved.ExtraFields.TryGetValue("futureWidget", out var extra2) && extra2.GetProperty("keep").GetInt32() == 1);
-        Ok("v2.4.2 round-trip does not invent detail tables or alert boxes",
-            CellDetailOps.IsEmpty(saved.CellDetails) && saved.AlertBoxes.Count == 0 && saved.ColumnGroups.Count == 0);
+        Ok("v2.4.2 round-trip does not invent detail tables, alert boxes, or part colors",
+            CellDetailOps.IsEmpty(saved.CellDetails) && saved.AlertBoxes.Count == 0 &&
+            saved.ColumnGroups.Count == 0 && saved.PartColors.Count == 0);
         using var json = JsonDocument.Parse(File.ReadAllText(path));
         Ok("v2.4.2 save writes version 5 and does not invent cellDetails",
             json.RootElement.GetProperty("version").GetInt32() == 5 &&

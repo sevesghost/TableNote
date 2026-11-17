@@ -3,7 +3,9 @@ namespace TableNote;
 /// <summary>In-memory note table. v5 adds stable column ids. v4 adds reminders. v3 adds column roles.</summary>
 public sealed class NoteDocument
 {
-    /// <summary>5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).</summary>
+    /// <summary>5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).
+    /// Column groups, cell details, alert boxes, and partColors are optional fields with empty defaults.
+    /// The format version stays 5. A higher file version is not downgraded.</summary>
     public const int CurrentVersion = 5;
     public const int DefaultRowCount = 4;
     /// <summary>User-editable column cap; system roles may push AbsoluteMaxColumns.</summary>
@@ -68,6 +70,9 @@ public sealed class NoteDocument
     public CellDetailStore CellDetails { get; set; } = new();
     /// <summary>Optional "alertBoxes" list in display order. Missing in the file means none. Each <see cref="AlertBox.Id"/> is stable. Not a format-version bump.</summary>
     public List<AlertBox> AlertBoxes { get; set; } = [];
+    /// <summary>Part id → background/text colour ("partColors"). No entry = the built-in colour.
+    /// An alert box is <c>alert:{id}</c> in this map only. It does not read or write alertBoxes.</summary>
+    public Dictionary<string, PartColor> PartColors { get; set; } = new(StringComparer.Ordinal);
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();
     public bool LaunchAtLogin { get; set; }
@@ -395,6 +400,7 @@ public sealed class NoteDocument
         ColumnGroups ??= [];
         CellDetails ??= new();
         AlertBoxes ??= [];
+        PartColors ??= new(StringComparer.Ordinal);
         if (AlertBoxOps.Normalize(AlertBoxes)) clipped = true;
         Window ??= new WindowMemory();
         Window.Width = Math.Clamp(Window.Width <= 0 ? 780 : Window.Width, 340, 5000);
