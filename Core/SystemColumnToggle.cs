@@ -27,7 +27,10 @@ public static class SystemColumnToggle
         else if (IsDue(role)) doc.DueColumnOmitted = omitted;
     }
 
-    /// <summary>Name inference must not adopt "Status" / "กำหนดส่ง" after the user removed that role.</summary>
+    /// <summary>
+    /// Header-name guesses stay on for every file that did not record a removal (including pre-2.1.0 notes with no columnRoles).
+    /// They are suppressed only when that role's <c>ColumnOmitted</c> flag is true.
+    /// </summary>
     public static bool AllowsNameInference(NoteDocument doc, string? role) => !IsOmitted(doc, role);
 
     /// <summary>Drop a status/due tag that was guessed onto another column after the user removed that role.</summary>

@@ -145,7 +145,8 @@ public sealed class NoteDocument
     {
         var byRole = IndexOfRole(ColumnRoles.Status);
         if (byRole >= 0) return byRole;
-        // A column merely named "Status" / "สถานะ" is not the status column after the user removed it.
+        // Pre-2.1.0 files have no columnRoles, so the header name is still how status is found.
+        // That guess is skipped only after the user removed the status column on purpose.
         if (StatusColumnOmitted) return -1;
         return IndexOfDefaultName(ColumnRoles.Status);
     }
@@ -154,6 +155,7 @@ public sealed class NoteDocument
     {
         var byRole = IndexOfRole(ColumnRoles.Due);
         if (byRole >= 0) return byRole;
+        // Same name fallback as status: kept for files with no columnRoles, off only when the user removed due.
         if (DueColumnOmitted) return -1;
         return IndexOfDefaultName(ColumnRoles.Due);
     }

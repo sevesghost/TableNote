@@ -157,6 +157,40 @@ public static partial class T
             !noDue.DueColumnOmitted && noDue.DueColumnIndex() == noDue.Columns.Count - 1);
     }
 
+    public static void TestPre210FileWithoutColumnRolesResolvesByName()
+    {
+        // Version 2 is before 2.1.0 (version 3), which is when columnRoles was added. The key is absent on purpose.
+        const string file = """
+        {"version":2,"columns":["หัวข้อ","รายละเอียด","สถานะ","กำหนดส่ง"],
+         "rows":[["งานประชุม","รายละเอียดงาน","todo","2026-12-01 09:00"]],"rowIds":["r1"]}
+        """;
+        var loaded = LoadJson("pre210", file).r;
+        var doc = loaded.Document;
+        Ok("pre-2.1.0 file without columnRoles opens", loaded.Warning == null && loaded.Issues.Count == 0,
+            (loaded.Warning ?? "") + " | " + string.Join(" | ", loaded.Issues));
+        Ok("pre-2.1.0 name fallback resolves status and due, and does not add columns",
+            doc.Columns.Count == 4 &&
+            doc.StatusColumnIndex() == 2 && doc.DueColumnIndex() == 3 &&
+            doc.ColumnRolesList[2] == ColumnRoles.Status && doc.ColumnRolesList[3] == ColumnRoles.Due &&
+            doc.ColumnRolesList[0] == ColumnRoles.Title && doc.ColumnRolesList[1] == ColumnRoles.Detail &&
+            !doc.StatusColumnOmitted && !doc.DueColumnOmitted &&
+            doc.GetCell(0, 0) == "งานประชุม" && doc.GetCell(0, 2) == "todo" && doc.GetCell(0, 3) == "2026-12-01 09:00",
+            string.Join("|", doc.Columns) + " / " + string.Join("|", doc.ColumnRolesList));
+
+        const string omitted = """
+        {"version":2,"columns":["หัวข้อ","รายละเอียด","สถานะ","กำหนดส่ง"],
+         "rows":[["งานประชุม","รายละเอียดงาน","todo","2026-12-01 09:00"]],"rowIds":["r1"],
+         "statusColumnOmitted":true,"dueColumnOmitted":true}
+        """;
+        var gone = LoadJson("pre210-omitted", omitted).r.Document;
+        Ok("the same names are not status or due when the removal flags are set",
+            gone.Columns.Count == 4 &&
+            gone.StatusColumnOmitted && gone.DueColumnOmitted &&
+            gone.StatusColumnIndex() < 0 && gone.DueColumnIndex() < 0 &&
+            gone.ColumnRolesList[2] != ColumnRoles.Status && gone.ColumnRolesList[3] != ColumnRoles.Due &&
+            gone.GetCell(0, 2) == "todo" && gone.GetCell(0, 3) == "2026-12-01 09:00");
+    }
+
     public static void TestNameLookalikeIsNotTheSpecialColumn()
     {
         foreach (var (lang, statusName, dueName) in new[] { ("en", "Status", "Due date"), ("th", "สถานะ", "กำหนดส่ง") })
@@ -274,6 +308,58 @@ public static partial class T
             !d.PartColors.ContainsKey(PartColorKeys.HeaderColumn(newId)) &&
             !d.PartColors.ContainsKey(PartColorKeys.Notify(rowId)) &&
             !d.PartColors.ContainsKey(PartColorKeys.Cell(rowId, newId)));
+    }
+
+    public static void TestExportWhenOnlyOneSpecialColumnIsRemoved()
+    {
+        En();
+        static (string Csv, string Sheet) Export(NoteDocument doc, string name)
+        {
+            var (headers, rows) = Exporter.FromDocument(doc, respectHideDone: false);
+            var dir = Dir(name);
+            var csvPath = Path.Combine(dir, "table.csv");
+            var xlsxPath = Path.Combine(dir, "table.xlsx");
+            var cols = new ExportColumns(doc.StatusColumnIndex(), doc.DueColumnIndex());
+            Exporter.Export(rows, headers, csvPath, ExportFormat.Csv, cols);
+            Exporter.Export(rows, headers, xlsxPath, ExportFormat.Xlsx, cols);
+            using var zip = System.IO.Compression.ZipFile.OpenRead(xlsxPath);
+            using var reader = new StreamReader(zip.GetEntry("xl/worksheets/sheet1.xml")!.Open());
+            return (File.ReadAllText(csvPath), reader.ReadToEnd());
+        }
+
+        var statusOnly = Fresh();
+        statusOnly.Recurrence[statusOnly.RowIdAt(0)] = "daily";
+        statusOnly.RemoveColumn(statusOnly.StatusColumnIndex());
+        Exception? error = null;
+        var statusCsv = "";
+        var statusSheet = "";
+        try { (statusCsv, statusSheet) = Export(statusOnly, "export-status-only"); }
+        catch (Exception ex) { error = ex; }
+        Ok("csv and xlsx export when only the status column is removed",
+            error == null && statusOnly.StatusColumnIndex() < 0 && statusOnly.DueColumnIndex() >= 0 &&
+            statusCsv.Contains("Due date") && statusCsv.Contains("2026-12-01") && statusCsv.Contains("Task") &&
+            !statusCsv.Contains("Status") && statusCsv.Contains("Daily") &&
+            statusSheet.Contains("Due date") && statusSheet.Contains("2026-12-01") && statusSheet.Contains("Task") &&
+            !statusSheet.Contains("Status") && statusSheet.Contains("Daily"),
+            error?.ToString() ?? "");
+
+        var dueOnly = Fresh();
+        dueOnly.SetCellRaw(0, dueOnly.StatusColumnIndex(), "todo");
+        dueOnly.Recurrence[dueOnly.RowIdAt(0)] = "weekly";
+        dueOnly.RemoveColumn(dueOnly.DueColumnIndex());
+        error = null;
+        var dueCsv = "";
+        var dueSheet = "";
+        try { (dueCsv, dueSheet) = Export(dueOnly, "export-due-only"); }
+        catch (Exception ex) { error = ex; }
+        Ok("csv and xlsx export when only the reminder column is removed",
+            error == null && dueOnly.DueColumnIndex() < 0 && dueOnly.StatusColumnIndex() >= 0 &&
+            dueOnly.Recurrence.Count == 0 &&
+            dueCsv.Contains("Status") && dueCsv.Contains("Not started") && dueCsv.Contains("Task") &&
+            !dueCsv.Contains("Due date") && !dueCsv.Contains("2026-12-01") && !dueCsv.Contains("Weekly") && !dueCsv.Contains("Repeat") &&
+            dueSheet.Contains("Status") && dueSheet.Contains("Not started") && dueSheet.Contains("Task") &&
+            !dueSheet.Contains("Due date") && !dueSheet.Contains("2026-12-01") && !dueSheet.Contains("Weekly"),
+            error?.ToString() ?? "");
     }
 
     public static void TestUndoRestoresRemovalMarker()
