@@ -51,8 +51,7 @@ public partial class MainWindow
             else
             {
                 Rebuild(); FlushSave();
-                if (_session.Doc.DueColumnIndex() < 0)
-                    ShowNotice(Localizer.T("ui.no_due_column"));
+                AfterColumnRemoved();
             }
         }
         finally { _busy = false; }
@@ -181,9 +180,9 @@ public partial class MainWindow
         items.Add(new Separator());
         items.AddRange(BuildColumnGroupMenuItems(column, edit));
         items.Add(new Separator());
-        var isDue = column >= 0 && column == _session.Doc.DueColumnIndex();
-        items.Add(Item(isDue ? Localizer.T("col.delete_due") : Localizer.T("col.delete"),
-            MenuCommandRules.DeleteColumn(edit, column, count, isDue),
+        // Status and the reminder column use the same delete item as every other column.
+        items.Add(Item(Localizer.T("col.delete"),
+            MenuCommandRules.DeleteColumn(edit, column, count, isDue: false),
             () => RequestDeleteColumn(column)));
         return items;
     }
