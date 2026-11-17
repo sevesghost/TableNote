@@ -89,6 +89,7 @@ public partial class MainWindow : Window
         _loadWarning = loaded.Warning ?? startupMsg;
         _confirm = new DialogDeleteConfirm(this);
         InitSettings(); // v2.4.0: column settings item in the header menu
+        InitDetailPopup(); // detail button + nested table; wraps the column/row menu hooks
 
         MinWidth = 480;
         MinHeight = 300;
@@ -1326,8 +1327,8 @@ public partial class MainWindow : Window
 
         var statusCol = _session.Doc.StatusColumnIndex();
         if (statusCol >= 0 && TaskStatuses.IsDone(_session.Doc.GetCell(row, statusCol)))
-            return WithStrikethrough(control);
-        return control;
+            control = WithStrikethrough(control);
+        return AttachDetailButton(row, column, control);
     }
 
     private static Control WithStrikethrough(Control inner)

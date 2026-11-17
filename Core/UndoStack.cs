@@ -202,6 +202,8 @@ public static class Snapshot
         public List<int> ColumnWidths { get; set; } = [];
         public Dictionary<string, string> Recurrence { get; set; } = new();
         public Dictionary<string, List<int>> ReminderOffsets { get; set; } = new();
+        /// <summary>Detail buttons and nested tables (JSON). Null when the note has none.</summary>
+        public string? CellDetails { get; set; }
     }
 
     public static string Serialize(NoteDocument doc)
@@ -224,7 +226,8 @@ public static class Snapshot
             RowIds = doc.RowIds.ToList(),
             ColumnWidths = doc.ColumnWidths.ToList(),
             Recurrence = new Dictionary<string, string>(doc.Recurrence),
-            ReminderOffsets = doc.Reminders.Where(k => k.Value.Offsets.Count > 0).ToDictionary(k => k.Key, k => k.Value.Offsets.ToList())
+            ReminderOffsets = doc.Reminders.Where(k => k.Value.Offsets.Count > 0).ToDictionary(k => k.Key, k => k.Value.Offsets.ToList()),
+            CellDetails = CellDetailOps.IsEmpty(doc.CellDetails) ? null : CellDetailOps.ToJson(doc.CellDetails)
         }, Opt);
 
     /// <summary>
@@ -272,6 +275,7 @@ public static class Snapshot
         var ids = new HashSet<string>(order, StringComparer.Ordinal);
         foreach (var k in doc.Reminders.Keys.Where(k => !ids.Contains(k)).ToList()) doc.Reminders.Remove(k);
         foreach (var k in doc.Snoozes.Keys.Where(k => !ids.Contains(k.Split('|')[0])).ToList()) doc.Snoozes.Remove(k);
+        doc.CellDetails = string.IsNullOrEmpty(d.CellDetails) ? new CellDetailStore() : CellDetailOps.ParseJson(d.CellDetails);
         doc.EnsureColumnRoles();
         doc.EnsureRowIds();
         doc.EnsureColumnIds();

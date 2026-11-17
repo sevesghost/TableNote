@@ -104,7 +104,8 @@ public static class NoteStore
         "version", "columns", "rows", "launchAtLogin", "trayNoticeShown", "columnWidths", "viewMode", "window",
         "hideDone", "snoozes", "recurrence", "rowIds", "columnIds", "columnRoles", "muteSound", "acknowledged", "reminders",
         "columnSettings", "rowStyles", // v2.4.0
-        "columnGroups" // collapsible column groups; missing on older files
+        "columnGroups", // collapsible column groups; missing on older files
+        "cellDetails" // nested detail tables; document version is unchanged until the integrator bumps it
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)
@@ -466,6 +467,23 @@ public static class NoteStore
                 LastLoadIssues.Add("window: not an object, using defaults");
             var layer = DesktopPlacement.ParseLayer(win is { } w1 ? GetString(w1, "layer", "window.") : null);
 
+            var cellDetailsRaw = Prop(root, "cellDetails");
+            CellDetailStore cellDetails;
+            JsonElement? cellDetailsFallback = null;
+            try
+            {
+                cellDetails = cellDetailsRaw is { } raw && raw.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null)
+                    ? CellDetailOps.Parse(raw, LastLoadIssues)
+                    : new CellDetailStore();
+            }
+            catch (Exception ex)
+            {
+                // Keep the raw value for a newer TableNote instead of dropping the whole note.
+                LastLoadIssues.Add($"cellDetails: could not be read ({ex.GetType().Name}: {ex.Message}), kept unchanged");
+                cellDetails = new CellDetailStore();
+                if (cellDetailsRaw is { } raw) cellDetailsFallback = raw.Clone();
+            }
+
             var doc = new NoteDocument
             {
                 Version = version,
@@ -487,6 +505,7 @@ public static class NoteStore
                 ColumnSettings = ParseColumnSettings(Prop(root, "columnSettings")), // v2.4.0
                 RowStyles = ParseRowStyles(Prop(root, "rowStyles")),
                 ColumnGroups = ParseColumnGroups(Prop(root, "columnGroups")),
+                CellDetails = cellDetails,
                 Window = new WindowMemory
                 {
                     Width = win is { } a ? GetInt(a, "width", 720, true, "window.") : 720,
@@ -502,6 +521,8 @@ public static class NoteStore
             foreach (var prop in root.EnumerateObject())
                 if (!KnownFields.Contains(prop.Name))
                     doc.ExtraFields[prop.Name] = prop.Value.Clone();
+            if (cellDetailsFallback is { } keptDetails)
+                doc.ExtraFields["cellDetails"] = keptDetails;
             if (version > NoteDocument.CurrentVersion)
                 LastLoadIssues.Add($"version {version}: file comes from a newer TableNote, will back up to note.v{version}.bak before saving and keep unknown fields ({doc.ExtraFields.Count} fields)");
 
@@ -548,6 +569,16 @@ public static class NoteStore
             if (overflowNotice != null) { clipped = false; }
             ReminderPlan.Sanitize(doc); // bad reminder values dropped individually, never .bak
             ColumnSettingsOps.PruneOrphans(doc); // v2.4.0: settings/styles of gone columns/rows
+            try
+            {
+                var dropped = CellDetailOps.Prune(doc);
+                if (dropped > 0)
+                    LastLoadIssues.Add($"cellDetails: dropped {dropped} (row or column no longer exists)");
+            }
+            catch (Exception ex)
+            {
+                LastLoadIssues.Add($"cellDetails: cleanup failed ({ex.GetType().Name}: {ex.Message})");
+            }
             LogIssues(path);
             var issues = LastLoadIssues.ToList();
             var reminderIssue = issues.Any(i => i.StartsWith("reminders", StringComparison.Ordinal));
@@ -671,6 +702,7 @@ public static class NoteStore
     public static long Save(string path, NoteDocument doc)
     {
         doc.Normalize();
+        CellDetailOps.Prune(doc);
         TryBackupBeforeV3(path, doc);
         var dto = new FileDto
         {
@@ -710,11 +742,13 @@ public static class NoteStore
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
         string json;
-        if (doc.ExtraFields.Count == 0) json = JsonSerializer.Serialize(dto, Options);
+        if (doc.ExtraFields.Count == 0 && CellDetailOps.IsEmpty(doc.CellDetails)) json = JsonSerializer.Serialize(dto, Options);
         else
         {
             // Preserve unknown top-level fields (from a newer version) instead of dropping them silently.
+            // cellDetails is written only when the note actually has detail buttons or tables.
             var node = (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(dto, Options))!;
+            CellDetailOps.WriteProperty(node, doc.CellDetails);
             foreach (var (k, v) in doc.ExtraFields)
                 if (!node.ContainsKey(k)) node[k] = System.Text.Json.Nodes.JsonNode.Parse(v.GetRawText());
             json = node.ToJsonString(Options);
