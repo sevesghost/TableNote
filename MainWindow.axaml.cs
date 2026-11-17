@@ -142,7 +142,7 @@ public partial class MainWindow : Window
         Program.EditRequested += () => Dispatcher.UIThread.Post(ShowEditor);
         ToolTip.SetTip(StatusText, Localizer.T("ui.saved_path", _path));
 
-        InitColors(); // v2.5: Colors button + restore partColors before the table is built
+        InitColors();
         ApplyZoom();
         ApplyLanguageTexts();
         Rebuild();
@@ -976,11 +976,7 @@ public partial class MainWindow : Window
         ToolTip.SetTip(ZoomOutButton, T("tip.zoom_out"));
         ToolTip.SetTip(ZoomResetButton, T("tip.zoom_reset"));
         ToolTip.SetTip(ZoomInButton, T("tip.zoom_in"));
-        if (_colorButton != null)
-        {
-            _colorButton.Content = T("color.button");
-            ToolTip.SetTip(_colorButton, T("tip.color"));
-        }
+        ApplyColorButtonText();
     }
 
     private void SetZoom(int scale)
@@ -1232,12 +1228,10 @@ public partial class MainWindow : Window
         ApplyColumnDefinitions(grid);
         if (rowIndex < 0 || rowIndex >= _session.Doc.Rows.Count) return;
         var rowBg = RowBackground(rowIndex);
-        var rowNumFg = rowIndex >= 0 && rowIndex < _session.Doc.Rows.Count
-            ? PartColorPainter.TryBrush(PartColorStore.Get(PartColorKeys.RowNum(_session.Doc.RowIdAt(rowIndex)))?.Foreground)
-            : null;
+        var rowLabel = RowLabelColors(rowIndex);
         var border = new Border
         {
-            Background = LabelBrushFor(rowIndex, RowNumberBackground(rowIndex)),
+            Background = rowLabel.Background,
             BorderBrush = GridLine,
             BorderThickness = new Thickness(1),
             Child = new TextBlock
@@ -1245,7 +1239,7 @@ public partial class MainWindow : Window
                 Text = (rowIndex + 1).ToString(),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                Foreground = rowNumFg ?? TextFg, FontFamily = AppFonts.Thai, Margin = new Thickness(4, 0)
+                Foreground = rowLabel.Foreground, FontFamily = AppFonts.Thai, Margin = new Thickness(4, 0)
             }
         };
         border.PointerPressed += (_, e) =>
@@ -1286,7 +1280,7 @@ public partial class MainWindow : Window
     private Control MakeHeader(int column)
     {
         var box = MakeTextBox(_session.Doc.Columns[column], header: true, -1, column, HeaderBg);
-        PartColorPainter.Apply(box, ColumnHeaderColor(column)); // v2.5: per-column, else all-headers
+        PaintColumnHeader(box, column);
         _headerBoxes.Add(box);
         var thumb = new Border { Width = 6, Background = GridLine, Cursor = ResizeCursor };
         Point? origin = null;
@@ -1329,10 +1323,7 @@ public partial class MainWindow : Window
             control = MakeTypedCell(row, column, bg) ?? // v2.4.0: number / choice / check columns
                       MakeTextBox(_session.Doc.GetCell(row, column), false, row, column, bg);
 
-        // v2.5: a cell color replaces the row/status background (and the text color) for this slot only.
-        // Number cells paint themselves first so a non-number can still turn red afterwards.
-        if (ColumnSettingsOps.Get(_session.Doc, column).Type != ColumnTypes.Number)
-            PartColorPainter.Apply(control, PartColorKeys.Cell(_session.Doc.RowIdAt(row), _session.Doc.ColumnIdAt(column)));
+        PaintDataCell(control, row, column);
 
         var statusCol = _session.Doc.StatusColumnIndex();
         if (statusCol >= 0 && TaskStatuses.IsDone(_session.Doc.GetCell(row, statusCol)))

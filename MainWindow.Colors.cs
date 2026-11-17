@@ -136,6 +136,39 @@ public partial class MainWindow
         PartColorOps.Merge(
             PartColorStore.Get(PartColorKeys.HeaderColumn(_session.Doc.ColumnIdAt(column))),
             PartColorStore.Get(PartColorKeys.Header));
+
+    /// <summary>
+    /// The only place a whole column is painted (its header, including the "all headers" color).
+    /// ColumnGroupOps.IsHidden is not on main. After rebasing onto the column-group change, return
+    /// here when that column is hidden so a collapsed group is not recolored.
+    /// </summary>
+    private void PaintColumnHeader(TextBox box, int column) =>
+        PartColorPainter.Apply(box, ColumnHeaderColor(column));
+
+    /// <summary>Per-cell color. Number columns paint themselves before the "not a number" check.</summary>
+    private void PaintDataCell(Control control, int row, int column)
+    {
+        if (ColumnSettingsOps.Get(_session.Doc, column).Type == ColumnTypes.Number) return;
+        PartColorPainter.Apply(control, PartColorKeys.Cell(_session.Doc.RowIdAt(row), _session.Doc.ColumnIdAt(column)));
+    }
+
+    private void PaintNumberCell(TextBox box, int row, int column) =>
+        PartColorPainter.Apply(box, PartColorKeys.Cell(_session.Doc.RowIdAt(row), _session.Doc.ColumnIdAt(column)));
+
+    private (IBrush Background, IBrush Foreground) RowLabelColors(int row)
+    {
+        IBrush? fg = null;
+        if (row >= 0 && row < _session.Doc.Rows.Count)
+            fg = PartColorPainter.TryBrush(PartColorStore.Get(PartColorKeys.RowNum(_session.Doc.RowIdAt(row)))?.Foreground);
+        return (LabelBrushFor(row, RowNumberBackground(row)), fg ?? TextFg);
+    }
+
+    private void ApplyColorButtonText()
+    {
+        if (_colorButton == null) return;
+        _colorButton.Content = Localizer.T("color.button");
+        ToolTip.SetTip(_colorButton, Localizer.T("tip.color"));
+    }
 }
 
 /// <summary>RGB / hex picker for one part. Empty channels mean the built-in color.</summary>
