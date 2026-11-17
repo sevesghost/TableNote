@@ -19,6 +19,7 @@ You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 dotnet build -c Release
 dotnet run -c Release --project tests/PersistenceTests
 dotnet run -c Release --project tests/LangTests
+dotnet run -c Release --project tests/AlertUiTests
 ```
 
 The Windows build is `dotnet publish -c Release -r win-x64` (see [Building from source](README.md#building-from-source)). The app also runs on Linux for UI testing, but background mode and Windows notifications only work on Windows.

@@ -1,10 +1,10 @@
 namespace TableNote;
 
-/// <summary>In-memory note table. v5 adds stable column ids. v4 adds reminders. v3 adds column roles.</summary>
+/// <summary>In-memory note table. v6 adds user alert boxes. v5 adds stable column ids. v4 adds reminders. v3 adds column roles.</summary>
 public sealed class NoteDocument
 {
-    /// <summary>5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).</summary>
-    public const int CurrentVersion = 5;
+    /// <summary>6 = alert boxes. 5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).</summary>
+    public const int CurrentVersion = 6;
     public const int DefaultRowCount = 4;
     /// <summary>User-editable column cap; system roles may push AbsoluteMaxColumns.</summary>
     public const int MaxUserColumns = 30;
@@ -59,6 +59,8 @@ public sealed class NoteDocument
     public Dictionary<string, ColumnSetting> ColumnSettings { get; set; } = new(StringComparer.Ordinal);
     /// <summary>v2.4.0: row colour/highlight by row id ("rowStyles"). No entry = normal row.</summary>
     public Dictionary<string, RowStyle> RowStyles { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>Format v6: user alert boxes in display order. Each <see cref="AlertBox.Id"/> is stable. Empty when the file has none.</summary>
+    public List<AlertBox> AlertBoxes { get; set; } = [];
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();
     public bool LaunchAtLogin { get; set; }
@@ -376,6 +378,8 @@ public sealed class NoteDocument
 
         EnsureRowIds();
         EnsureColumnIds();
+        AlertBoxes ??= [];
+        if (AlertBoxOps.Normalize(AlertBoxes)) clipped = true;
         Window ??= new WindowMemory();
         Window.Width = Math.Clamp(Window.Width <= 0 ? 780 : Window.Width, 340, 5000);
         Window.Height = Math.Clamp(Window.Height <= 0 ? 520 : Window.Height, 300, 5000);

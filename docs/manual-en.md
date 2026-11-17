@@ -322,6 +322,10 @@ Click **Export** on the toolbar and choose a format:
 
 Moving columns or rows, deleting a column, changing column settings, and changing a row's colour or highlight can all be undone with **Ctrl+Z**.
 
+## 15. Alert boxes
+
+Above the table, **+ Alert** adds a box. Each box has a title and a text you can edit. **Delete** removes that box. Drag the **⋮⋮** grip to change the order, or use **Up** and **Down** — those buttons work without dragging and can be reached with the keyboard. The boxes and their order are saved in `note.json` and are still there after you close and open TableNote. They are separate from due-date reminders. Ctrl+Z does not undo alert-box changes.
+
 
 ---
 *This guide is based on the TableNote 2.4.0 code as of 11 Nov 2026 (Thailand time, UTC+7).*

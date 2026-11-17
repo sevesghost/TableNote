@@ -30,6 +30,8 @@ public static class NoteStore
         /// <summary>v2.4.0: parsed leniently per entry, like reminders.</summary>
         public JsonElement? ColumnSettings { get; set; }
         public JsonElement? RowStyles { get; set; }
+        /// <summary>Format v6: user alert boxes, in order. Parsed leniently per entry.</summary>
+        public JsonElement? AlertBoxes { get; set; }
     }
 
     /// <summary>Problems found while reading optional sections (logged, not shown as "file corrupt").</summary>
@@ -101,7 +103,8 @@ public static class NoteStore
     {
         "version", "columns", "rows", "launchAtLogin", "trayNoticeShown", "columnWidths", "viewMode", "window",
         "hideDone", "snoozes", "recurrence", "rowIds", "columnIds", "columnRoles", "muteSound", "acknowledged", "reminders",
-        "columnSettings", "rowStyles" // v2.4.0
+        "columnSettings", "rowStyles", // v2.4.0
+        "alertBoxes" // format v6: user alert boxes
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)
@@ -464,6 +467,7 @@ public static class NoteStore
                 Reminders = ParseReminders(Prop(root, "reminders")),
                 ColumnSettings = ParseColumnSettings(Prop(root, "columnSettings")), // v2.4.0
                 RowStyles = ParseRowStyles(Prop(root, "rowStyles")),
+                AlertBoxes = AlertBoxOps.Parse(Prop(root, "alertBoxes"), LastLoadIssues.Add),
                 Window = new WindowMemory
                 {
                     Width = win is { } a ? GetInt(a, "width", 720, true, "window.") : 720,
@@ -670,6 +674,7 @@ public static class NoteStore
             Reminders = JsonSerializer.SerializeToElement(doc.Reminders, Options),
             ColumnSettings = JsonSerializer.SerializeToElement(doc.ColumnSettings, Options), // v2.4.0
             RowStyles = JsonSerializer.SerializeToElement(doc.RowStyles, Options),
+            AlertBoxes = AlertBoxOps.ToElement(doc.AlertBoxes),
             Window = new WindowDto
             {
                 Width = doc.Window.Width,
