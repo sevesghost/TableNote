@@ -16,7 +16,7 @@ namespace TableNote;
 /// <see cref="DefaultIsHidden"/> (stored width &lt;= 0). That delegate has the same shape as
 /// ColumnGroupOps.IsHidden(NoteDocument, int), so a merge can assign the method group directly.
 /// </summary>
-public static class ViewImage
+public static partial class ViewImage
 {
     public const int RowLabelWidth = 44;
     public const double FontSize = 14;
@@ -179,73 +179,11 @@ public static class ViewImage
         }
     }
 
-    /// <summary>First print page. See <see cref="RenderPrintPages"/> for the full vertical page set.</summary>
+    /// <summary>First print page. See <see cref="RenderPrintPages"/> for the full page set.</summary>
     public static byte[] RenderPrintPng(NoteDocument doc, ViewImageOptions? options = null, ViewPrintSpec? spec = null) =>
         RenderPrintPages(doc, options, spec)[0];
 
-    /// <summary>
-    /// Scales the whole table down so every column fits the page width, then slices it vertically.
-    /// Columns are never split across pages. A table that is already narrower stays at its layout size.
-    /// </summary>
-    public static IReadOnlyList<byte[]> RenderPrintPages(NoteDocument doc, ViewImageOptions? options = null, ViewPrintSpec? spec = null)
-    {
-        spec ??= new ViewPrintSpec();
-        var plan = Plan(doc, options);
-        var png = Render(Build(plan), plan.Width, plan.Height, ViewImageFormat.Png);
-        var contentW = Math.Max(1, spec.PageWidth - spec.Margin * 2);
-        const double footerH = 22;
-        var contentH = Math.Max(1, spec.PageHeight - spec.Margin * 2 - footerH);
-        var scale = plan.Width > contentW ? contentW / plan.Width : 1;
-        var scaledH = Math.Max(1, plan.Height * scale);
-        var pages = Math.Max(1, (int)Math.Ceiling(scaledH / contentH - 1e-6));
-        var list = new List<byte[]>(pages);
-        var stream = new MemoryStream(png);
-        var source = new Bitmap(stream);
-        for (var i = 0; i < pages; i++)
-        {
-            var sliceH = Math.Min(contentH, scaledH - i * contentH);
-            var image = new Image
-            {
-                Source = source,
-                Stretch = Stretch.Fill,
-                Width = Math.Max(1, plan.Width * scale),
-                Height = scaledH,
-                VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(0, -i * contentH, 0, 0)
-            };
-            var clip = new Border
-            {
-                Width = Math.Max(1, plan.Width * scale),
-                Height = Math.Max(1, sliceH),
-                ClipToBounds = true,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Child = image
-            };
-            var footer = new TextBlock
-            {
-                Text = Localizer.T("print.page", i + 1, pages),
-                FontFamily = AppFonts.Thai,
-                FontSize = 12,
-                Foreground = Brush(Text),
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new Thickness(0, 6, 0, 0)
-            };
-            var page = new Border
-            {
-                Background = Brush(PageFill),
-                Width = spec.PageWidth,
-                Height = spec.PageHeight,
-                Padding = new Thickness(spec.Margin),
-                Child = new StackPanel { Children = { clip, footer } }
-            };
-            list.Add(Render(page, (int)Math.Ceiling(spec.PageWidth), (int)Math.Ceiling(spec.PageHeight), ViewImageFormat.Png));
-        }
-        source.Dispose();
-        stream.Dispose();
-        return list;
-    }
-
-    /// <summary>Windows shell print verb on a PNG. Other systems return <see cref="ViewPrintKind.Unavailable"/> and do not throw.</summary>
+    /// <summary>Windows shell print verb on a file (page PNG, or one multi-page PDF). Other systems return <see cref="ViewPrintKind.Unavailable"/> and do not throw.</summary>
     public static ViewPrintResult TryShellPrint(string pngPath)
     {
         if (string.IsNullOrEmpty(pngPath) || !File.Exists(pngPath))
@@ -336,9 +274,9 @@ public static class ViewImage
             Child = new StackPanel { Children = { image, footer } }
         };
         page.Measure(new Size(spec.PageWidth, double.PositiveInfinity));
-        var height = Math.Max(1, (int)Math.Ceiling(page.DesiredSize.Height));
+        var height = Math.Max(1, page.DesiredSize.Height);
         page.Arrange(new Rect(0, 0, spec.PageWidth, height));
-        var bytes = Encode(page, (int)spec.PageWidth, height, ViewImageFormat.Png);
+        var bytes = Encode(page, spec.PageWidth, height, ViewImageFormat.Png, spec.Dpi);
         source.Dispose();
         stream.Dispose();
         return bytes;
@@ -351,10 +289,23 @@ public static class ViewImage
         return Encode(visual, width, height, format);
     }
 
-    private static byte[] Encode(Control visual, int width, int height, ViewImageFormat format)
+    private static byte[] Encode(Control visual, double width, double height, ViewImageFormat format, double dpi = 96)
     {
-        var px = new PixelSize(Math.Max(1, width), Math.Max(1, height));
-        using var bitmap = new RenderTargetBitmap(px, new Vector(96, 96));
+        // 96 dpi keeps image export at the same pixel size as before. Print passes a higher dpi.
+        int pxW, pxH;
+        if (Math.Abs(dpi - 96) < 0.01)
+        {
+            dpi = 96;
+            pxW = Math.Max(1, (int)Math.Ceiling(width));
+            pxH = Math.Max(1, (int)Math.Ceiling(height));
+        }
+        else
+        {
+            pxW = Math.Max(1, (int)Math.Round(width * dpi / 96.0));
+            pxH = Math.Max(1, (int)Math.Round(height * dpi / 96.0));
+        }
+        var px = new PixelSize(pxW, pxH);
+        using var bitmap = new RenderTargetBitmap(px, new Vector(dpi, dpi));
         bitmap.Render(visual);
         using var ms = new MemoryStream();
         if (format == ViewImageFormat.Jpeg)
@@ -559,9 +510,27 @@ public readonly record struct ViewPrintResult(ViewPrintKind Kind, string? Detail
 
 public sealed class ViewPrintSpec
 {
-    public double PageWidth { get; init; } = 794; // A4 at 96 dpi
-    public double PageHeight { get; init; } = 1123;
+    public const double LayoutDpi = 96;
+    /// <summary>Print raster density. Image export stays at <see cref="LayoutDpi"/>.</summary>
+    public const double DefaultDpi = 200;
+    /// <summary>A4 width in pixels at <see cref="DefaultDpi"/> (210 mm).</summary>
+    public const int A4WidthPx = 1654;
+    /// <summary>A4 height in pixels at <see cref="DefaultDpi"/> (297 mm).</summary>
+    public const int A4HeightPx = 2339;
+    /// <summary>Band under the table reserved for the page number, in DIPs.</summary>
+    public const double FooterBand = 22;
+
+    /// <summary>Page width in DIPs. The default covers <see cref="A4WidthPx"/> pixels at <see cref="DefaultDpi"/>.</summary>
+    public double PageWidth { get; init; } = A4WidthPx * LayoutDpi / DefaultDpi;
+    /// <summary>Page height in DIPs. The default covers <see cref="A4HeightPx"/> pixels at <see cref="DefaultDpi"/>.</summary>
+    public double PageHeight { get; init; } = A4HeightPx * LayoutDpi / DefaultDpi;
     public double Margin { get; init; } = 36;
+    public double Dpi { get; init; } = DefaultDpi;
+
+    public int PixelWidth => Math.Max(1, (int)Math.Round(PageWidth * Dpi / LayoutDpi));
+    public int PixelHeight => Math.Max(1, (int)Math.Round(PageHeight * Dpi / LayoutDpi));
+    public double ContentWidth => Math.Max(1, PageWidth - Margin * 2);
+    public double ContentHeight => Math.Max(1, PageHeight - Margin * 2 - FooterBand);
 }
 
 public sealed class ViewImageOptions
