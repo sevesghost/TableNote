@@ -89,7 +89,8 @@ public partial class MainWindow : Window
         _loadWarning = loaded.Warning ?? startupMsg;
         _confirm = new DialogDeleteConfirm(this);
         InitSettings(); // v2.4.0: column settings item in the header menu
-        InitDetailPopup(); // detail button + nested table; wraps the column/row menu hooks (settings and groups stay)
+        InitDetailPopup(); // wraps settings, so detail items stay beside them
+        InitSizing(); // wraps that hook again: Column width… / Row height… plus the detail items
         InitAlertBoxes();
 
         MinWidth = 480;
@@ -1262,6 +1263,7 @@ public partial class MainWindow : Window
             Grid.SetColumn(cell, c + 1);
             grid.Children.Add(cell);
         }
+        ApplySavedRowHeight(grid, rowIndex); // v2.6: a set height clips; auto rows are unchanged
     }
 
     private (IBrush label, IBrush cell) RowBackground(int row) => WithRowStyle(row, StatusRowBackground(row)); // v2.4.0

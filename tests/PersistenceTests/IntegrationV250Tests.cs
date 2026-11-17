@@ -51,7 +51,8 @@ public static partial class T
             doc.ColumnGroups.Count == 0 &&
             CellDetailOps.IsEmpty(doc.CellDetails) &&
             doc.AlertBoxes.Count == 0 &&
-            doc.PartColors.Count == 0);
+            doc.PartColors.Count == 0 &&
+            doc.RowHeights.Count == 0);
         Ok("v2.4.2 unknown field is kept",
             doc.ExtraFields.TryGetValue("futureWidget", out var extra) && extra.GetProperty("keep").GetInt32() == 1);
 
@@ -72,7 +73,7 @@ public static partial class T
             saved.ExtraFields.TryGetValue("futureWidget", out var extra2) && extra2.GetProperty("keep").GetInt32() == 1);
         Ok("v2.4.2 round-trip does not invent detail tables, alert boxes, or part colors",
             CellDetailOps.IsEmpty(saved.CellDetails) && saved.AlertBoxes.Count == 0 &&
-            saved.ColumnGroups.Count == 0 && saved.PartColors.Count == 0);
+            saved.ColumnGroups.Count == 0 && saved.PartColors.Count == 0 && saved.RowHeights.Count == 0);
         using var json = JsonDocument.Parse(File.ReadAllText(path));
         Ok("v2.4.2 save writes version 5 and does not invent cellDetails",
             json.RootElement.GetProperty("version").GetInt32() == 5 &&

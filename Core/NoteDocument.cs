@@ -73,6 +73,8 @@ public sealed class NoteDocument
     /// <summary>Part id → background/text colour ("partColors"). No entry = the built-in colour.
     /// An alert box is <c>alert:{id}</c> in this map only. It does not read or write alertBoxes.</summary>
     public Dictionary<string, PartColor> PartColors { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>v2.6: pixel row height by row id ("rowHeights"). No entry = auto (the row grows with its text, at least 32 px). Only rows the user set are stored.</summary>
+    public Dictionary<string, int> RowHeights { get; set; } = new(StringComparer.Ordinal);
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();
     public bool LaunchAtLogin { get; set; }
@@ -242,6 +244,7 @@ public sealed class NoteDocument
         Acknowledged.Remove(id);
         Reminders.Remove(id);
         CellDetailOps.OnRowRemoved(this, id);
+        RowHeights?.Remove(id);
         return true;
     }
 
@@ -401,6 +404,7 @@ public sealed class NoteDocument
         CellDetails ??= new();
         AlertBoxes ??= [];
         PartColors ??= new(StringComparer.Ordinal);
+        RowHeights ??= new(StringComparer.Ordinal);
         if (AlertBoxOps.Normalize(AlertBoxes)) clipped = true;
         Window ??= new WindowMemory();
         Window.Width = Math.Clamp(Window.Width <= 0 ? 780 : Window.Width, 340, 5000);
@@ -424,6 +428,7 @@ public sealed class NoteDocument
         var dueIdx = DueColumnIndex();
         if (dueIdx >= 0 && (migrate || dueIdx >= widthsBefore) && ColumnWidths[dueIdx] == 140) ColumnWidths[dueIdx] = 200;
 
+        SizeSpec.PruneRowHeights(this); // drop heights of deleted rows and values outside 32–400 (never clamped)
         Version = Math.Max(Version, CurrentVersion); // never downgrade a newer file
         ColumnGroupOps.Sanitize(this); // unknown ids dropped; never rewrites cell text
         return clipped;

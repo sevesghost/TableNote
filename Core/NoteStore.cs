@@ -36,6 +36,9 @@ public static class NoteStore
         public JsonElement? AlertBoxes { get; set; }
         /// <summary>v2.5. Optional. Missing, null, or a bad value leaves every part on its built-in color.</summary>
         public JsonElement? PartColors { get; set; }
+        /// <summary>v2.6: row id → pixel height. Null when no row was given a height, so old files stay unchanged.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, int>? RowHeights { get; set; }
     }
 
     /// <summary>Problems found while reading optional sections (logged, not shown as "file corrupt").</summary>
@@ -111,7 +114,8 @@ public static class NoteStore
         "columnGroups", // collapsible column groups; missing on older files
         "cellDetails", // nested detail tables; document version is unchanged until the integrator bumps it
         "alertBoxes", // optional; missing or bad → no boxes
-        "partColors" // v2.5, optional. An alert box color is alert:{id} here, not on the box.
+        "partColors", // v2.5, optional. An alert box color is alert:{id} in this map.
+        "rowHeights" // v2.6; missing means every row is auto
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)
@@ -346,6 +350,28 @@ public static class NoteStore
         return parsed.RootElement.Clone();
     }
 
+    /// <summary>v2.6: lenient parse of "rowHeights" {rowId: pixels}. Missing field = every row auto.
+    /// A bad value is skipped (not clamped); the rest of the file still opens.</summary>
+    internal static Dictionary<string, int> ParseRowHeights(JsonElement? el)
+    {
+        var map = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (el is not { } e || e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return map;
+        if (e.ValueKind != JsonValueKind.Object) { LastLoadIssues.Add("rowHeights: not an object, all skipped"); return map; }
+        foreach (var p in e.EnumerateObject())
+        {
+            int? n = null;
+            if (p.Value.ValueKind == JsonValueKind.Number && p.Value.TryGetInt32(out var i)) n = i;
+            else if (p.Value.ValueKind == JsonValueKind.String && int.TryParse((p.Value.GetString() ?? "").Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var s)) n = s;
+            if (n is not int h || h < SizeSpec.MinRowHeight || h > SizeSpec.MaxRowHeight)
+            {
+                LastLoadIssues.Add($"rowHeights.{p.Name}: value {p.Value.GetRawText()} is not a row height from {SizeSpec.MinRowHeight} to {SizeSpec.MaxRowHeight}, skipped");
+                continue;
+            }
+            map[p.Name] = h;
+        }
+        return map;
+    }
+
     private static void LogIssues(string path)
     {
         if (LastLoadIssues.Count == 0) return;
@@ -534,6 +560,7 @@ public static class NoteStore
                 CellDetails = cellDetails,
                 AlertBoxes = AlertBoxOps.Parse(Prop(root, "alertBoxes"), LastLoadIssues.Add),
                 PartColors = ParsePartColors(Prop(root, "partColors")),
+                RowHeights = ParseRowHeights(Prop(root, "rowHeights")), // v2.6
                 Window = new WindowMemory
                 {
                     Width = win is { } a ? GetInt(a, "width", 720, true, "window.") : 720,
@@ -757,6 +784,7 @@ public static class NoteStore
             ColumnGroups = ColumnGroupOps.Clone(doc.ColumnGroups),
             AlertBoxes = AlertBoxOps.ToElement(doc.AlertBoxes),
             PartColors = PartColorsElement(doc),
+            RowHeights = doc.RowHeights is { Count: > 0 } ? new Dictionary<string, int>(doc.RowHeights) : null, // v2.6
             Window = new WindowDto
             {
                 Width = doc.Window.Width,

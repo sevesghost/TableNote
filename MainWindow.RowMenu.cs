@@ -98,6 +98,7 @@ public partial class MainWindow
         var fixedCount = menu.Items.Count;
         menu.Opening += (_, _) =>
         {
+            NoteSizingSelection(); // v2.6: Row height… applies to the shift-selection, read before ChooseRow
             _session.ChooseRow(rowIndex);
             Highlight();
             UpdateStatus();
