@@ -590,9 +590,12 @@ OnUi(() =>
             CellColors = absentPaints.CellColors
         });
         absentPng = ViewImage.Render(absent, ViewImageFormat.Png, new ViewImageOptions { Now = new DateTime(2026, 6, 1) });
-        absentPage = ViewImage.RenderPrintPng(absent, new ViewImageOptions { Now = new DateTime(2026, 6, 1) });
+        var absentPages = ViewImage.RenderPrintPages(absent, new ViewImageOptions { Now = new DateTime(2026, 6, 1) });
+        absentPage = absentPages.Count > 0 ? absentPages[0] : [];
         Ok("image plan omits removed status and reminder columns",
             absentPlan.Headers.SequenceEqual(absent.Columns) && !absentPlan.Headers.Contains("Status") && !absentPlan.Headers.Contains("Due date"));
+        Ok("paginated print still yields a page when status and due are absent",
+            absentPages.Count >= 1 && absentPage.Length > 32);
     }
     catch (Exception ex) { absentEx = ex; }
     Ok("image and print do not throw when status and the reminder column are absent",
