@@ -295,12 +295,13 @@ public partial class MainWindow
         {
             var id = doc.ColumnIdAt(column);
             var room = NoteDocument.MaxUserColumns - doc.Columns.Count;
-            var make = GroupItem(Localizer.T("colgroup.make"), edit && room >= 1, () =>
+            var system = ColumnSettingsOps.IsSystemColumn(doc, column);
+            var make = GroupItem(Localizer.T("colgroup.make"), edit && room >= 1 && !system, () =>
             {
                 var idx = _session.Doc.ColumnIds.IndexOf(id);
                 if (idx >= 0) RequestMakeGroup(idx);
             });
-            ToolTip.SetTip(make, Localizer.T("colgroup.make_tip"));
+            ToolTip.SetTip(make, system ? Localizer.T("colgroup.system") : Localizer.T("colgroup.make_tip"));
             items.Add(make);
         }
         return items;
@@ -322,8 +323,9 @@ public partial class MainWindow
     private void RequestUngroup(int column) =>
         _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.colgroup_ungroup"), () => Task.FromResult(ApplyGroupEdit(column, ColumnGroupOps.Ungroup, "colgroup.ungrouped"))));
 
+    // View state only: persisted, but not an undo step, so Ctrl+Z skips it.
     private void RequestToggleGroup(int column) =>
-        _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.colgroup_toggle"), () => ToggleGroupAsync(column)));
+        _ = RunStructureAsync(() => ToggleGroupAsync(column));
 
     private void RequestRenameChildren(int column) =>
         _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.colgroup_rename"), () => RenameChildrenAsync(column)));

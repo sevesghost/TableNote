@@ -259,7 +259,7 @@ public static class Snapshot
         doc.ColumnWidths = d.ColumnWidths;
         doc.ColumnSettings = ColumnSettingsOps.Clone(d.ColumnSettings); // v2.4.0
         doc.RowStyles = RowStyleOps.Clone(d.RowStyles);
-        doc.ColumnGroups = ColumnGroupOps.Clone(d.ColumnGroups);
+        ColumnGroupOps.RestoreGroups(doc, d.ColumnGroups);
         doc.RowIds = order;
         doc.Rows = order.Select(id => snapRows[id].ToList()).ToList();
         doc.Recurrence = new Dictionary<string, string>(d.Recurrence, StringComparer.Ordinal);

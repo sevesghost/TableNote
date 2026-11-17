@@ -30,6 +30,22 @@ public static class ColumnGroupOps
     /// <summary>Cap on children of one group (the table's own column cap still applies).</summary>
     public const int MaxChildCount = 12;
 
+    /// <summary>
+    /// Put <paramref name="snapshot"/> groups back. Expanded is view state: a group that is still on screen
+    /// keeps the expanded flag it has now, so undo/redo does not replay a collapse or expand.
+    /// </summary>
+    public static void RestoreGroups(NoteDocument doc, List<ColumnGroup>? snapshot)
+    {
+        var live = new Dictionary<string, bool>(StringComparer.Ordinal);
+        foreach (var g in doc.ColumnGroups ?? [])
+            if (g != null && !string.IsNullOrEmpty(g.ParentId))
+                live[g.ParentId] = g.Expanded;
+        doc.ColumnGroups = Clone(snapshot);
+        foreach (var g in doc.ColumnGroups)
+            if (g.ParentId != null && live.TryGetValue(g.ParentId, out var expanded))
+                g.Expanded = expanded;
+    }
+
     public static List<ColumnGroup> Clone(List<ColumnGroup>? groups) =>
         (groups ?? []).Where(g => g != null).Select(g => new ColumnGroup
         {
@@ -90,6 +106,7 @@ public static class ColumnGroupOps
         doc.EnsureColumnRoles();
         doc.ColumnGroups ??= [];
         if (parent < 0 || parent >= doc.Columns.Count) return GroupEdit.Fail(Localizer.T("colgroup.not_column"));
+        if (ColumnSettingsOps.IsSystemColumn(doc, parent)) return GroupEdit.Fail(Localizer.T("colgroup.system"));
         if (childCount < MinChildCount || childCount > MaxChildCount)
             return GroupEdit.Fail(Localizer.T("colgroup.bad_count", MinChildCount, MaxChildCount));
         var parentId = doc.ColumnIdAt(parent);

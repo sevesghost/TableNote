@@ -53,7 +53,18 @@ public static class ExcelPaste
 			}
 		}
 		int num2 = startRow + grid.Count;
-		int num3 = startCol + num;
+		if (num == 0)
+		{
+			return GridPasteResult.Applied(grid.Count, 0);
+		}
+		// Hidden children of a collapsed group are width 0. Paste walks visible columns only,
+		// so a multi-column paste does not write into those cells.
+		List<int> targets = PasteTargets(doc, startCol, num);
+		if (targets.Count < num)
+		{
+			return GridPasteResult.Rejected(Localizer.T("paste.too_many_columns", NoteDocument.MaxUserColumns));
+		}
+		int num3 = targets[targets.Count - 1] + 1;
 		// P3: check the whole block BEFORE changing anything (rows, columns and content stay as they were).
 		if (num2 > TableLimits.MaxRows)
 		{
@@ -85,10 +96,23 @@ public static class ExcelPaste
 			List<string> list2 = grid[i];
 			for (int j = 0; j < list2.Count; j++)
 			{
-				list[startCol + j] = list2[j];
+				list[targets[j]] = list2[j];
 			}
 		}
 		return GridPasteResult.Applied(grid.Count, num);
+	}
+
+	/// <summary>Visible column indexes for a paste of <paramref name="width"/> cells starting at <paramref name="startCol"/>.</summary>
+	private static List<int> PasteTargets(NoteDocument doc, int startCol, int width)
+	{
+		var targets = new List<int>(width);
+		var limit = System.Math.Max(doc.Columns.Count, NoteDocument.MaxUserColumns);
+		for (var col = startCol; targets.Count < width && col < limit; col++)
+		{
+			if (col >= doc.Columns.Count || !ColumnGroupOps.IsHidden(doc, col))
+				targets.Add(col);
+		}
+		return targets;
 	}
 
 	public static bool TryRead(string text, out List<List<string>> grid, out string? error)

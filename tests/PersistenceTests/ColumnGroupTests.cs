@@ -106,19 +106,18 @@ public static partial class T
         var snapshot = AllCells(d);
         var cols = d.Columns.Count;
         var undo = new UndoStack();
-        var beforeToggle = Snapshot.CloneLite(d);
+        var beforeEdit = Snapshot.CloneLite(d);
+        d.SetCellRaw(0, 0, "changed-title");
+        undo.Push(new SnapshotAction("edit header cell", beforeEdit, Snapshot.CloneLite(d)));
+        var steps = undo.Count;
         ColumnGroupOps.Toggle(d, d.ColumnIds.IndexOf(d.ColumnGroups[0].ParentId));
-        undo.Push(new SnapshotAction(Localizer.T("undo.colgroup_toggle"), beforeToggle, Snapshot.CloneLite(d)));
-        Ok("toggle collapse does not change column count or any cell",
-            !d.ColumnGroups[0].Expanded && d.Columns.Count == cols &&
-            AllCells(d).OrderBy(kv => kv.Key).SequenceEqual(snapshot.OrderBy(kv => kv.Key)));
+        Ok("toggle collapse does not change column count or any child cell and is not an undo step",
+            !d.ColumnGroups[0].Expanded && d.Columns.Count == cols && undo.Count == steps &&
+            Cell(d, 0, ids[0]) == "r0c0" && d.GetCell(0, 0) == "changed-title");
         undo.Undo(d);
-        Ok("undo collapse shows the children again and keeps the text",
-            d.ColumnGroups.Count == 1 && d.ColumnGroups[0].Expanded &&
-            AllCells(d).OrderBy(kv => kv.Key).SequenceEqual(snapshot.OrderBy(kv => kv.Key)));
-        undo.Redo(d);
-        Ok("redo collapse hides again without dropping text",
-            !d.ColumnGroups[0].Expanded && Cell(d, 3, ids[2]) == "r3c2");
+        Ok("undo skips the toggle: the cell reverts and the group stays collapsed",
+            d.ColumnGroups.Count == 1 && !d.ColumnGroups[0].Expanded && d.GetCell(0, 0) == "หัวกลุ่ม" &&
+            Cell(d, 3, ids[2]) == "r3c2");
 
         var beforeUngroup = Snapshot.CloneLite(d);
         var parentIndex = d.ColumnIds.IndexOf(d.ColumnGroups[0].ParentId);
@@ -213,5 +212,46 @@ public static partial class T
         while (full.Columns.Count < NoteDocument.MaxUserColumns) full.AddColumn();
         var denied = ColumnGroupOps.Create(full, 0, 3);
         Ok("no room for a group at the column cap", !denied.Ok && full.Columns.Count == NoteDocument.MaxUserColumns && full.ColumnGroups.Count == 0);
+    }
+
+    public static void TestSystemColumnsCannotBeGrouped()
+    {
+        var d = Sample(2);
+        var before = AllCells(d);
+        var status = d.StatusColumnIndex();
+        var due = d.DueColumnIndex();
+        var rs = ColumnGroupOps.Create(d, status, 3);
+        var rd = ColumnGroupOps.Create(d, due, 3);
+        Ok("status and due cannot become a group",
+            status >= 0 && due >= 0 && !rs.Ok && !rd.Ok && rs.Error == Localizer.T("colgroup.system") && rd.Error == Localizer.T("colgroup.system") &&
+            d.ColumnGroups.Count == 0 && d.Columns.Count == 4 &&
+            AllCells(d).OrderBy(kv => kv.Key).SequenceEqual(before.OrderBy(kv => kv.Key)));
+        Localizer.SetLanguage("th");
+        var th = Localizer.T("colgroup.system");
+        Localizer.SetLanguage("en");
+        Ok("system-column message exists in Thai and English",
+            th.Contains("ยุบ") && !th.Contains("ย่อ") && Localizer.T("colgroup.system").Contains("Status"));
+    }
+
+    public static void TestPasteSkipsCollapsedChildren()
+    {
+        var d = Sample(2);
+        d.Columns[1] = "ข้อมูล";
+        Ok("paste setup", ColumnGroupOps.Create(d, 1, 3).Ok);
+        var children = d.ColumnGroups[0].ChildIds.ToList();
+        d.SetCellRaw(0, d.ColumnIds.IndexOf(children[0]), "secret-a");
+        d.SetCellRaw(0, d.ColumnIds.IndexOf(children[1]), "secret-b");
+        d.SetCellRaw(0, d.ColumnIds.IndexOf(children[2]), "secret-c");
+        ColumnGroupOps.SetExpanded(d, 1, false);
+        var status = d.StatusColumnIndex();
+        var due = d.DueColumnIndex();
+        var pasted = ExcelPaste.Apply(d, 0, 1, "PARENT\tSTATUS\tDUE");
+        Ok("paste across a collapsed group is accepted", pasted.Kind == GridPasteKind.Applied, pasted.Message ?? "");
+        Ok("paste lands on visible columns and leaves hidden child cells",
+            d.GetCell(0, 1) == "PARENT" && d.GetCell(0, status) == "STATUS" && d.GetCell(0, due) == "DUE" &&
+            Cell(d, 0, children[0]) == "secret-a" && Cell(d, 0, children[1]) == "secret-b" && Cell(d, 0, children[2]) == "secret-c");
+        var open = Sample(1);
+        var plain = ExcelPaste.Apply(open, 0, 0, "a\tb");
+        Ok("paste with no group still fills neighbouring columns", plain.Kind == GridPasteKind.Applied && open.GetCell(0, 0) == "a" && open.GetCell(0, 1) == "b");
     }
 }
