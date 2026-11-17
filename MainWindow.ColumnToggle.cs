@@ -52,6 +52,7 @@ public partial class MainWindow
 
     private Task AddSystemColumnAsync(string role)
     {
+        if (_view != ViewMode.Edit) return Task.CompletedTask;
         var err = _session.AddSystemColumn(role);
         if (err != null) { StatusText.Text = err; return Task.CompletedTask; }
         Rebuild();

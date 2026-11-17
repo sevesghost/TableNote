@@ -328,13 +328,14 @@ public partial class MainWindow
         foreach (var refresh in _menuTextRefresh) refresh();
     }
 
-    /// <summary>Reserved table-menu slots. Disabled while that column exists, enabled after it was removed.</summary>
+    /// <summary>Reserved table-menu slots. Disabled in view mode, and while that column already exists.</summary>
     private void ApplySpecialColumnSpots()
     {
         var doc = _session.Doc;
-        _spotAddDueItem.IsEnabled = MenuCommandRules.AddDueColumn(doc);
-        _spotAddStatusItem.IsEnabled = MenuCommandRules.AddStatusColumn(doc);
-        ToolTip.SetTip(_spotAddDueItem, _spotAddDueItem.IsEnabled ? null : Localizer.T("col.only_one_due"));
-        ToolTip.SetTip(_spotAddStatusItem, _spotAddStatusItem.IsEnabled ? null : Localizer.T("col.only_one_status"));
+        var edit = _view == ViewMode.Edit && !_busy;
+        _spotAddDueItem.IsEnabled = edit && MenuCommandRules.AddDueColumn(doc);
+        _spotAddStatusItem.IsEnabled = edit && MenuCommandRules.AddStatusColumn(doc);
+        ToolTip.SetTip(_spotAddDueItem, MenuCommandRules.AddDueColumn(doc) ? null : Localizer.T("col.only_one_due"));
+        ToolTip.SetTip(_spotAddStatusItem, MenuCommandRules.AddStatusColumn(doc) ? null : Localizer.T("col.only_one_status"));
     }
 }
