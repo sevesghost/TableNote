@@ -143,9 +143,10 @@ public static class ViewPrintPdf
             Obj(pageId, () => Text("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + pageW + " " + pageH
                 + "] /Contents " + contentId.ToString(CultureInfo.InvariantCulture)
                 + " 0 R /Resources << /XObject << /Im0 " + imageId.ToString(CultureInfo.InvariantCulture) + " 0 R >> >> >>"));
-            // Bitmap rows are top to bottom. PDF user space grows upward, so the image is flipped
-            // onto the page (first row at the top). One document, one Windows print verb.
-            var content = Encoding.ASCII.GetBytes("q\n" + pageW + " 0 0 -" + pageH + " 0 " + pageH + " cm\n/Im0 Do\nQ\n");
+            // Samples are stored with the first row at the top. The Do operator already maps that
+            // row to the top of the unit square, so the scale stays positive. A negative page height
+            // turns the page upside down (checked by rendering the PDF).
+            var content = Encoding.ASCII.GetBytes("q\n" + pageW + " 0 0 " + pageH + " 0 0 cm\n/Im0 Do\nQ\n");
             Obj(contentId, () =>
             {
                 Text("<< /Length " + content.Length.ToString(CultureInfo.InvariantCulture) + " >>\nstream\n");

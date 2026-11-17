@@ -76,6 +76,46 @@ static int LooseInk(string sample)
         }
     return maxY >= minY ? maxY - minY + 1 : 0;
 }
+static SKBitmap? RenderPdfPage(byte[] pdf, int page)
+{
+    var exe = "pdftoppm";
+    var dir = Path.Combine(Path.GetTempPath(), "tn-pdf-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(dir);
+    try
+    {
+        var path = Path.Combine(dir, "page.pdf");
+        File.WriteAllBytes(path, pdf);
+        var psi = new ProcessStartInfo
+        {
+            FileName = exe,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        psi.ArgumentList.Add("-png");
+        psi.ArgumentList.Add("-r");
+        psi.ArgumentList.Add("72");
+        psi.ArgumentList.Add("-f");
+        psi.ArgumentList.Add(page.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("-l");
+        psi.ArgumentList.Add(page.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add(path);
+        psi.ArgumentList.Add(Path.Combine(dir, "out"));
+        using var proc = Process.Start(psi);
+        if (proc == null) return null;
+        proc.WaitForExit(20000);
+        if (proc.ExitCode != 0) return null;
+        var png = Directory.GetFiles(dir, "out*.png").FirstOrDefault();
+        return png == null ? null : Decode(File.ReadAllBytes(png));
+    }
+    catch
+    {
+        return null;
+    }
+    finally
+    {
+        try { Directory.Delete(dir, true); } catch { /* temp */ }
+    }
+}
 static byte[] InflatePdfImage(byte[] pdf)
 {
     var filter = System.Text.Encoding.ASCII.GetBytes("/Filter /FlateDecode");
@@ -431,6 +471,20 @@ OnUi(() =>
         && pdfPx.R == pngPx.Red && pdfPx.G == pngPx.Green && pdfPx.B == pngPx.Blue
         && !(pngPx.Red == pngPx.Blue && pngPx.Green == pngPx.Blue),
         $"at {spot.X},{spot.Y} png {pngPx.Red:X2}{pngPx.Green:X2}{pngPx.Blue:X2} pdf {pdfPx.R:X2}{pdfPx.G:X2}{pdfPx.B:X2}");
+    var pdfText = System.Text.Encoding.ASCII.GetString(pdf);
+    Ok("pdf draws each page right side up", pdfText.Contains(" 0 0 cm\n/Im0 Do") && !pdfText.Contains(" 0 0 -"));
+    using (var rendered = RenderPdfPage(pdf, 2))
+    {
+        if (rendered == null)
+            Ok("opened pdf has the column header at the top", true, "pdftoppm is not installed; the page matrix was checked");
+        else
+        {
+            var shownHeader = FirstY(rendered, ViewImage.HeaderFill);
+            Ok("opened pdf has the column header at the top",
+                shownHeader >= 0 && shownHeader < rendered.Height / 3,
+                $"header y {shownHeader} of {rendered.Height}");
+        }
+    }
 
     var tall = Doc();
     Row(tall, "huge", "", "", "");

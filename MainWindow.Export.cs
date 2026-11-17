@@ -160,7 +160,7 @@ public partial class MainWindow
             }
             var dlg = new ViewPrintWindow(paths, job);
             await dlg.ShowDialog(this);
-            StatusText.Text = Localizer.T("print.preview_title");
+            UpdateStatus();
         }
         catch (Exception ex)
         {
@@ -249,12 +249,14 @@ public sealed class ViewPrintWindow : Window
         {
             foreach (var page in _paths)
             {
-                var bitmap = new Bitmap(page);
+                // Screen-sized copy for the preview. The file on disk stays at print resolution.
+                var bitmap = LoadPreview(page);
                 _bitmaps.Add(bitmap);
                 pages.Children.Add(new Image
                 {
                     Source = bitmap,
-                    Stretch = Stretch.None,
+                    Stretch = Stretch.Uniform,
+                    MaxWidth = PreviewWidth,
                     HorizontalAlignment = HorizontalAlignment.Center
                 });
             }
@@ -280,9 +282,19 @@ public sealed class ViewPrintWindow : Window
         };
     }
 
+    /// <summary>Preview bitmaps are decoded to this width so a long table does not keep every 200 dpi page in memory.</summary>
+    public const int PreviewWidth = 880;
+
+    private static Bitmap LoadPreview(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Bitmap.DecodeToWidth(stream, PreviewWidth);
+    }
+
     /// <summary>
     /// One shell print. A multi-page preview prints the combined PDF when that file exists.
-    /// A failed PDF falls back to the page images. Nothing here deletes the temp files.
+    /// If that program has no print verb, the page images are sent instead (one dialog each).
+    /// Nothing here deletes the temp files.
     /// </summary>
     private ViewPrintResult SendToPrinter()
     {

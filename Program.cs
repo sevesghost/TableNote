@@ -31,7 +31,8 @@ internal static class Program
         }
 
         CrashLog.Install(); // v2.4.2: unhandled exceptions go to tablenote.log (UI-thread ones no longer end the app)
-        ViewPrintFiles.CleanupExpired(); // print PNGs/PDFs older than an hour; the preview does not delete them
+        // Old print files. Off the startup path so a large temp folder does not delay the window.
+        Task.Run(static () => ViewPrintFiles.CleanupExpired());
         _signal = new EditorSignal(EditorSignal.DefaultPipeName);
         _signalStarted = _signal.TryStart(
             () => EditRequested?.Invoke(),
