@@ -17,7 +17,7 @@ public partial class MainWindow
             _session.Doc.PartColors.TryGetValue(key, out var c) ? c : null;
         _colorButton = new Button { Classes = { "tool" } };
         _colorButton.Click += async (_, _) => await OpenColorDialog();
-        EditTools.Children.Insert(0, _colorButton);
+        TableEditTools.Children.Insert(0, _colorButton);
         ApplyChromeColors();
     }
 
@@ -82,13 +82,7 @@ public partial class MainWindow
         var barFg = PartColorPainter.TryBrush(bar?.Foreground);
         ToolScroll.Background = barBg ?? Brushes.Transparent;
         EditTools.Background = barBg ?? Brushes.Transparent;
-        foreach (var child in EditTools.Children.OfType<TemplatedControl>())
-        {
-            if (barBg != null) child.Background = barBg;
-            else child.ClearValue(TemplatedControl.BackgroundProperty);
-            if (barFg != null) child.Foreground = barFg;
-            else child.ClearValue(TemplatedControl.ForegroundProperty);
-        }
+        PaintToolbar(EditTools, barBg, barFg);
 
         var status = PartColorStore.Get(PartColorKeys.Status);
         StatusText.Foreground = PartColorPainter.TryBrush(status?.Foreground) ?? new SolidColorBrush(Color.Parse("#6B5E48"));
@@ -161,6 +155,27 @@ public partial class MainWindow
         if (row >= 0 && row < _session.Doc.Rows.Count)
             fg = PartColorPainter.TryBrush(PartColorStore.Get(PartColorKeys.RowNum(_session.Doc.RowIdAt(row)))?.Foreground);
         return (LabelBrushFor(row, RowNumberBackground(row)), fg ?? TextFg);
+    }
+
+    /// <summary>Toolbar buttons sit inside group borders now, so the colour has to walk the tree.</summary>
+    private static void PaintToolbar(Control root, IBrush? barBg, IBrush? barFg)
+    {
+        if (root is TemplatedControl control)
+        {
+            if (barBg != null) control.Background = barBg;
+            else control.ClearValue(TemplatedControl.BackgroundProperty);
+            if (barFg != null) control.Foreground = barFg;
+            else control.ClearValue(TemplatedControl.ForegroundProperty);
+        }
+        if (root is Border group && group.Classes.Contains("toolgroup") && barBg != null)
+            group.Background = barBg;
+        if (root is Panel panel)
+        {
+            foreach (var child in panel.Children)
+                PaintToolbar(child, barBg, barFg);
+        }
+        else if (root is Decorator { Child: Control child })
+            PaintToolbar(child, barBg, barFg);
     }
 
     private void ApplyColorButtonText()

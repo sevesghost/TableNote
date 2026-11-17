@@ -66,16 +66,7 @@ public partial class MainWindow
             OpenDetailPopup(row, column);
         };
 
-        var open = new MenuItem { Header = Localizer.T("detail.open"), FontFamily = AppFonts.Thai };
-        open.Click += (_, _) => OpenDetailPopup(row, column);
-        var hide = new MenuItem
-        {
-            Header = Localizer.T("detail.hide_cell"),
-            FontFamily = AppFonts.Thai,
-            IsEnabled = _view == ViewMode.Edit
-        };
-        hide.Click += (_, _) => ToggleCellButton(row, column, false);
-        button.ContextMenu = new ContextMenu { Items = { open, hide } };
+        button.ContextMenu = new ContextMenu { ItemsSource = BuildDetailButtonMenuItems(row, column) };
 
         var grid = new Grid
         {
@@ -97,7 +88,11 @@ public partial class MainWindow
     private IEnumerable<Control> DetailColumnMenu(int column)
     {
         var edit = _view == ViewMode.Edit;
-        var columnItem = new MenuItem { FontFamily = AppFonts.Thai, IsEnabled = edit };
+        var columnItem = new MenuItem
+        {
+            FontFamily = AppFonts.Thai,
+            IsEnabled = MenuCommandRules.DetailColumnToggle(edit, column, _session.Doc.Columns.Count)
+        };
         void RefreshColumn()
         {
             var on = CellDetailOps.ColumnButtonOn(_session.Doc, column);
@@ -111,7 +106,11 @@ public partial class MainWindow
             ToggleColumnButton(column, on);
         };
 
-        var cellItem = new MenuItem { FontFamily = AppFonts.Thai, IsEnabled = edit && _session.Doc.Rows.Count > 0 };
+        var cellItem = new MenuItem
+        {
+            FontFamily = AppFonts.Thai,
+            IsEnabled = MenuCommandRules.DetailCellToggle(edit, column, _session.Doc.Columns.Count, _session.Doc.Rows.Count)
+        };
         void RefreshCell()
         {
             var row = _session.TargetRow();
@@ -129,10 +128,45 @@ public partial class MainWindow
         return [columnItem, cellItem];
     }
 
+    /// <summary>Open / Hide from the detail button. The top menu uses the same pair for the selected cell.</summary>
+    internal List<Control> BuildDetailButtonMenuItems(int row, int column)
+    {
+        var shows = CellDetailOps.ShowsButton(_session.Doc, row, column);
+        var open = new MenuItem
+        {
+            Header = Localizer.T("detail.open"),
+            FontFamily = AppFonts.Thai,
+            IsEnabled = MenuCommandRules.DetailOpen(shows)
+        };
+        open.Click += (_, _) => OpenDetailPopup(row, column);
+        var hide = new MenuItem
+        {
+            Header = Localizer.T("detail.hide_cell"),
+            FontFamily = AppFonts.Thai,
+            IsEnabled = MenuCommandRules.DetailHide(_view == ViewMode.Edit, shows)
+        };
+        hide.Click += (_, _) => ToggleCellButton(row, column, false);
+        return [open, hide];
+    }
+
     private IEnumerable<Control> DetailRowMenu(string rowId)
     {
         var row = _session.Doc.RowIds.IndexOf(rowId);
-        if (row < 0 || _session.Doc.Columns.Count == 0) yield break;
+        if (row < 0 || _session.Doc.Columns.Count == 0)
+        {
+            // The row context menu omits this item when the row is gone or there is no column.
+            // The top menu still lists it, disabled, so the command stays visible with no target.
+            if (rowId.Length == 0)
+            {
+                yield return new MenuItem
+                {
+                    Header = Localizer.T("detail.row_toggle", "—"),
+                    FontFamily = AppFonts.Thai,
+                    IsEnabled = MenuCommandRules.DetailRowToggle(false, false, false)
+                };
+            }
+            yield break;
+        }
         var column = _session.ActiveCol >= 0 && _session.ActiveCol < _session.Doc.Columns.Count ? _session.ActiveCol : 0;
         var name = _session.Doc.Columns[column];
         var on = CellDetailOps.ShowsButton(_session.Doc, row, column);
@@ -140,7 +174,7 @@ public partial class MainWindow
         {
             Header = (on ? "✓ " : "") + Localizer.T("detail.row_toggle", name),
             FontFamily = AppFonts.Thai,
-            IsEnabled = _view == ViewMode.Edit
+            IsEnabled = MenuCommandRules.DetailRowToggle(_view == ViewMode.Edit, true, true)
         };
         var col = column;
         item.Click += (_, _) => ToggleCellButton(row, col, !CellDetailOps.ShowsButton(_session.Doc, row, col));

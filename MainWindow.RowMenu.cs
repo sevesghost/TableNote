@@ -80,6 +80,30 @@ public partial class MainWindow
     private ContextMenu BuildRowMenu(int rowIndex)
     {
         var menu = new ContextMenu { FontFamily = AppFonts.Thai };
+        void Fill()
+        {
+            menu.Items.Clear();
+            foreach (var c in CreateRowMenuItems(rowIndex)) menu.Items.Add(c);
+        }
+        menu.Opening += (_, _) =>
+        {
+            NoteSizingSelection(); // v2.6: Row height… applies to the shift-selection, read before ChooseRow
+            _session.ChooseRow(rowIndex);
+            Highlight();
+            UpdateStatus();
+            Fill();
+        };
+        Fill();
+        return menu;
+    }
+
+    /// <summary>
+    /// Move commands plus the row-style, detail, and row-height items. Shared by the row-number
+    /// context menu and the top Row menu. A negative <paramref name="rowIndex"/> lists every command disabled.
+    /// </summary>
+    internal List<Control> CreateRowMenuItems(int rowIndex)
+    {
+        var edit = _view == ViewMode.Edit;
         var items = new (RowMoveKind kind, string key, KeyGesture? gesture)[]
         {
             (RowMoveKind.Up, "row.move_up", new KeyGesture(Key.Up, KeyModifiers.Alt | KeyModifiers.Shift)),
@@ -87,32 +111,34 @@ public partial class MainWindow
             (RowMoveKind.Top, "row.move_top", null),
             (RowMoveKind.Bottom, "row.move_bottom", null),
         };
-        var built = new List<(MenuItem item, RowMoveKind kind)>();
+        var list = new List<Control>();
         foreach (var (kind, key, gesture) in items)
         {
-            var mi = new MenuItem { Header = Localizer.T(key), InputGesture = gesture, FontFamily = AppFonts.Thai };
-            mi.Click += (_, _) => _ = RunStructureAsync(() => { MoveRowBy(rowIndex, kind, focus: false); return Task.CompletedTask; });
-            menu.Items.Add(mi);
-            built.Add((mi, kind));
+            var move = kind;
+            var mi = new MenuItem
+            {
+                Header = key switch
+                {
+                    "row.move_up" => Localizer.T("row.move_up"),
+                    "row.move_down" => Localizer.T("row.move_down"),
+                    "row.move_top" => Localizer.T("row.move_top"),
+                    "row.move_bottom" => Localizer.T("row.move_bottom"),
+                    _ => Localizer.T(key)
+                },
+                InputGesture = gesture,
+                FontFamily = AppFonts.Thai,
+                IsEnabled = MenuCommandRules.RowMove(edit, _busy, _visibleRows, rowIndex, move)
+            };
+            mi.Click += (_, _) => _ = RunStructureAsync(() => { MoveRowBy(rowIndex, move, focus: false); return Task.CompletedTask; });
+            list.Add(mi);
         }
-        var fixedCount = menu.Items.Count;
-        menu.Opening += (_, _) =>
-        {
-            NoteSizingSelection(); // v2.6: Row height… applies to the shift-selection, read before ChooseRow
-            _session.ChooseRow(rowIndex);
-            Highlight();
-            UpdateStatus();
-            foreach (var (mi, kind) in built)
-                mi.IsEnabled = !_busy && RowOps.TargetFor(_visibleRows, rowIndex, kind) >= 0;
-            // Re-create the extension entries on every open so they reflect the row's current state.
-            while (menu.Items.Count > fixedCount) menu.Items.RemoveAt(menu.Items.Count - 1);
-            if (_extraRowMenuItems == null || rowIndex < 0 || rowIndex >= _session.Doc.Rows.Count) return;
-            var extra = _extraRowMenuItems(_session.Doc.RowIdAt(rowIndex))?.ToList();
-            if (extra is not { Count: > 0 }) return;
-            menu.Items.Add(new Separator());
-            foreach (var c in extra) menu.Items.Add(c);
-        };
-        return menu;
+        if (_extraRowMenuItems == null) return list;
+        var rowId = rowIndex >= 0 && rowIndex < _session.Doc.Rows.Count ? _session.Doc.RowIdAt(rowIndex) : "";
+        var extra = _extraRowMenuItems(rowId)?.ToList();
+        if (extra is not { Count: > 0 }) return list;
+        list.Add(new Separator());
+        list.AddRange(extra);
+        return list;
     }
 
     /// <summary>Alt+Shift+↑/↓ moves the selected row (columns use Alt+Shift+←/→).</summary>

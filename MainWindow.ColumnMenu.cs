@@ -133,34 +133,46 @@ public partial class MainWindow
     }
 
     /// <summary>Header menu: cut/copy/paste of the header text, move, delete (always confirmed), plus other teams' items.</summary>
-    private ContextMenu BuildColumnMenu(int column, TextBox? box)
+    private ContextMenu BuildColumnMenu(int column, TextBox? box) =>
+        new() { ItemsSource = BuildColumnMenuItems(column, box) };
+
+    /// <summary>
+    /// Items for the header menu and for the top Column menu. <paramref name="keepClipboardSlot"/>
+    /// keeps Cut / Copy / Paste visible (disabled) when there is no header box, which the menu bar
+    /// needs for a collapsed column. The grip context menu leaves the flag off and omits them.
+    /// </summary>
+    internal List<Control> BuildColumnMenuItems(int column, TextBox? box, bool keepClipboardSlot = false)
     {
         var count = _session.Doc.Columns.Count;
         var edit = _view == ViewMode.Edit;
         var items = new List<Control>();
-        if (box != null)
+        if (box != null || keepClipboardSlot)
         {
-            var cut = new MenuItem { Header = Localizer.T("col.cut"), InputGesture = new KeyGesture(Key.X, KeyModifiers.Control) };
-            cut.Click += (_, _) => box.Cut();
-            var copy = new MenuItem { Header = Localizer.T("col.copy"), InputGesture = new KeyGesture(Key.C, KeyModifiers.Control) };
-            copy.Click += (_, _) => box.Copy();
-            var paste = new MenuItem { Header = Localizer.T("col.paste"), InputGesture = new KeyGesture(Key.V, KeyModifiers.Control) };
-            paste.Click += (_, _) => box.Paste();
+            var clip = MenuCommandRules.ColumnClipboard(edit, box != null, column, count);
+            var cut = new MenuItem { Header = Localizer.T("col.cut"), InputGesture = new KeyGesture(Key.X, KeyModifiers.Control), IsEnabled = clip };
+            var copy = new MenuItem { Header = Localizer.T("col.copy"), InputGesture = new KeyGesture(Key.C, KeyModifiers.Control), IsEnabled = clip };
+            var paste = new MenuItem { Header = Localizer.T("col.paste"), InputGesture = new KeyGesture(Key.V, KeyModifiers.Control), IsEnabled = clip };
+            if (box != null)
+            {
+                cut.Click += (_, _) => box.Cut();
+                copy.Click += (_, _) => box.Copy();
+                paste.Click += (_, _) => box.Paste();
+            }
             items.AddRange([cut, copy, paste, new Separator()]);
         }
         MenuItem Item(string text, bool enabled, Action act, KeyGesture? g = null)
         {
-            var m = new MenuItem { Header = text, IsEnabled = enabled && edit };
+            var m = new MenuItem { Header = text, IsEnabled = enabled };
             if (g != null) m.InputGesture = g;
             m.Click += (_, _) => act();
             return m;
         }
-        items.Add(Item(Localizer.T("col.move_left"), column > 0, () => RequestMoveColumn(column, column - 1),
+        items.Add(Item(Localizer.T("col.move_left"), MenuCommandRules.MoveLeft(edit, column, count), () => RequestMoveColumn(column, column - 1),
             new KeyGesture(Key.Left, KeyModifiers.Alt | KeyModifiers.Shift)));
-        items.Add(Item(Localizer.T("col.move_right"), column < count - 1, () => RequestMoveColumn(column, column + 1),
+        items.Add(Item(Localizer.T("col.move_right"), MenuCommandRules.MoveRight(edit, column, count), () => RequestMoveColumn(column, column + 1),
             new KeyGesture(Key.Right, KeyModifiers.Alt | KeyModifiers.Shift)));
-        items.Add(Item(Localizer.T("col.move_first"), column > 0, () => RequestMoveColumn(column, 0)));
-        items.Add(Item(Localizer.T("col.move_last"), column < count - 1, () => RequestMoveColumn(column, count - 1)));
+        items.Add(Item(Localizer.T("col.move_first"), MenuCommandRules.MoveFirst(edit, column, count), () => RequestMoveColumn(column, 0)));
+        items.Add(Item(Localizer.T("col.move_last"), MenuCommandRules.MoveLast(edit, column, count), () => RequestMoveColumn(column, count - 1)));
         if (_extraColumnMenuItems?.Invoke(column) is { } extra)
         {
             items.Add(new Separator());
@@ -169,10 +181,11 @@ public partial class MainWindow
         items.Add(new Separator());
         items.AddRange(BuildColumnGroupMenuItems(column, edit));
         items.Add(new Separator());
-        var isDue = column == _session.Doc.DueColumnIndex();
-        items.Add(Item(isDue ? Localizer.T("col.delete_due") : Localizer.T("col.delete"), !isDue && count > 1,
+        var isDue = column >= 0 && column == _session.Doc.DueColumnIndex();
+        items.Add(Item(isDue ? Localizer.T("col.delete_due") : Localizer.T("col.delete"),
+            MenuCommandRules.DeleteColumn(edit, column, count, isDue),
             () => RequestDeleteColumn(column)));
-        return new ContextMenu { ItemsSource = items };
+        return items;
     }
 
     /// <summary>Data column under an X position in TableGrid (grid column 0 = row numbers).</summary>
@@ -242,29 +255,29 @@ public partial class MainWindow
         if (parent != null)
         {
             var parentId = doc.ColumnIdAt(column);
-            items.Add(GroupItem(parent.Expanded ? Localizer.T("colgroup.collapse") : Localizer.T("colgroup.expand"), edit, () =>
+            items.Add(GroupItem(parent.Expanded ? Localizer.T("colgroup.collapse") : Localizer.T("colgroup.expand"), MenuCommandRules.ToggleGroup(edit), () =>
             {
                 var idx = _session.Doc.ColumnIds.IndexOf(parentId);
                 if (idx >= 0) RequestToggleGroup(idx);
             }));
             var room = NoteDocument.MaxUserColumns - doc.Columns.Count;
-            items.Add(GroupItem(Localizer.T("colgroup.add_child"), edit && room >= 1 && parent.ChildIds.Count < ColumnGroupOps.MaxChildCount, () =>
+            items.Add(GroupItem(Localizer.T("colgroup.add_child"), MenuCommandRules.AddChild(edit, room, parent.ChildIds.Count), () =>
             {
                 var idx = _session.Doc.ColumnIds.IndexOf(parentId);
                 if (idx >= 0) RequestAddChild(idx);
             }));
-            items.Add(GroupItem(Localizer.T("colgroup.rename_children"), edit, () =>
+            items.Add(GroupItem(Localizer.T("colgroup.rename_children"), MenuCommandRules.RenameChildren(edit), () =>
             {
                 var idx = _session.Doc.ColumnIds.IndexOf(parentId);
                 if (idx >= 0) RequestRenameChildren(idx);
             }));
-            var remove = new MenuItem { Header = Localizer.T("colgroup.remove_child"), IsEnabled = edit };
+            var remove = new MenuItem { Header = Localizer.T("colgroup.remove_child"), IsEnabled = MenuCommandRules.RemoveChildParent(edit) };
             foreach (var cid in parent.ChildIds.ToList())
             {
                 var childIndex = doc.ColumnIds.IndexOf(cid);
                 var label = childIndex >= 0 ? doc.Columns[childIndex] : cid;
                 var idCopy = cid;
-                var m = new MenuItem { Header = Localizer.T("colgroup.remove_named", label), IsEnabled = edit };
+                var m = new MenuItem { Header = Localizer.T("colgroup.remove_named", label), IsEnabled = MenuCommandRules.RemoveNamedChild(edit) };
                 m.Click += (_, _) =>
                 {
                     var idx = _session.Doc.ColumnIds.IndexOf(idCopy);
@@ -273,7 +286,7 @@ public partial class MainWindow
                 remove.Items.Add(m);
             }
             items.Add(remove);
-            items.Add(GroupItem(Localizer.T("colgroup.ungroup"), edit, () =>
+            items.Add(GroupItem(Localizer.T("colgroup.ungroup"), MenuCommandRules.Ungroup(edit), () =>
             {
                 var idx = _session.Doc.ColumnIds.IndexOf(parentId);
                 if (idx >= 0) RequestUngroup(idx);
@@ -283,9 +296,9 @@ public partial class MainWindow
         {
             var parentIndex = doc.ColumnIds.IndexOf(child.ParentId);
             var parentName = parentIndex >= 0 ? doc.Columns[parentIndex] : "";
-            items.Add(new MenuItem { Header = Localizer.T("colgroup.child_of", parentName), IsEnabled = false });
+            items.Add(new MenuItem { Header = Localizer.T("colgroup.child_of", parentName), IsEnabled = MenuCommandRules.ChildOfLabel() });
             var childId = doc.ColumnIdAt(column);
-            items.Add(GroupItem(Localizer.T("colgroup.remove_named", doc.Columns[column]), edit && doc.Columns.Count > 1, () =>
+            items.Add(GroupItem(Localizer.T("colgroup.remove_named", doc.Columns[column]), MenuCommandRules.RemoveThisColumn(edit, doc.Columns.Count), () =>
             {
                 var idx = _session.Doc.ColumnIds.IndexOf(childId);
                 if (idx >= 0) RequestDeleteColumn(idx);
@@ -293,10 +306,10 @@ public partial class MainWindow
         }
         else
         {
-            var id = doc.ColumnIdAt(column);
+            var id = column >= 0 && column < doc.Columns.Count ? doc.ColumnIdAt(column) : "";
             var room = NoteDocument.MaxUserColumns - doc.Columns.Count;
-            var system = ColumnSettingsOps.IsSystemColumn(doc, column);
-            var make = GroupItem(Localizer.T("colgroup.make"), edit && room >= 1 && !system, () =>
+            var system = column >= 0 && ColumnSettingsOps.IsSystemColumn(doc, column);
+            var make = GroupItem(Localizer.T("colgroup.make"), MenuCommandRules.MakeGroup(edit, column, doc.Columns.Count, system, room), () =>
             {
                 var idx = _session.Doc.ColumnIds.IndexOf(id);
                 if (idx >= 0) RequestMakeGroup(idx);

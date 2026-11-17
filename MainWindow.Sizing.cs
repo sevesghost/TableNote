@@ -52,7 +52,7 @@ public partial class MainWindow
         var item = new MenuItem
         {
             Header = Localizer.T("size.col_menu"),
-            IsEnabled = _view == ViewMode.Edit && !hidden
+            IsEnabled = MenuCommandRules.ColumnWidth(_view == ViewMode.Edit, column, _session.Doc.Columns.Count, hidden)
         };
         if (hidden) ToolTip.SetTip(item, Localizer.T("size.hidden_column"));
         item.Click += (_, _) => OpenColumnWidth(column);
@@ -61,7 +61,12 @@ public partial class MainWindow
 
     public MenuItem BuildRowHeightMenuItem(string rowId)
     {
-        var item = new MenuItem { Header = Localizer.T("size.row_menu"), IsEnabled = _view == ViewMode.Edit };
+        var hasRow = !string.IsNullOrEmpty(rowId) && _session.Doc.RowIds.Contains(rowId);
+        var item = new MenuItem
+        {
+            Header = Localizer.T("size.row_menu"),
+            IsEnabled = MenuCommandRules.RowHeight(_view == ViewMode.Edit, hasRow)
+        };
         item.Click += (_, _) => OpenRowHeight(rowId);
         return item;
     }

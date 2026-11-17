@@ -27,7 +27,11 @@ public partial class MainWindow
     public MenuItem BuildColumnSettingsMenuItem(int column)
     {
         var type = ColumnSettingsOps.TypeOf(_session.Doc, column);
-        var item = new MenuItem { Header = Localizer.T("colset.menu"), IsEnabled = _view == ViewMode.Edit };
+        var item = new MenuItem
+        {
+            Header = Localizer.T("colset.menu"),
+            IsEnabled = MenuCommandRules.ColumnSettings(_view == ViewMode.Edit, column, _session.Doc.Columns.Count)
+        };
         ToolTip.SetTip(item, Localizer.T("colset.type_now", ColumnTypes.Label(type)));
         item.Click += (_, _) => OpenColumnSettings(column);
         return item;
@@ -180,13 +184,28 @@ public partial class MainWindow
         return (style.Highlight ? HighlightLabelBg : status.label, cell);
     }
 
+    /// <summary>Palette labels. Each key is spelled out so the row-colour commands stay visible to the menu check.</summary>
+    private static string ColourLabel(string key) => key switch
+    {
+        "yellow" => Localizer.T("colour.yellow"),
+        "orange" => Localizer.T("colour.orange"),
+        "red" => Localizer.T("colour.red"),
+        "pink" => Localizer.T("colour.pink"),
+        "purple" => Localizer.T("colour.purple"),
+        "blue" => Localizer.T("colour.blue"),
+        "green" => Localizer.T("colour.green"),
+        "gray" => Localizer.T("colour.gray"),
+        _ => Localizer.T("colour." + key)
+    };
+
     /// <summary>Items for the row-number right-click menu (wired in MainWindow: <c>_extraRowMenuItems = BuildRowStyleMenuItems;</c>): colour submenu (with "None"), highlight toggle, clear.</summary>
     public IEnumerable<Control> BuildRowStyleMenuItems(string rowId)
     {
         var style = RowStyleOps.Get(_session.Doc, rowId);
-        var edit = _view == ViewMode.Edit;
+        var hasRow = !string.IsNullOrEmpty(rowId) && _session.Doc.RowIds.Contains(rowId);
+        var edit = _view == ViewMode.Edit && hasRow;
         var colours = new List<Control>();
-        var none = new MenuItem { Header = Localizer.T("rowstyle.none"), ToggleType = MenuItemToggleType.Radio, IsChecked = style.Color == null };
+        var none = new MenuItem { Header = Localizer.T("rowstyle.none"), ToggleType = MenuItemToggleType.Radio, IsChecked = style.Color == null, IsEnabled = edit };
         none.Click += (_, _) => ChangeRowStyle(rowId, Localizer.T("undo.row_no_color"), d => RowStyleOps.SetColor(d, rowId, null));
         colours.Add(none);
         colours.Add(new Separator());
@@ -195,26 +214,32 @@ public partial class MainWindow
             var k = key;
             var m = new MenuItem
             {
-                Header = Localizer.T("colour." + key),
+                Header = ColourLabel(key),
                 ToggleType = MenuItemToggleType.Radio,
                 IsChecked = string.Equals(style.Color, key, StringComparison.OrdinalIgnoreCase),
+                IsEnabled = edit,
                 Icon = new Border
                 {
                     Width = 14, Height = 14, CornerRadius = new CornerRadius(2),
                     Background = new SolidColorBrush(Color.Parse(hex)), BorderBrush = GridLine, BorderThickness = new Thickness(1)
                 }
             };
-            m.Click += (_, _) => ChangeRowStyle(rowId, Localizer.T("undo.row_color", Localizer.T("colour." + k)), d => RowStyleOps.SetColor(d, rowId, k));
+            m.Click += (_, _) => ChangeRowStyle(rowId, Localizer.T("undo.row_color", ColourLabel(k)), d => RowStyleOps.SetColor(d, rowId, k));
             colours.Add(m);
         }
-        var colourMenu = new MenuItem { Header = Localizer.T("rowstyle.colour"), ItemsSource = colours, IsEnabled = edit };
+        var colourMenu = new MenuItem { Header = Localizer.T("rowstyle.colour"), ItemsSource = colours, IsEnabled = MenuCommandRules.RowStyleMenu(edit, hasRow) };
         var highlight = new MenuItem
         {
-            Header = Localizer.T("rowstyle.highlight"), ToggleType = MenuItemToggleType.CheckBox, IsChecked = style.Highlight, IsEnabled = edit
+            Header = Localizer.T("rowstyle.highlight"), ToggleType = MenuItemToggleType.CheckBox, IsChecked = style.Highlight,
+            IsEnabled = MenuCommandRules.RowHighlight(edit, hasRow)
         };
         highlight.Click += (_, _) => ChangeRowStyle(rowId, Localizer.T(style.Highlight ? "undo.unhighlight_row" : "undo.highlight_row"),
             d => RowStyleOps.SetHighlight(d, rowId, !style.Highlight));
-        var clear = new MenuItem { Header = Localizer.T("rowstyle.clear"), IsEnabled = edit && (style.Color != null || style.Highlight) };
+        var clear = new MenuItem
+        {
+            Header = Localizer.T("rowstyle.clear"),
+            IsEnabled = MenuCommandRules.RowClear(edit, hasRow, style.Color != null || style.Highlight)
+        };
         clear.Click += (_, _) => ChangeRowStyle(rowId, Localizer.T("undo.clear_row_style"), d => RowStyleOps.Clear(d, rowId));
         return new List<Control> { colourMenu, highlight, clear };
     }
