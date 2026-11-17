@@ -3,7 +3,9 @@ namespace TableNote;
 /// <summary>In-memory note table. v5 adds stable column ids. v4 adds reminders. v3 adds column roles.</summary>
 public sealed class NoteDocument
 {
-    /// <summary>5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).</summary>
+    /// <summary>5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).
+    /// partColors (2.5) is an optional field with an empty default — the format version stays 5.
+    /// A higher version (for example 6, alert boxes) is not downgraded.</summary>
     public const int CurrentVersion = 5;
     public const int DefaultRowCount = 4;
     /// <summary>User-editable column cap; system roles may push AbsoluteMaxColumns.</summary>
@@ -59,6 +61,9 @@ public sealed class NoteDocument
     public Dictionary<string, ColumnSetting> ColumnSettings { get; set; } = new(StringComparer.Ordinal);
     /// <summary>v2.4.0: row colour/highlight by row id ("rowStyles"). No entry = normal row.</summary>
     public Dictionary<string, RowStyle> RowStyles { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>v2.5: part id → background/text colour ("partColors"). No entry = the built-in colour.
+    /// Alert-box colours are also mirrored onto alertBoxes[].color / textColor.</summary>
+    public Dictionary<string, PartColor> PartColors { get; set; } = new(StringComparer.Ordinal);
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();
     public bool LaunchAtLogin { get; set; }

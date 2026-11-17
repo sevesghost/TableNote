@@ -30,6 +30,8 @@ public static class NoteStore
         /// <summary>v2.4.0: parsed leniently per entry, like reminders.</summary>
         public JsonElement? ColumnSettings { get; set; }
         public JsonElement? RowStyles { get; set; }
+        /// <summary>v2.5. Optional. Missing, null, or a bad value leaves every part on its built-in color.</summary>
+        public JsonElement? PartColors { get; set; }
     }
 
     /// <summary>Problems found while reading optional sections (logged, not shown as "file corrupt").</summary>
@@ -101,7 +103,8 @@ public static class NoteStore
     {
         "version", "columns", "rows", "launchAtLogin", "trayNoticeShown", "columnWidths", "viewMode", "window",
         "hideDone", "snoozes", "recurrence", "rowIds", "columnIds", "columnRoles", "muteSound", "acknowledged", "reminders",
-        "columnSettings", "rowStyles" // v2.4.0
+        "columnSettings", "rowStyles", // v2.4.0
+        "partColors" // v2.5, optional. alertBoxes (written by the alert-box change) stays unknown and is written back.
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)
@@ -297,6 +300,26 @@ public static class NoteStore
         return map;
     }
 
+    /// <summary>v2.5: "partColors" is optional. Missing, null, or a wrong type leaves the defaults; bad entries are skipped.</summary>
+    private static Dictionary<string, PartColor> ParsePartColors(JsonElement? el)
+    {
+        if (el is not { } e || e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return new Dictionary<string, PartColor>(StringComparer.Ordinal);
+        if (e.ValueKind != JsonValueKind.Object)
+        {
+            LastLoadIssues.Add("partColors: not an object, all skipped");
+            return new Dictionary<string, PartColor>(StringComparer.Ordinal);
+        }
+        return PartColorOps.ParseMap(e);
+    }
+
+    private static JsonElement PartColorsElement(NoteDocument doc)
+    {
+        var node = PartColorOps.ToJson(doc.PartColors);
+        using var parsed = JsonDocument.Parse(node?.ToJsonString() ?? "{}");
+        return parsed.RootElement.Clone();
+    }
+
     private static void LogIssues(string path)
     {
         if (LastLoadIssues.Count == 0) return;
@@ -464,6 +487,7 @@ public static class NoteStore
                 Reminders = ParseReminders(Prop(root, "reminders")),
                 ColumnSettings = ParseColumnSettings(Prop(root, "columnSettings")), // v2.4.0
                 RowStyles = ParseRowStyles(Prop(root, "rowStyles")),
+                PartColors = ParsePartColors(Prop(root, "partColors")),
                 Window = new WindowMemory
                 {
                     Width = win is { } a ? GetInt(a, "width", 720, true, "window.") : 720,
@@ -475,10 +499,12 @@ public static class NoteStore
                     Topmost = DesktopPlacement.EffectiveTopmost(layer)
                 }
             };
-            // Keep fields this version doesn't know (e.g. from a newer TableNote) so saving doesn't drop them.
+            // Keep fields this version doesn't know (e.g. alertBoxes) so saving doesn't drop them.
+            // A higher version still opens and is not downgraded. partColors is optional.
             foreach (var prop in root.EnumerateObject())
                 if (!KnownFields.Contains(prop.Name))
                     doc.ExtraFields[prop.Name] = prop.Value.Clone();
+            AlertColorSync.Import(doc, LastLoadIssues.Add); // color / textColor on each alert box, by its id
             if (version > NoteDocument.CurrentVersion)
                 LastLoadIssues.Add($"version {version}: file comes from a newer TableNote, will back up to note.v{version}.bak before saving and keep unknown fields ({doc.ExtraFields.Count} fields)");
 
@@ -648,6 +674,7 @@ public static class NoteStore
     public static long Save(string path, NoteDocument doc)
     {
         doc.Normalize();
+        AlertColorSync.Export(doc); // stamp partColors onto alertBoxes[].color / textColor before the extra fields are written
         TryBackupBeforeV3(path, doc);
         var dto = new FileDto
         {
@@ -670,6 +697,7 @@ public static class NoteStore
             Reminders = JsonSerializer.SerializeToElement(doc.Reminders, Options),
             ColumnSettings = JsonSerializer.SerializeToElement(doc.ColumnSettings, Options), // v2.4.0
             RowStyles = JsonSerializer.SerializeToElement(doc.RowStyles, Options),
+            PartColors = PartColorsElement(doc),
             Window = new WindowDto
             {
                 Width = doc.Window.Width,

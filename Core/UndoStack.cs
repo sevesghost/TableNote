@@ -283,6 +283,7 @@ public static class Snapshot
         n.LaunchAtLogin = doc.LaunchAtLogin;
         n.TrayNoticeShown = doc.TrayNoticeShown;
         n.ExtraFields = doc.ExtraFields;
+        n.PartColors = PartColorOps.Clone(doc.PartColors); // not inside the undo snapshot; a cell undo must not wipe colours
         n.View = doc.View;
         n.Version = doc.Version;
         return n;

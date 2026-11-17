@@ -2,6 +2,9 @@
 
 All notable changes to TableNote. [ภาษาไทย](CHANGELOG.th.md)
 
+- **2.5.0** (unreleased)
+  - New: **Colors** on the toolbar opens an RGB / hex picker for the selected cell (background and text), the row number, column headers, and the main sections (window, toolbar, status bar, notice banner, table). The reminder window and each reminder card can be colored too. Choices are saved in `note.json` under optional `partColors` (the format version stays 5; a file without the field uses the built-in colors) and restored on startup. Reset clears a part back to its built-in color.
+  - Alert boxes from the parallel change (`alertBoxes`, each with a stable `id`) keep their colors on the box as `color` and `textColor`, and in `partColors` as `alert:{id}`. A file that has no `alertBoxes`, or a box with no color, still opens. Unknown fields on a box are written back.
 - **2.4.2** (12 November 2026)
   - New: English is the primary language. All UI text lives in `lang/en.json` and `lang/th.json`; add a language by adding a JSON file (see CONTRIBUTING.md). Export labels, dates (`yyyy-MM-dd`, `yyyy-MM-dd HH:mm`), and the log are language-independent or English.
   - New: taskbar icon while editing, tray icon only when attached to the desktop background; the mode is kept after restart.

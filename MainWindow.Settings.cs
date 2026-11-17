@@ -70,6 +70,8 @@ public partial class MainWindow
             {
                 var box = MakeTextBox(_session.Doc.GetCell(row, column), false, row, column, bg);
                 box.TextAlignment = TextAlignment.Right;
+                // Capture the text color AFTER a custom cell color, so a non-number still returns to that color.
+                PartColorPainter.Apply(box, PartColorKeys.Cell(_session.Doc.RowIdAt(row), _session.Doc.ColumnIdAt(column)));
                 var normalFg = box.Foreground;
                 void Check()
                 {
