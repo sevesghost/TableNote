@@ -324,7 +324,7 @@ Moving columns or rows, deleting a column, changing column settings, and changin
 
 ## 15. Alert boxes
 
-Above the table, **+ Alert** adds a box. Each box has a title and a text you can edit. **Delete** removes that box. Drag the **⋮⋮** grip to change the order, or use **Up** and **Down** — those buttons work without dragging and can be reached with the keyboard. The boxes and their order are saved in `note.json` and are still there after you close and open TableNote. They are separate from due-date reminders. Ctrl+Z does not undo alert-box changes.
+Above the table, **+ Alert** adds a box. Each box has a title and a text you can edit. **Delete** asks for confirmation, then removes that box. This can't be undone. Drag the **⋮⋮** grip to change the order, or use **Up** and **Down** — those buttons work without dragging and can be reached with the keyboard. The boxes and their order are saved in `note.json` and are still there after you close and open TableNote. They are separate from due-date reminders. Ctrl+Z does not undo alert-box changes.
 
 
 ---

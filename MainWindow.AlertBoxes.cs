@@ -140,7 +140,7 @@ public partial class MainWindow
         };
         buttons.Children.Add(MakeAlertAction(Localizer.T("alert.up"), Localizer.T("alert.move_up"), index > 0, () => MoveAlertBy(id, -1)));
         buttons.Children.Add(MakeAlertAction(Localizer.T("alert.down"), Localizer.T("alert.move_down"), index < count - 1, () => MoveAlertBy(id, 1)));
-        buttons.Children.Add(MakeAlertAction(Localizer.T("alert.delete"), Localizer.T("alert.delete_tip"), true, () => DeleteAlert(id)));
+        buttons.Children.Add(MakeAlertAction(Localizer.T("alert.delete"), Localizer.T("alert.delete_tip"), true, () => _ = DeleteAlertAsync(id)));
 
         Grid.SetColumn(grip, 0);
         Grid.SetColumn(fields, 1);
@@ -231,16 +231,36 @@ public partial class MainWindow
         FocusAlertTitle(box.Id);
     }
 
-    private void DeleteAlert(string id)
+    /// <summary>Same confirm dialog as row/column delete. Cancel leaves the box. There is no Ctrl+Z for this.</summary>
+    private async Task DeleteAlertAsync(string id)
     {
         if (_view != ViewMode.Edit || _busy) return;
         var boxes = _session.Doc.AlertBoxes;
         var i = AlertBoxOps.IndexOf(boxes, id);
         if (i < 0) return;
-        boxes.RemoveAt(i);
-        RenderAlertBoxes();
-        FlushSave();
-        StatusText.Text = Localizer.T("alert.deleted");
+        var message = AlertBoxOps.ConfirmMessage(boxes[i], i);
+        _busy = true;
+        try
+        {
+            if (!await _confirm.ConfirmAsync(message))
+            {
+                StatusText.Text = Localizer.T("delete.canceled");
+                return;
+            }
+            boxes = _session.Doc.AlertBoxes;
+            i = AlertBoxOps.IndexOf(boxes, id);
+            if (i < 0)
+            {
+                StatusText.Text = Localizer.T("delete.canceled_alert_changed");
+                RenderAlertBoxes();
+                return;
+            }
+            boxes.RemoveAt(i);
+            RenderAlertBoxes();
+            FlushSave();
+            StatusText.Text = Localizer.T("alert.deleted");
+        }
+        finally { _busy = false; }
     }
 
     private void MoveAlertBy(string id, int delta)

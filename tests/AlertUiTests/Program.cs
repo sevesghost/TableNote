@@ -73,7 +73,18 @@ try
     var keepId = Ids(window)[1];
     Click(window, DeleteButton(Card(window, 0)));
     Pump(window);
-    Ok(Cards(window).Count == 1 && Titles(window).SequenceEqual(["Beta"]), "delete removes that box", string.Join(" | ", Titles(window)));
+    var dialog = ConfirmDialog(window);
+    Ok(dialog != null && Cards(window).Count == 2, "delete asks before removing the box");
+    if (dialog == null) throw new Exception("confirm dialog did not open");
+    Click(dialog, DialogButton(dialog, "Cancel"));
+    Pump(window);
+    Ok(Cards(window).Count == 2 && Titles(window).SequenceEqual(["Alpha", "Beta"]), "cancel keeps the alert box", string.Join(" | ", Titles(window)));
+    Click(window, DeleteButton(Card(window, 0)));
+    Pump(window);
+    dialog = ConfirmDialog(window) ?? throw new Exception("confirm dialog did not open the second time");
+    Click(dialog, DialogButton(dialog, "Delete"));
+    Pump(window);
+    Ok(Cards(window).Count == 1 && Titles(window).SequenceEqual(["Beta"]), "confirm delete removes that box", string.Join(" | ", Titles(window)));
     Ok(Ids(window).SequenceEqual([keepId]), "the remaining box keeps its id");
 
     window.Close();
@@ -113,6 +124,12 @@ static TextBox BodyBox(Border card) => card.GetVisualDescendants().OfType<TextBo
 
 static Button UpButton(Border card) => ButtonWith(card, "Up");
 static Button DeleteButton(Border card) => ButtonWith(card, "Delete");
+
+static Window? ConfirmDialog(Window owner) =>
+    owner.OwnedWindows.FirstOrDefault(w => w.IsVisible);
+
+static Button DialogButton(Window dialog, string content) =>
+    dialog.GetVisualDescendants().OfType<Button>().First(b => (b.Content as string) == content);
 
 static Button ButtonWith(Border card, string content) =>
     card.GetVisualDescendants().OfType<Button>().First(b => (b.Content as string) == content);

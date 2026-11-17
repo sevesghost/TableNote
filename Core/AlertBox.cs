@@ -40,6 +40,20 @@ public static class AlertBoxOps
         Text = TableLimits.Clip(text ?? "", MaxTextChars)
     };
 
+    /// <summary>Name shown in the delete confirmation: title, else the first line of text, else "Alert n". Cut at 40 characters.</summary>
+    public static string ConfirmLabel(AlertBox box, int index)
+    {
+        var text = (box.Title ?? "").Trim();
+        if (text.Length == 0) text = FirstLine(box.Text);
+        if (text.Length == 0) text = Localizer.T("delete.alert_fallback", index + 1);
+        if (text.Length > 40) text = TableLimits.Clip(text, 40) + "…";
+        return text;
+    }
+
+    /// <summary>Message for <see cref="DialogDeleteConfirm"/>. Delete is not undoable, so the text does not mention Ctrl+Z.</summary>
+    public static string ConfirmMessage(AlertBox box, int index) =>
+        Localizer.T("delete.alert_confirm", ConfirmLabel(box, index));
+
     public static int IndexOf(IReadOnlyList<AlertBox>? boxes, string? id)
     {
         if (boxes == null || string.IsNullOrEmpty(id)) return -1;
@@ -233,6 +247,13 @@ public static class AlertBoxOps
             b.Id = id;
         }
         return clipped;
+    }
+
+    private static string FirstLine(string? value)
+    {
+        var text = (value ?? "").Trim();
+        var nl = text.IndexOfAny(['\r', '\n']);
+        return nl >= 0 ? text[..nl].Trim() : text;
     }
 
     private static bool NameIs(string name, string expected) =>

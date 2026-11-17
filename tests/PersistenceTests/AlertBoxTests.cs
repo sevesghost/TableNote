@@ -26,6 +26,32 @@ public static partial class T
         Ok("slot math matches Move", to == 2 && AlertBoxOps.Move(ordered, 0, to) && ordered.Select(b => b.Id).SequenceEqual(new[] { ids[1], ids[2], ids[0] }));
     }
 
+    public static void TestAlertDeleteConfirmMessage()
+    {
+        var prev = Localizer.Current;
+        try
+        {
+            Localizer.SetLanguage("en");
+            var titled = AlertBoxOps.Create("Remember", "call");
+            Ok("confirm names the title and says it can't be undone",
+                AlertBoxOps.ConfirmMessage(titled, 0) == "Delete alert box \"Remember\"? This can't be undone.");
+            var blank = AlertBoxOps.Create("  ", "\n");
+            Ok("blank box uses Alert n",
+                AlertBoxOps.ConfirmMessage(blank, 2) == "Delete alert box \"Alert 3\"? This can't be undone.");
+            var fromText = AlertBoxOps.Create("", "line one\nline two");
+            Ok("empty title uses the first line of text",
+                AlertBoxOps.ConfirmLabel(fromText, 0) == "line one");
+            var longTitle = AlertBoxOps.Create(new string('a', 50), "");
+            Ok("long title is cut at 40",
+                AlertBoxOps.ConfirmMessage(longTitle, 0).Contains("\"" + new string('a', 40) + "…\""));
+            Localizer.SetLanguage("th");
+            var th = AlertBoxOps.ConfirmMessage(titled, 0);
+            Ok("thai confirm keeps the title and the placeholder",
+                th.Contains("Remember") && th.Contains("กล่องแจ้งเตือน") && !th.Contains("{0}"));
+        }
+        finally { Localizer.SetLanguage(prev); }
+    }
+
     public static void TestAlertBoxesRoundTripAndUnknownFields()
     {
         var p = Path.Combine(Dir("alerts"), "note.json");

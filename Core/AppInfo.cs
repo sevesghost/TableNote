@@ -29,7 +29,8 @@ Columns and rows
 
 Alert boxes
   + Alert (above the table) adds a box. Edit its title and text. Drag the ⋮⋮ grip to change the order,
-  or use Up and Down (they work without dragging, and with the keyboard). Delete removes that box.
+  or use Up and Down (they work without dragging, and with the keyboard). Delete asks first, then removes that box.
+  This can't be undone with Ctrl+Z.
   The boxes and their order are saved in note.json. Each box keeps a stable id. Ctrl+Z does not undo
   alert-box changes. These boxes are separate from due-date reminders.
 
@@ -130,7 +131,8 @@ Files
 กล่องแจ้งเตือน
   ปุ่ม + กล่องแจ้งเตือน (เหนือตาราง) เพิ่มกล่อง แก้หัวข้อและข้อความได้
   ลากที่จับ ⋮⋮ เพื่อเรียงลำดับ หรือใช้ปุ่ม ขึ้น / ลง (ใช้ได้โดยไม่ต้องลาก และใช้คีย์บอร์ดได้)
-  ปุ่ม ลบ เอาออก กล่องและลำดับถูกบันทึกใน note.json แต่ละกล่องมีรหัสคงที่
+  ปุ่ม ลบ จะถามก่อน แล้วจึงเอาออก การลบนี้กู้คืนด้วย Ctrl+Z ไม่ได้
+  กล่องและลำดับถูกบันทึกใน note.json แต่ละกล่องมีรหัสคงที่
   Ctrl+Z ไม่ย้อนการแก้กล่องแจ้งเตือน กล่องนี้คนละอย่างกับเตือนตามกำหนดส่ง
 
 ไอคอนแถบงานและถาด
