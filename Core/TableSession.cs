@@ -103,7 +103,7 @@ public sealed partial class TableSession
     public async Task<EditResult> DeleteColumnAsync(Func<string, Task<bool>> confirm)
     {
         var column = TargetColumn();
-        var plan = DeletePlanner.ForColumn(Doc, column);
+        var plan = SystemColumnToggle.PlanHeaderDelete(Doc, column);
         if (!plan.CanDelete) return new EditResult(false, plan.StatusIfBlocked);
         // v2.3.1 (L5): bind to the column's header + role, re-find it after the dialog (like rows do by id).
         Doc.EnsureColumnRoles();

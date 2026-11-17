@@ -89,6 +89,9 @@ public partial class MainWindow : Window
         _loadWarning = loaded.Warning ?? startupMsg;
         _confirm = new DialogDeleteConfirm(this);
         InitSettings(); // v2.4.0: column settings item in the header menu
+        InitDetailPopup(); // wraps settings, so detail items stay beside them
+        InitSizing(); // wraps that hook again: Column width… / Row height… plus the detail items
+        InitAlertBoxes();
 
         MinWidth = 480;
         MinHeight = 300;
@@ -120,10 +123,11 @@ public partial class MainWindow : Window
         CopyHeadersButton.Click += async (_, _) => await CopyAsync(true, true);
         AddRowButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_row"), AddRowAsync));
         DeleteRowButton.Click += async (_, _) => await RunStructureAsync(DeleteRowAsync);
-        AddColumnButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), AddColumnAsync));
+        InitColumnToggle();
         DeleteColumnButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("delete.undo_column"), DeleteColumnAsync));
         SortDueButton.Click += (_, _) => SortByDue();
         ExportButton.Click += async (_, _) => await ExportAsync();
+        InitImageExport();
         LanguageButton.Click += (_, _) => SwitchLanguage(Localizer.Next(Localizer.Current));
         ZoomOutButton.Click += (_, _) => SetZoom(_settings.Scale - AppSettings.ScaleStep);
         ZoomInButton.Click += (_, _) => SetZoom(_settings.Scale + AppSettings.ScaleStep);
@@ -142,7 +146,9 @@ public partial class MainWindow : Window
         Program.EditRequested += () => Dispatcher.UIThread.Post(ShowEditor);
         ToolTip.SetTip(StatusText, Localizer.T("ui.saved_path", _path));
 
+        InitColors();
         ApplyZoom();
+        InitMenuBar();
         ApplyLanguageTexts();
         Rebuild();
         UpdateStatus();
@@ -405,6 +411,7 @@ public partial class MainWindow : Window
         {
             // A TextBox being edited with its own undo history handles Ctrl+Z itself (U9).
             if (FocusedEditingBox() is { CanUndo: true }) return;
+            if (FocusedAlertTextBox() is { CanUndo: true }) return;
             CommitFocusedEdit();
             e.Handled = true;
             DoUndo();
@@ -414,6 +421,7 @@ public partial class MainWindow : Window
             (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.KeyModifiers.HasFlag(KeyModifiers.Shift) && e.Key == Key.Z))
         {
             if (FocusedEditingBox() is { CanRedo: true }) return;
+            if (FocusedAlertTextBox() is { CanRedo: true }) return;
             CommitFocusedEdit();
             e.Handled = true;
             DoRedo();
@@ -562,8 +570,7 @@ public partial class MainWindow : Window
             else
             {
                 Rebuild(); FlushSave();
-                if (_session.Doc.DueColumnIndex() < 0)
-                    ShowNotice(Localizer.T("ui.no_due_column"));
+                AfterColumnRemoved();
             }
         }
         finally { _busy = false; }
@@ -975,6 +982,10 @@ public partial class MainWindow : Window
         ToolTip.SetTip(ZoomOutButton, T("tip.zoom_out"));
         ToolTip.SetTip(ZoomResetButton, T("tip.zoom_reset"));
         ToolTip.SetTip(ZoomInButton, T("tip.zoom_in"));
+        RenderAlertBoxes();
+        ApplyColorButtonText();
+        ApplyImageExportTexts();
+        ApplyMenuBarTexts();
     }
 
     private void SetZoom(int scale)
@@ -1121,6 +1132,7 @@ public partial class MainWindow : Window
         if (!_ignoreText) CommitFocusedEdit();
         using var _uiScope = UiActivity.Scope("rebuild table");
         _headerBoxes.Clear();
+        ClearMenuHeaderBoxes();
         TableGrid.Children.Clear();
         TableGrid.RowDefinitions.Clear();
         TableGrid.ColumnDefinitions.Clear();
@@ -1168,13 +1180,13 @@ public partial class MainWindow : Window
         grid.ColumnDefinitions.Clear();
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(RowLabelWidth)));
         for (var i = 0; i < _session.Doc.Columns.Count; i++)
-            grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(_session.Doc.ColumnWidth(i))));
+            grid.ColumnDefinitions.Add(GroupColumnDefinition(i));
     }
 
     /// <summary>Column resize: header + the few realized rows (others pick the width up when realized).</summary>
     private void ApplyColumnWidth(int column)
     {
-        var w = new GridLength(_session.Doc.ColumnWidth(column));
+        var w = GroupColumnLength(column);
         if (column + 1 < TableGrid.ColumnDefinitions.Count) TableGrid.ColumnDefinitions[column + 1].Width = w;
         foreach (var c in RowsList.GetRealizedContainers())
             if (c is ContentPresenter { Child: Grid g } && column + 1 < g.ColumnDefinitions.Count)
@@ -1226,9 +1238,10 @@ public partial class MainWindow : Window
         ApplyColumnDefinitions(grid);
         if (rowIndex < 0 || rowIndex >= _session.Doc.Rows.Count) return;
         var rowBg = RowBackground(rowIndex);
+        var rowLabel = RowLabelColors(rowIndex);
         var border = new Border
         {
-            Background = LabelBrushFor(rowIndex, rowBg.label),
+            Background = rowLabel.Background,
             BorderBrush = GridLine,
             BorderThickness = new Thickness(1),
             Child = new TextBlock
@@ -1236,7 +1249,7 @@ public partial class MainWindow : Window
                 Text = (rowIndex + 1).ToString(),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                Foreground = TextFg, FontFamily = AppFonts.Thai, Margin = new Thickness(4, 0)
+                Foreground = rowLabel.Foreground, FontFamily = AppFonts.Thai, Margin = new Thickness(4, 0)
             }
         };
         border.PointerPressed += (_, e) =>
@@ -1250,10 +1263,11 @@ public partial class MainWindow : Window
         grid.Children.Add(border);
         for (var c = 0; c < _session.Doc.Columns.Count; c++)
         {
-            var cell = MakeCell(rowIndex, c, rowBg.cell);
+            var cell = GroupCell(rowIndex, c, rowBg.cell);
             Grid.SetColumn(cell, c + 1);
             grid.Children.Add(cell);
         }
+        ApplySavedRowHeight(grid, rowIndex); // v2.6: a set height clips; auto rows are unchanged
     }
 
     private (IBrush label, IBrush cell) RowBackground(int row) => WithRowStyle(row, StatusRowBackground(row)); // v2.4.0
@@ -1276,8 +1290,11 @@ public partial class MainWindow : Window
 
     private Control MakeHeader(int column)
     {
+        if (TryHiddenHeader(column, out var hiddenHeader)) return hiddenHeader;
         var box = MakeTextBox(_session.Doc.Columns[column], header: true, -1, column, HeaderBg);
+        PaintColumnHeader(box, column);
         _headerBoxes.Add(box);
+        RememberMenuHeaderBox(column, box);
         var thumb = new Border { Width = 6, Background = GridLine, Cursor = ResizeCursor };
         Point? origin = null;
         var startWidth = 0;
@@ -1299,8 +1316,12 @@ public partial class MainWindow : Window
         };
         thumb.PointerReleased += (_, e) => { origin = null; e.Pointer.Capture(null); };
 
-        var grid = new Grid { ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) } };
-        Grid.SetColumn(thumb, 1);
+        var grid = new Grid();
+        var slot = AddGroupToggle(grid, column);
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        Grid.SetColumn(box, slot);
+        Grid.SetColumn(thumb, slot + 1);
         grid.Children.Add(box);
         grid.Children.Add(thumb);
         return WithColumnGrip(column, box, grid); // v2.4.0: drag grip + column menu
@@ -1319,10 +1340,12 @@ public partial class MainWindow : Window
             control = MakeTypedCell(row, column, bg) ?? // v2.4.0: number / choice / check columns
                       MakeTextBox(_session.Doc.GetCell(row, column), false, row, column, bg);
 
+        PaintDataCell(control, row, column);
+
         var statusCol = _session.Doc.StatusColumnIndex();
         if (statusCol >= 0 && TaskStatuses.IsDone(_session.Doc.GetCell(row, statusCol)))
-            return WithStrikethrough(control);
-        return control;
+            control = WithStrikethrough(control);
+        return AttachDetailButton(row, column, control);
     }
 
     private static Control WithStrikethrough(Control inner)
@@ -1842,7 +1865,7 @@ public partial class MainWindow : Window
                 if (c is ContentPresenter { Child: Grid { Tag: int r } g } && g.Children.FirstOrDefault() is Border b &&
                     !(focused != null && focused.GetVisualAncestors().Contains(g)) && // never under the caret; next minute
 
-                    r < _session.Doc.Rows.Count && !ReferenceEquals(b.Background, LabelBrushFor(r, RowBackground(r).label)))
+                    r < _session.Doc.Rows.Count && !ReferenceEquals(b.Background, LabelBrushFor(r, RowNumberBackground(r))))
                     stale.Add(r);
             foreach (var r in stale) RefreshRow(r);
         }
@@ -1883,7 +1906,7 @@ public partial class MainWindow : Window
         foreach (var c in RowsList.GetRealizedContainers())
             if (c is ContentPresenter { Child: Grid { Tag: int r } g } && (r == active || r == _highlightedRow) &&
                 g.Children.FirstOrDefault() is Border b && r < _session.Doc.Rows.Count)
-                b.Background = LabelBrushFor(r, RowBackground(r).label);
+                b.Background = LabelBrushFor(r, RowNumberBackground(r));
         _highlightedRow = active;
     }
 
@@ -1898,6 +1921,7 @@ public partial class MainWindow : Window
     {
         row = Math.Clamp(row, 0, Math.Max(0, _session.Doc.Rows.Count - 1));
         column = Math.Clamp(column, 0, Math.Max(0, _session.Doc.Columns.Count - 1));
+        column = NearestVisibleGroupColumn(column);
         _session.ChooseCell(row, column);
         var vi = _visibleRows.IndexOf(row);
         if (vi < 0) return;
@@ -2194,6 +2218,7 @@ public partial class MainWindow : Window
         IsHitTestVisible = edit;
         CanResize = edit && !_session.Doc.Window.Locked;
         Rebuild();
+        RenderAlertBoxes();
     }
 
     /// <summary>v2.4.2: taskbar button for the current mode (TaskbarPresence): edit = shown, background = tray only.</summary>

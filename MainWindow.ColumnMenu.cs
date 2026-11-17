@@ -51,8 +51,7 @@ public partial class MainWindow
             else
             {
                 Rebuild(); FlushSave();
-                if (_session.Doc.DueColumnIndex() < 0)
-                    ShowNotice(Localizer.T("ui.no_due_column"));
+                AfterColumnRemoved();
             }
         }
         finally { _busy = false; }
@@ -133,44 +132,59 @@ public partial class MainWindow
     }
 
     /// <summary>Header menu: cut/copy/paste of the header text, move, delete (always confirmed), plus other teams' items.</summary>
-    private ContextMenu BuildColumnMenu(int column, TextBox? box)
+    private ContextMenu BuildColumnMenu(int column, TextBox? box) =>
+        new() { ItemsSource = BuildColumnMenuItems(column, box) };
+
+    /// <summary>
+    /// Items for the header menu and for the top Column menu. <paramref name="keepClipboardSlot"/>
+    /// keeps Cut / Copy / Paste visible (disabled) when there is no header box, which the menu bar
+    /// needs for a collapsed column. The grip context menu leaves the flag off and omits them.
+    /// </summary>
+    internal List<Control> BuildColumnMenuItems(int column, TextBox? box, bool keepClipboardSlot = false)
     {
         var count = _session.Doc.Columns.Count;
         var edit = _view == ViewMode.Edit;
         var items = new List<Control>();
-        if (box != null)
+        if (box != null || keepClipboardSlot)
         {
-            var cut = new MenuItem { Header = Localizer.T("col.cut"), InputGesture = new KeyGesture(Key.X, KeyModifiers.Control) };
-            cut.Click += (_, _) => box.Cut();
-            var copy = new MenuItem { Header = Localizer.T("col.copy"), InputGesture = new KeyGesture(Key.C, KeyModifiers.Control) };
-            copy.Click += (_, _) => box.Copy();
-            var paste = new MenuItem { Header = Localizer.T("col.paste"), InputGesture = new KeyGesture(Key.V, KeyModifiers.Control) };
-            paste.Click += (_, _) => box.Paste();
+            var clip = MenuCommandRules.ColumnClipboard(edit, box != null, column, count);
+            var cut = new MenuItem { Header = Localizer.T("col.cut"), InputGesture = new KeyGesture(Key.X, KeyModifiers.Control), IsEnabled = clip };
+            var copy = new MenuItem { Header = Localizer.T("col.copy"), InputGesture = new KeyGesture(Key.C, KeyModifiers.Control), IsEnabled = clip };
+            var paste = new MenuItem { Header = Localizer.T("col.paste"), InputGesture = new KeyGesture(Key.V, KeyModifiers.Control), IsEnabled = clip };
+            if (box != null)
+            {
+                cut.Click += (_, _) => box.Cut();
+                copy.Click += (_, _) => box.Copy();
+                paste.Click += (_, _) => box.Paste();
+            }
             items.AddRange([cut, copy, paste, new Separator()]);
         }
         MenuItem Item(string text, bool enabled, Action act, KeyGesture? g = null)
         {
-            var m = new MenuItem { Header = text, IsEnabled = enabled && edit };
+            var m = new MenuItem { Header = text, IsEnabled = enabled };
             if (g != null) m.InputGesture = g;
             m.Click += (_, _) => act();
             return m;
         }
-        items.Add(Item(Localizer.T("col.move_left"), column > 0, () => RequestMoveColumn(column, column - 1),
+        items.Add(Item(Localizer.T("col.move_left"), MenuCommandRules.MoveLeft(edit, column, count), () => RequestMoveColumn(column, column - 1),
             new KeyGesture(Key.Left, KeyModifiers.Alt | KeyModifiers.Shift)));
-        items.Add(Item(Localizer.T("col.move_right"), column < count - 1, () => RequestMoveColumn(column, column + 1),
+        items.Add(Item(Localizer.T("col.move_right"), MenuCommandRules.MoveRight(edit, column, count), () => RequestMoveColumn(column, column + 1),
             new KeyGesture(Key.Right, KeyModifiers.Alt | KeyModifiers.Shift)));
-        items.Add(Item(Localizer.T("col.move_first"), column > 0, () => RequestMoveColumn(column, 0)));
-        items.Add(Item(Localizer.T("col.move_last"), column < count - 1, () => RequestMoveColumn(column, count - 1)));
+        items.Add(Item(Localizer.T("col.move_first"), MenuCommandRules.MoveFirst(edit, column, count), () => RequestMoveColumn(column, 0)));
+        items.Add(Item(Localizer.T("col.move_last"), MenuCommandRules.MoveLast(edit, column, count), () => RequestMoveColumn(column, count - 1)));
         if (_extraColumnMenuItems?.Invoke(column) is { } extra)
         {
             items.Add(new Separator());
             items.AddRange(extra);
         }
         items.Add(new Separator());
-        var isDue = column == _session.Doc.DueColumnIndex();
-        items.Add(Item(isDue ? Localizer.T("col.delete_due") : Localizer.T("col.delete"), !isDue && count > 1,
+        items.AddRange(BuildColumnGroupMenuItems(column, edit));
+        items.Add(new Separator());
+        // Status and the reminder column use the same delete item as every other column.
+        items.Add(Item(Localizer.T("col.delete"),
+            MenuCommandRules.DeleteColumn(edit, column, count, isDue: false),
             () => RequestDeleteColumn(column)));
-        return new ContextMenu { ItemsSource = items };
+        return items;
     }
 
     /// <summary>Data column under an X position in TableGrid (grid column 0 = row numbers).</summary>
@@ -181,7 +195,8 @@ public partial class MainWindow
         for (var i = 0; i < n; i++)
         {
             var w = i + 1 < TableGrid.ColumnDefinitions.Count ? TableGrid.ColumnDefinitions[i + 1].ActualWidth : 0;
-            if (w <= 0) w = _session.Doc.ColumnWidth(i);
+            // A collapsed child is width 0 on purpose — do not fall back to its stored width or drag-drop hits it.
+            if (w <= 0) w = ColumnGroupOps.IsHidden(_session.Doc, i) ? 0 : _session.Doc.ColumnWidth(i);
             if (x < acc + w) return i;
             acc += w;
         }
@@ -198,5 +213,298 @@ public partial class MainWindow
             tb.BorderBrush = on ? ColumnDropMark : GridLine;
             tb.BorderThickness = on ? (target < from ? new Thickness(4, 1, 1, 1) : new Thickness(1, 1, 4, 1)) : new Thickness(1);
         }
+    }
+
+    /// <summary>▸ / ▾ on a group parent. Collapsing hides children; it does not change their cells.</summary>
+    private Control MakeGroupToggle(int column)
+    {
+        var doc = _session.Doc;
+        var group = ColumnGroupOps.GroupForParent(doc, column);
+        var expanded = group?.Expanded ?? true;
+        var parentId = doc.ColumnIdAt(column);
+        var button = new Button
+        {
+            Content = expanded ? "▾" : "▸",
+            Width = 28, MinWidth = 28, Padding = new Thickness(0),
+            Background = HeaderBg, Foreground = TextFg, BorderBrush = GridLine, BorderThickness = new Thickness(0, 0, 1, 0),
+            FontSize = 16, HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
+            IsEnabled = _view == ViewMode.Edit,
+            Cursor = new Cursor(StandardCursorType.Hand)
+        };
+        var count = group?.ChildIds.Count ?? 0;
+        ToolTip.SetTip(button, expanded
+            ? Localizer.T("colgroup.toggle_collapse_tip")
+            : Localizer.T("colgroup.toggle_expand_tip", count));
+        button.Click += (_, e) =>
+        {
+            e.Handled = true;
+            if (_busy || _view != ViewMode.Edit) return;
+            var idx = _session.Doc.ColumnIds.IndexOf(parentId);
+            if (idx >= 0) RequestToggleGroup(idx);
+        };
+        return button;
+    }
+
+    private List<Control> BuildColumnGroupMenuItems(int column, bool edit)
+    {
+        var doc = _session.Doc;
+        var items = new List<Control>();
+        var parent = ColumnGroupOps.GroupForParent(doc, column);
+        var child = parent == null ? ColumnGroupOps.GroupForChild(doc, column) : null;
+        if (parent != null)
+        {
+            var parentId = doc.ColumnIdAt(column);
+            items.Add(GroupItem(parent.Expanded ? Localizer.T("colgroup.collapse") : Localizer.T("colgroup.expand"), MenuCommandRules.ToggleGroup(edit), () =>
+            {
+                var idx = _session.Doc.ColumnIds.IndexOf(parentId);
+                if (idx >= 0) RequestToggleGroup(idx);
+            }));
+            var room = NoteDocument.MaxUserColumns - doc.Columns.Count;
+            items.Add(GroupItem(Localizer.T("colgroup.add_child"), MenuCommandRules.AddChild(edit, room, parent.ChildIds.Count), () =>
+            {
+                var idx = _session.Doc.ColumnIds.IndexOf(parentId);
+                if (idx >= 0) RequestAddChild(idx);
+            }));
+            items.Add(GroupItem(Localizer.T("colgroup.rename_children"), MenuCommandRules.RenameChildren(edit), () =>
+            {
+                var idx = _session.Doc.ColumnIds.IndexOf(parentId);
+                if (idx >= 0) RequestRenameChildren(idx);
+            }));
+            var remove = new MenuItem { Header = Localizer.T("colgroup.remove_child"), IsEnabled = MenuCommandRules.RemoveChildParent(edit) };
+            foreach (var cid in parent.ChildIds.ToList())
+            {
+                var childIndex = doc.ColumnIds.IndexOf(cid);
+                var label = childIndex >= 0 ? doc.Columns[childIndex] : cid;
+                var idCopy = cid;
+                var m = new MenuItem { Header = Localizer.T("colgroup.remove_named", label), IsEnabled = MenuCommandRules.RemoveNamedChild(edit) };
+                m.Click += (_, _) =>
+                {
+                    var idx = _session.Doc.ColumnIds.IndexOf(idCopy);
+                    if (idx >= 0) RequestDeleteColumn(idx);
+                };
+                remove.Items.Add(m);
+            }
+            items.Add(remove);
+            items.Add(GroupItem(Localizer.T("colgroup.ungroup"), MenuCommandRules.Ungroup(edit), () =>
+            {
+                var idx = _session.Doc.ColumnIds.IndexOf(parentId);
+                if (idx >= 0) RequestUngroup(idx);
+            }));
+        }
+        else if (child != null)
+        {
+            var parentIndex = doc.ColumnIds.IndexOf(child.ParentId);
+            var parentName = parentIndex >= 0 ? doc.Columns[parentIndex] : "";
+            items.Add(new MenuItem { Header = Localizer.T("colgroup.child_of", parentName), IsEnabled = MenuCommandRules.ChildOfLabel() });
+            var childId = doc.ColumnIdAt(column);
+            items.Add(GroupItem(Localizer.T("colgroup.remove_named", doc.Columns[column]), MenuCommandRules.RemoveThisColumn(edit, doc.Columns.Count), () =>
+            {
+                var idx = _session.Doc.ColumnIds.IndexOf(childId);
+                if (idx >= 0) RequestDeleteColumn(idx);
+            }));
+        }
+        else
+        {
+            var id = column >= 0 && column < doc.Columns.Count ? doc.ColumnIdAt(column) : "";
+            var room = NoteDocument.MaxUserColumns - doc.Columns.Count;
+            var system = column >= 0 && ColumnSettingsOps.IsSystemColumn(doc, column);
+            var make = GroupItem(Localizer.T("colgroup.make"), MenuCommandRules.MakeGroup(edit, column, doc.Columns.Count, system, room), () =>
+            {
+                var idx = _session.Doc.ColumnIds.IndexOf(id);
+                if (idx >= 0) RequestMakeGroup(idx);
+            });
+            ToolTip.SetTip(make, system ? Localizer.T("colgroup.system") : Localizer.T("colgroup.make_tip"));
+            items.Add(make);
+        }
+        return items;
+    }
+
+    private MenuItem GroupItem(string text, bool enabled, Action act)
+    {
+        var m = new MenuItem { Header = text, IsEnabled = enabled };
+        m.Click += (_, _) => act();
+        return m;
+    }
+
+    private void RequestMakeGroup(int column) =>
+        _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.colgroup_create"), () => MakeGroupAsync(column)));
+
+    private void RequestAddChild(int column) =>
+        _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.colgroup_add"), () => Task.FromResult(ApplyGroupEdit(column, ColumnGroupOps.AddChild, "colgroup.added"))));
+
+    private void RequestUngroup(int column) =>
+        _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.colgroup_ungroup"), () => Task.FromResult(ApplyGroupEdit(column, ColumnGroupOps.Ungroup, "colgroup.ungrouped"))));
+
+    // View state only: persisted, but not an undo step, so Ctrl+Z skips it.
+    private void RequestToggleGroup(int column) =>
+        _ = RunStructureAsync(() => ToggleGroupAsync(column));
+
+    private void RequestRenameChildren(int column) =>
+        _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.colgroup_rename"), () => RenameChildrenAsync(column)));
+
+    private bool ApplyGroupEdit(int column, Func<NoteDocument, int, GroupEdit> edit, string doneKey)
+    {
+        var doc = _session.Doc;
+        if (column < 0 || column >= doc.Columns.Count) return false;
+        var id = doc.ColumnIdAt(column);
+        var result = edit(doc, column);
+        if (!result.Ok)
+        {
+            if (!string.IsNullOrEmpty(result.Error)) StatusText.Text = result.Error;
+            return false;
+        }
+        column = doc.ColumnIds.IndexOf(id);
+        Rebuild(); FlushSave();
+        var name = column >= 0 ? doc.Columns[column] : "";
+        StatusText.Text = Localizer.T(doneKey, name);
+        return true;
+    }
+
+    private async Task MakeGroupAsync(int column)
+    {
+        var doc = _session.Doc;
+        if (column < 0 || column >= doc.Columns.Count || _view != ViewMode.Edit) return;
+        var id = doc.ColumnIdAt(column);
+        var room = NoteDocument.MaxUserColumns - doc.Columns.Count;
+        if (room < 1)
+        {
+            StatusText.Text = Localizer.T("colgroup.no_room", ColumnGroupOps.DefaultChildCount, NoteDocument.MaxUserColumns);
+            return;
+        }
+        _busy = true;
+        try
+        {
+            var count = await new ColumnGroupCountDialog(doc.Columns[column], room).ShowDialog<int?>(this);
+            if (count is not int n) return;
+            column = doc.ColumnIds.IndexOf(id);
+            if (column < 0) { StatusText.Text = Localizer.T("colgroup.not_column"); return; }
+            var result = ColumnGroupOps.Create(doc, column, n);
+            if (!result.Ok) { StatusText.Text = result.Error ?? ""; return; }
+            Rebuild(); FlushSave();
+            StatusText.Text = Localizer.T("colgroup.created", doc.Columns[column], n);
+        }
+        finally { _busy = false; }
+    }
+
+    private Task ToggleGroupAsync(int column)
+    {
+        var doc = _session.Doc;
+        if (column < 0 || column >= doc.Columns.Count) return Task.CompletedTask;
+        var id = doc.ColumnIdAt(column);
+        var before = ColumnGroupOps.GroupForParent(doc, column)?.Expanded ?? true;
+        var result = ColumnGroupOps.Toggle(doc, column);
+        if (!result.Ok) { StatusText.Text = result.Error ?? ""; return Task.CompletedTask; }
+        column = doc.ColumnIds.IndexOf(id);
+        Rebuild(); FlushSave();
+        var name = column >= 0 ? doc.Columns[column] : "";
+        StatusText.Text = Localizer.T(before ? "colgroup.collapsed" : "colgroup.expanded", name);
+        return Task.CompletedTask;
+    }
+
+    private async Task RenameChildrenAsync(int column)
+    {
+        var doc = _session.Doc;
+        if (column < 0 || column >= doc.Columns.Count || _view != ViewMode.Edit) return;
+        var id = doc.ColumnIdAt(column);
+        var group = ColumnGroupOps.GroupForParent(doc, column);
+        if (group == null) { StatusText.Text = Localizer.T("colgroup.not_group"); return; }
+        var names = group.ChildIds.Select(cid =>
+        {
+            var i = doc.ColumnIds.IndexOf(cid);
+            return i >= 0 ? doc.Columns[i] : "";
+        }).ToList();
+        _busy = true;
+        try
+        {
+            var edited = await new ColumnGroupNamesDialog(doc.Columns[column], names).ShowDialog<List<string>?>(this);
+            if (edited == null) return;
+            column = doc.ColumnIds.IndexOf(id);
+            if (column < 0) { StatusText.Text = Localizer.T("colgroup.not_column"); return; }
+            var result = ColumnGroupOps.RenameChildren(doc, column, edited);
+            if (!result.Ok) { StatusText.Text = result.Error ?? ""; return; }
+            Rebuild(); FlushSave();
+            StatusText.Text = Localizer.T("colgroup.renamed", doc.Columns[column]);
+        }
+        finally { _busy = false; }
+    }
+}
+
+/// <summary>How many child columns a new group should own. Default 3, capped by the free column slots.</summary>
+public sealed class ColumnGroupCountDialog : Window
+{
+    public ColumnGroupCountDialog(string parentName, int room)
+    {
+        Title = Localizer.T("colgroup.ask_count_title");
+        Width = 420;
+        SizeToContent = SizeToContent.Height;
+        CanResize = false;
+        ShowInTaskbar = false;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        FontFamily = AppFonts.Thai;
+        Background = new SolidColorBrush(Color.Parse("#FFF6C2"));
+        var max = Math.Max(1, Math.Min(ColumnGroupOps.MaxChildCount, room));
+        var start = Math.Min(ColumnGroupOps.DefaultChildCount, max);
+        var count = new NumericUpDown
+        {
+            Minimum = ColumnGroupOps.MinChildCount, Maximum = max, Increment = 1,
+            Value = start, FormatString = "0", Width = 120, HorizontalAlignment = HorizontalAlignment.Left
+        };
+        var ok = new Button { Content = Localizer.T("common.ok"), MinWidth = 80, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
+        var cancel = new Button { Content = Localizer.T("common.cancel"), MinWidth = 80, IsCancel = true };
+        ok.Click += (_, _) =>
+        {
+            var n = (int)(count.Value ?? start);
+            if (n < ColumnGroupOps.MinChildCount || n > max)
+            {
+                return;
+            }
+            Close(n);
+        };
+        cancel.Click += (_, _) => Close(null);
+        Content = new StackPanel
+        {
+            Margin = new Thickness(16), Spacing = 8,
+            Children =
+            {
+                new TextBlock { Text = Localizer.T("colgroup.ask_count_body", parentName), TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = Localizer.T("colgroup.ask_count_label") },
+                count,
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
+                    Margin = new Thickness(0, 8, 0, 0), Children = { ok, cancel }
+                }
+            }
+        };
+    }
+}
+
+/// <summary>Rename every child column of a group. Empty names are allowed (same as any other header).</summary>
+public sealed class ColumnGroupNamesDialog : Window
+{
+    public ColumnGroupNamesDialog(string parentName, IReadOnlyList<string> names)
+    {
+        Title = Localizer.T("colgroup.ask_names_title");
+        Width = 420;
+        SizeToContent = SizeToContent.Height;
+        CanResize = false;
+        ShowInTaskbar = false;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        FontFamily = AppFonts.Thai;
+        Background = new SolidColorBrush(Color.Parse("#FFF6C2"));
+        var boxes = names.Select(n => new TextBox { Text = n, MaxLength = TableLimits.MaxCellChars }).ToList();
+        var ok = new Button { Content = Localizer.T("common.ok"), MinWidth = 80, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
+        var cancel = new Button { Content = Localizer.T("common.cancel"), MinWidth = 80, IsCancel = true };
+        ok.Click += (_, _) => Close(boxes.Select(b => b.Text ?? "").ToList());
+        cancel.Click += (_, _) => Close(null);
+        var root = new StackPanel { Margin = new Thickness(16), Spacing = 6 };
+        root.Children.Add(new TextBlock { Text = Localizer.T("colgroup.ask_names_body", parentName), TextWrapping = TextWrapping.Wrap });
+        foreach (var box in boxes) root.Children.Add(box);
+        root.Children.Add(new StackPanel
+        {
+            Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 8, 0, 0), Children = { ok, cancel }
+        });
+        Content = root;
     }
 }

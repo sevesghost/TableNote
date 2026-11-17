@@ -16,55 +16,143 @@
       <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="BorderBrush" Value="#D4B86A"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="Margin" Value="0,2,4,2"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="CheckBox.tool">
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Foreground" Value="#3B3222"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
-      <Setter Property="Margin" Value="4,0,8,0"/>
+      <Setter Property="Margin" Value="4,2,8,2"/>
+    </Style>
+    <Style Selector="Border.toolgroup">
+      <Setter Property="Background" Value="#FFF8DC"/>
+      <Setter Property="BorderBrush" Value="#E4D08A"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="Padding" Value="4,3,2,3"/>
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.groupcap">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#8A7040"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="Margin" Value="2,0,8,0"/>
+    </Style>
+    <Style Selector="Menu.note">
+      <Setter Property="Background" Value="#F6E7A4"/>
+      <Setter Property="Foreground" Value="#3B3222"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="2,1"/>
+    </Style>
+    <Style Selector="Menu.note MenuItem">
+      <Setter Property="Foreground" Value="#3B3222"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="10,6"/>
     </Style>
   </Window.Styles>
 
   <LayoutTransformControl x:Name="ZoomHost">
   <DockPanel Margin="12,10">
+    <Menu x:Name="MainMenu" Classes="note" DockPanel.Dock="Top" Margin="0,0,0,6"/>
+
     <TextBlock x:Name="ModeNotice" DockPanel.Dock="Top"
                TextWrapping="Wrap" FontSize="12" Foreground="#A05A12"
                Margin="0,0,0,6" IsVisible="False"/>
 
+    <!-- Groups wrap inside each row so a narrow window never clips a button. -->
     <ScrollViewer x:Name="ToolScroll" DockPanel.Dock="Top"
-                  HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Disabled"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto"
+                  MaxHeight="220"
+                  ClipToBounds="True"
                   Margin="0,0,0,4">
-      <StackPanel x:Name="EditTools" Orientation="Horizontal">
-        <Button x:Name="AddRowButton" Classes="tool" Content="+ Row" ToolTip.Tip="Add row (F5)"/>
-        <Button x:Name="DeleteRowButton" Classes="tool" Content="− Row" ToolTip.Tip="Delete row (F6)"/>
-        <Button x:Name="AddColumnButton" Classes="tool" Content="+ Column" ToolTip.Tip="Add column (F7)"/>
-        <Button x:Name="DeleteColumnButton" Classes="tool" Content="− Column" ToolTip.Tip="Delete column (F8)"/>
-        <CheckBox x:Name="TopmostBox" Classes="tool" Content="Always on top" ToolTip.Tip="Keep the window on top"/>
-        <CheckBox x:Name="LockBox" Classes="tool" Content="Lock position" Margin="4,0,16,0"
-                  ToolTip.Tip="Locked: dragging doesn't move the window"/>
-        <Button x:Name="HelpButton" Classes="tool" Content="?" ToolTip.Tip="Help"/>
-        <Button x:Name="LogButton" Classes="tool" Content="Change log" ToolTip.Tip="Change log"/>
-        <Button x:Name="BackgroundButton" Classes="tool" Content="Pin to desktop"
-                ToolTip.Tip="View only, clicks pass through (Windows)"/>
-        <Button x:Name="CopyAllButton" Classes="tool" Content="Copy table"/>
-        <Button x:Name="CopyHeadersButton" Classes="tool" Content="Copy with headers"/>
-        <Button x:Name="ExportButton" Classes="tool" Content="Export" ToolTip.Tip="Save the table as .txt / .csv / .xlsx"/>
-        <CheckBox x:Name="LaunchBox" Classes="tool" Content="Launch at sign-in"/>
-        <CheckBox x:Name="HideDoneBox" Classes="tool" Content="Hide done rows"/>
-        <CheckBox x:Name="MuteSoundBox" Classes="tool" Content="Mute reminders"
-                  ToolTip.Tip="No sound when a reminder pops up (the popup still shows)"/>
-        <Button x:Name="SortDueButton" Classes="tool" Content="Sort by due"
-                ToolTip.Tip="Sort rows by the nearest due date"/>
-        <Button x:Name="LanguageButton" Classes="tool" Content="EN/TH" Margin="10,0,6,0"
-                ToolTip.Tip="Change the display language"/>
-        <Button x:Name="ZoomOutButton" Classes="tool" Content="A−" ToolTip.Tip="Zoom out (Ctrl+−)"/>
-        <Button x:Name="ZoomResetButton" Classes="tool" Content="100%" ToolTip.Tip="Reset zoom (Ctrl+0)"/>
-        <Button x:Name="ZoomInButton" Classes="tool" Content="A+" ToolTip.Tip="Zoom in (Ctrl++)"/>
+      <StackPanel x:Name="EditTools">
+        <Border Classes="toolgroup">
+          <Grid ColumnDefinitions="124,*">
+            <TextBlock x:Name="GroupTableLabel" Classes="groupcap" Text="Edit table"/>
+            <WrapPanel x:Name="TableEditTools" Grid.Column="1">
+              <Button x:Name="AddRowButton" Classes="tool" Content="+ Row" ToolTip.Tip="Add row (F5)"/>
+              <Button x:Name="DeleteRowButton" Classes="tool" Content="− Row" ToolTip.Tip="Delete row (F6)"/>
+              <Button x:Name="AddColumnButton" Classes="tool" Content="+ Column" ToolTip.Tip="Add column (F7)"/>
+              <Button x:Name="DeleteColumnButton" Classes="tool" Content="− Column" ToolTip.Tip="Delete column (F8)"/>
+            </WrapPanel>
+          </Grid>
+        </Border>
+        <Border Classes="toolgroup">
+          <Grid ColumnDefinitions="124,*">
+            <TextBlock x:Name="GroupCopyLabel" Classes="groupcap" Text="Copy / export"/>
+            <WrapPanel Grid.Column="1">
+              <Button x:Name="CopyAllButton" Classes="tool" Content="Copy table"/>
+              <Button x:Name="CopyHeadersButton" Classes="tool" Content="Copy with headers"/>
+              <Button x:Name="ExportButton" Classes="tool" Content="Export" ToolTip.Tip="Save the table as .txt / .csv / .xlsx"/>
+              <Button x:Name="ExportImageButton" Classes="tool" Content="Export image" ToolTip.Tip="Save the current view as a PNG or JPEG image"/>
+              <Button x:Name="PrintButton" Classes="tool" Content="Print" ToolTip.Tip="Print the current view"/>
+            </WrapPanel>
+          </Grid>
+        </Border>
+        <Border Classes="toolgroup">
+          <Grid ColumnDefinitions="124,*">
+            <TextBlock x:Name="GroupViewLabel" Classes="groupcap" Text="View"/>
+            <WrapPanel Grid.Column="1">
+              <CheckBox x:Name="HideDoneBox" Classes="tool" Content="Hide done rows"/>
+              <Button x:Name="SortDueButton" Classes="tool" Content="Sort by due"
+                      ToolTip.Tip="Sort rows by the nearest due date"/>
+              <Button x:Name="ZoomOutButton" Classes="tool" Content="A−" ToolTip.Tip="Zoom out (Ctrl+−)"/>
+              <Button x:Name="ZoomResetButton" Classes="tool" Content="100%" ToolTip.Tip="Reset zoom (Ctrl+0)"/>
+              <Button x:Name="ZoomInButton" Classes="tool" Content="A+" ToolTip.Tip="Zoom in (Ctrl++)"/>
+              <Button x:Name="LanguageButton" Classes="tool" Content="EN/TH"
+                      ToolTip.Tip="Change the display language"/>
+            </WrapPanel>
+          </Grid>
+        </Border>
+        <Border Classes="toolgroup">
+          <Grid ColumnDefinitions="124,*">
+            <TextBlock x:Name="GroupSystemLabel" Classes="groupcap" Text="System"/>
+            <WrapPanel Grid.Column="1">
+              <CheckBox x:Name="TopmostBox" Classes="tool" Content="Always on top" ToolTip.Tip="Keep the window on top"/>
+              <CheckBox x:Name="LockBox" Classes="tool" Content="Lock position"
+                        ToolTip.Tip="Locked: dragging doesn't move the window"/>
+              <CheckBox x:Name="LaunchBox" Classes="tool" Content="Launch at sign-in"/>
+              <CheckBox x:Name="MuteSoundBox" Classes="tool" Content="Mute reminders"
+                        ToolTip.Tip="No sound when a reminder pops up (the popup still shows)"/>
+              <Button x:Name="BackgroundButton" Classes="tool" Content="Pin to desktop"
+                      ToolTip.Tip="View only, clicks pass through (Windows)"/>
+            </WrapPanel>
+          </Grid>
+        </Border>
+        <Border Classes="toolgroup">
+          <Grid ColumnDefinitions="124,*">
+            <TextBlock x:Name="GroupHelpLabel" Classes="groupcap" Text="Help"/>
+            <WrapPanel Grid.Column="1">
+              <Button x:Name="HelpButton" Classes="tool" Content="?" ToolTip.Tip="Help"/>
+              <Button x:Name="LogButton" Classes="tool" Content="Change log" ToolTip.Tip="Change log"/>
+            </WrapPanel>
+          </Grid>
+        </Border>
       </StackPanel>
     </ScrollViewer>
+
+    <Border x:Name="AlertHost" DockPanel.Dock="Top" Margin="0,2,0,6"
+            Background="#FFF8E0" BorderBrush="#E4D08A" BorderThickness="1"
+            CornerRadius="8" Padding="8,6">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+          <TextBlock x:Name="AlertHeading" VerticalAlignment="Center" FontSize="13"
+                     FontWeight="SemiBold" Foreground="#3B3222" TextWrapping="Wrap"/>
+          <Button x:Name="AddAlertButton" Grid.Column="1" Classes="tool" Margin="8,0,0,0"
+                  Content="+ Alert" VerticalAlignment="Center"/>
+        </Grid>
+        <TextBlock x:Name="AlertEmpty" DockPanel.Dock="Top" FontSize="12" Foreground="#6B5E48"
+                   TextWrapping="Wrap" IsVisible="False" Margin="0,0,0,2"/>
+        <ScrollViewer x:Name="AlertScroll" MaxHeight="220"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <StackPanel x:Name="AlertList"/>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
 
     <TextBlock x:Name="StatusText" DockPanel.Dock="Bottom"
                Margin="0,8,0,0" FontSize="12" Foreground="#6B5E48"

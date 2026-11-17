@@ -27,6 +27,13 @@ Columns and rows
   Right-click a row number → Row color / Highlight row. A row color replaces the status color;
   a highlighted row gets an orange row number.
 
+Alert boxes
+  + Alert (above the table) adds a box. Edit its title and text. Drag the ⋮⋮ grip to change the order,
+  or use Up and Down (they work without dragging, and with the keyboard). Delete asks first, then removes that box.
+  This can't be undone with Ctrl+Z.
+  The boxes and their order are saved in note.json. Each box keeps a stable id. Ctrl+Z does not undo
+  alert-box changes. These boxes are separate from due-date reminders.
+
 Taskbar and tray
   Editing: icon on the taskbar and in the tray. Pinned to desktop: tray icon only.
   Tray → Edit table, Ctrl+Shift+E or unpinning brings the taskbar icon back; the mode is kept after restart.
@@ -120,6 +127,13 @@ Files
   ปุ่ม ""เรียงตามกำหนด"" / ช่อง ""ซ่อนงานเสร็จ""
   สีแถวที่ตั้งเอง (คลิกขวาที่เลขแถว → สีแถว) ใช้แทนสีพื้นข้างบน  ไฮไลต์แถว = เลขแถวสีส้ม
   คลิกขวาที่หัวคอลัมน์ → ตั้งค่าคอลัมน์… เปลี่ยนชื่อ ความกว้าง และชนิด (ข้อความ / ตัวเลข / ตัวเลือก / ช่องติ๊ก)
+
+กล่องแจ้งเตือน
+  ปุ่ม + กล่องแจ้งเตือน (เหนือตาราง) เพิ่มกล่อง แก้หัวข้อและข้อความได้
+  ลากที่จับ ⋮⋮ เพื่อเรียงลำดับ หรือใช้ปุ่ม ขึ้น / ลง (ใช้ได้โดยไม่ต้องลาก และใช้คีย์บอร์ดได้)
+  ปุ่ม ลบ จะถามก่อน แล้วจึงเอาออก การลบนี้กู้คืนด้วย Ctrl+Z ไม่ได้
+  กล่องและลำดับถูกบันทึกใน note.json แต่ละกล่องมีรหัสคงที่
+  Ctrl+Z ไม่ย้อนการแก้กล่องแจ้งเตือน กล่องนี้คนละอย่างกับเตือนตามกำหนดส่ง
 
 ไอคอนแถบงานและถาด
   โหมดแก้ไข: มีไอคอนทั้งที่แถบงานและถาด   โหมดวางแนบพื้นหลัง: มีไอคอนที่ถาดอย่างเดียว

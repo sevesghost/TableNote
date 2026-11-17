@@ -9,7 +9,8 @@ public static class TableLimits
     public const int MaxSaveFileBytes = 8 * 1024 * 1024; // 1000 rows fit comfortably
     public const int DefaultColumnWidth = 140;
     public const int MinColumnWidth = 72;
-    public const int MaxColumnWidth = 420;
+    /// <summary>v2.6: was 420. Values are pixels at 100% zoom. Older TableNote builds still clamp anything above 420 when they open the file.</summary>
+    public const int MaxColumnWidth = 800;
 
     // v2.4.2: messages are properties resolved when shown (were Thai consts).
     public static string PasteTooBigMessage => Localizer.T("limit.paste_too_big");

@@ -161,6 +161,27 @@ Show(Make(2, "quit-"), done: _ => { Show(Make(1, "quit-deferred-")); ReminderPop
 Pump(100); Click(Buttons()[1]); Pump(100);
 Ok(ReminderPopup.CurrentWindow == null && released.Contains("quit-deferred-0"), "quit during a click: deferred batch dropped and released");
 
+// ── 9b. deleting the due column stops the scheduler without an error ──
+Reset();
+{
+    var doc = NoteDocument.CreateDefault();
+    doc.SetCellRaw(0, doc.DueColumnIndex(), DueDates.Format(DateTime.Now.AddMinutes(-2)));
+    int batches = 0;
+    Exception? boom = null;
+    try
+    {
+        using var svc = new ReminderService(() => doc, _ => batches++);
+        svc.CheckNow();
+        var fired = batches;
+        doc.RemoveColumn(doc.DueColumnIndex());
+        svc.CheckNow();
+        Ok(fired == 1 && batches == 1 && ReminderPlan.Collect(doc, DateTime.Now).Count == 0,
+            $"scheduler stops after the due column is removed (before={fired} after={batches})");
+    }
+    catch (Exception ex) { boom = ex; }
+    Ok(boom == null, "scheduler does not throw when the due column is gone" + (boom == null ? "" : " — " + boom.Message));
+}
+
 // ── 10. CrashLog ──
 Reset();
 Dispatcher.UIThread.Post(() => throw new InvalidOperationException("boom from a UI handler"));

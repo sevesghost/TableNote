@@ -30,6 +30,21 @@ public static class NoteStore
         /// <summary>v2.4.0: parsed leniently per entry, like reminders.</summary>
         public JsonElement? ColumnSettings { get; set; }
         public JsonElement? RowStyles { get; set; }
+        /// <summary>Collapsible column groups. Absent in files from before this field — those load with none.</summary>
+        public List<ColumnGroup>? ColumnGroups { get; set; }
+        /// <summary>Optional alert boxes, in order. Missing → empty. Parsed leniently per entry.</summary>
+        public JsonElement? AlertBoxes { get; set; }
+        /// <summary>v2.5. Optional. Missing, null, or a bad value leaves every part on its built-in color.</summary>
+        public JsonElement? PartColors { get; set; }
+        /// <summary>v2.6: row id → pixel height. Null when no row was given a height, so old files stay unchanged.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, int>? RowHeights { get; set; }
+        /// <summary>False (omitted) on older files, which still receive a status column if it is missing.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool StatusColumnOmitted { get; set; }
+        /// <summary>False (omitted) on older files, which still receive the reminder date column if it is missing.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool DueColumnOmitted { get; set; }
     }
 
     /// <summary>Problems found while reading optional sections (logged, not shown as "file corrupt").</summary>
@@ -101,7 +116,13 @@ public static class NoteStore
     {
         "version", "columns", "rows", "launchAtLogin", "trayNoticeShown", "columnWidths", "viewMode", "window",
         "hideDone", "snoozes", "recurrence", "rowIds", "columnIds", "columnRoles", "muteSound", "acknowledged", "reminders",
-        "columnSettings", "rowStyles" // v2.4.0
+        "columnSettings", "rowStyles", // v2.4.0
+        "columnGroups", // collapsible column groups; missing on older files
+        "cellDetails", // nested detail tables; document version is unchanged until the integrator bumps it
+        "alertBoxes", // optional; missing or bad → no boxes
+        "partColors", // v2.5, optional. An alert box color is alert:{id} in this map.
+        "rowHeights", // v2.6; missing means every row is auto
+        "statusColumnOmitted", "dueColumnOmitted" // false when absent: older files still gain both columns
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)
@@ -297,6 +318,67 @@ public static class NoteStore
         return map;
     }
 
+    /// <summary>Lenient parse of "columnGroups". A bad section or entry is skipped; the table still opens.</summary>
+    internal static List<ColumnGroup> ParseColumnGroups(JsonElement? el)
+    {
+        var list = new List<ColumnGroup>();
+        if (el is not { } e || e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return list;
+        if (e.ValueKind != JsonValueKind.Array) { LastLoadIssues.Add("columnGroups: not an array, all skipped"); return list; }
+        var n = 0;
+        foreach (var item in e.EnumerateArray())
+        {
+            n++;
+            if (item.ValueKind != JsonValueKind.Object) { LastLoadIssues.Add($"columnGroups[{n}]: not an object, skipped"); continue; }
+            var parent = (GetString(item, "parentId", "columnGroups.") ?? "").Trim();
+            var children = GetStringList(item, "childIds");
+            var expanded = GetBool(item, "expanded", true, "columnGroups.");
+            list.Add(new ColumnGroup { ParentId = parent, ChildIds = children, Expanded = expanded });
+        }
+        return list;
+    }
+
+    /// <summary>v2.5: "partColors" is optional. Missing, null, or a wrong type leaves the defaults; bad entries are skipped.</summary>
+    private static Dictionary<string, PartColor> ParsePartColors(JsonElement? el)
+    {
+        if (el is not { } e || e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return new Dictionary<string, PartColor>(StringComparer.Ordinal);
+        if (e.ValueKind != JsonValueKind.Object)
+        {
+            LastLoadIssues.Add("partColors: not an object, all skipped");
+            return new Dictionary<string, PartColor>(StringComparer.Ordinal);
+        }
+        return PartColorOps.ParseMap(e);
+    }
+
+    private static JsonElement PartColorsElement(NoteDocument doc)
+    {
+        var node = PartColorOps.ToJson(doc.PartColors);
+        using var parsed = JsonDocument.Parse(node?.ToJsonString() ?? "{}");
+        return parsed.RootElement.Clone();
+    }
+
+    /// <summary>v2.6: lenient parse of "rowHeights" {rowId: pixels}. Missing field = every row auto.
+    /// A bad value is skipped (not clamped); the rest of the file still opens.</summary>
+    internal static Dictionary<string, int> ParseRowHeights(JsonElement? el)
+    {
+        var map = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (el is not { } e || e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return map;
+        if (e.ValueKind != JsonValueKind.Object) { LastLoadIssues.Add("rowHeights: not an object, all skipped"); return map; }
+        foreach (var p in e.EnumerateObject())
+        {
+            int? n = null;
+            if (p.Value.ValueKind == JsonValueKind.Number && p.Value.TryGetInt32(out var i)) n = i;
+            else if (p.Value.ValueKind == JsonValueKind.String && int.TryParse((p.Value.GetString() ?? "").Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var s)) n = s;
+            if (n is not int h || h < SizeSpec.MinRowHeight || h > SizeSpec.MaxRowHeight)
+            {
+                LastLoadIssues.Add($"rowHeights.{p.Name}: value {p.Value.GetRawText()} is not a row height from {SizeSpec.MinRowHeight} to {SizeSpec.MaxRowHeight}, skipped");
+                continue;
+            }
+            map[p.Name] = h;
+        }
+        return map;
+    }
+
     private static void LogIssues(string path)
     {
         if (LastLoadIssues.Count == 0) return;
@@ -444,6 +526,23 @@ public static class NoteStore
                 LastLoadIssues.Add("window: not an object, using defaults");
             var layer = DesktopPlacement.ParseLayer(win is { } w1 ? GetString(w1, "layer", "window.") : null);
 
+            var cellDetailsRaw = Prop(root, "cellDetails");
+            CellDetailStore cellDetails;
+            JsonElement? cellDetailsFallback = null;
+            try
+            {
+                cellDetails = cellDetailsRaw is { } raw && raw.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null)
+                    ? CellDetailOps.Parse(raw, LastLoadIssues)
+                    : new CellDetailStore();
+            }
+            catch (Exception ex)
+            {
+                // Keep the raw value for a newer TableNote instead of dropping the whole note.
+                LastLoadIssues.Add($"cellDetails: could not be read ({ex.GetType().Name}: {ex.Message}), kept unchanged");
+                cellDetails = new CellDetailStore();
+                if (cellDetailsRaw is { } raw) cellDetailsFallback = raw.Clone();
+            }
+
             var doc = new NoteDocument
             {
                 Version = version,
@@ -464,6 +563,13 @@ public static class NoteStore
                 Reminders = ParseReminders(Prop(root, "reminders")),
                 ColumnSettings = ParseColumnSettings(Prop(root, "columnSettings")), // v2.4.0
                 RowStyles = ParseRowStyles(Prop(root, "rowStyles")),
+                ColumnGroups = ParseColumnGroups(Prop(root, "columnGroups")),
+                CellDetails = cellDetails,
+                AlertBoxes = AlertBoxOps.Parse(Prop(root, "alertBoxes"), LastLoadIssues.Add),
+                PartColors = ParsePartColors(Prop(root, "partColors")),
+                RowHeights = ParseRowHeights(Prop(root, "rowHeights")), // v2.6
+                StatusColumnOmitted = GetBool(root, "statusColumnOmitted", false),
+                DueColumnOmitted = GetBool(root, "dueColumnOmitted", false),
                 Window = new WindowMemory
                 {
                     Width = win is { } a ? GetInt(a, "width", 720, true, "window.") : 720,
@@ -475,10 +581,13 @@ public static class NoteStore
                     Topmost = DesktopPlacement.EffectiveTopmost(layer)
                 }
             };
-            // Keep fields this version doesn't know (e.g. from a newer TableNote) so saving doesn't drop them.
+            // Keep fields this version doesn't know so saving doesn't drop them.
+            // A higher version still opens and is not downgraded. partColors and alertBoxes are optional known fields.
             foreach (var prop in root.EnumerateObject())
                 if (!KnownFields.Contains(prop.Name))
                     doc.ExtraFields[prop.Name] = prop.Value.Clone();
+            if (cellDetailsFallback is { } keptDetails)
+                doc.ExtraFields["cellDetails"] = keptDetails;
             if (version > NoteDocument.CurrentVersion)
                 LastLoadIssues.Add($"version {version}: file comes from a newer TableNote, will back up to note.v{version}.bak before saving and keep unknown fields ({doc.ExtraFields.Count} fields)");
 
@@ -525,6 +634,16 @@ public static class NoteStore
             if (overflowNotice != null) { clipped = false; }
             ReminderPlan.Sanitize(doc); // bad reminder values dropped individually, never .bak
             ColumnSettingsOps.PruneOrphans(doc); // v2.4.0: settings/styles of gone columns/rows
+            try
+            {
+                var dropped = CellDetailOps.Prune(doc);
+                if (dropped > 0)
+                    LastLoadIssues.Add($"cellDetails: dropped {dropped} (row or column no longer exists)");
+            }
+            catch (Exception ex)
+            {
+                LastLoadIssues.Add($"cellDetails: cleanup failed ({ex.GetType().Name}: {ex.Message})");
+            }
             LogIssues(path);
             var issues = LastLoadIssues.ToList();
             var reminderIssue = issues.Any(i => i.StartsWith("reminders", StringComparison.Ordinal));
@@ -648,6 +767,7 @@ public static class NoteStore
     public static long Save(string path, NoteDocument doc)
     {
         doc.Normalize();
+        CellDetailOps.Prune(doc);
         TryBackupBeforeV3(path, doc);
         var dto = new FileDto
         {
@@ -670,6 +790,12 @@ public static class NoteStore
             Reminders = JsonSerializer.SerializeToElement(doc.Reminders, Options),
             ColumnSettings = JsonSerializer.SerializeToElement(doc.ColumnSettings, Options), // v2.4.0
             RowStyles = JsonSerializer.SerializeToElement(doc.RowStyles, Options),
+            ColumnGroups = ColumnGroupOps.Clone(doc.ColumnGroups),
+            AlertBoxes = AlertBoxOps.ToElement(doc.AlertBoxes),
+            PartColors = PartColorsElement(doc),
+            RowHeights = doc.RowHeights is { Count: > 0 } ? new Dictionary<string, int>(doc.RowHeights) : null, // v2.6
+            StatusColumnOmitted = doc.StatusColumnOmitted,
+            DueColumnOmitted = doc.DueColumnOmitted,
             Window = new WindowDto
             {
                 Width = doc.Window.Width,
@@ -686,11 +812,13 @@ public static class NoteStore
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
         string json;
-        if (doc.ExtraFields.Count == 0) json = JsonSerializer.Serialize(dto, Options);
+        if (doc.ExtraFields.Count == 0 && CellDetailOps.IsEmpty(doc.CellDetails)) json = JsonSerializer.Serialize(dto, Options);
         else
         {
             // Preserve unknown top-level fields (from a newer version) instead of dropping them silently.
+            // cellDetails is written only when the note actually has detail buttons or tables.
             var node = (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(dto, Options))!;
+            CellDetailOps.WriteProperty(node, doc.CellDetails);
             foreach (var (k, v) in doc.ExtraFields)
                 if (!node.ContainsKey(k)) node[k] = System.Text.Json.Nodes.JsonNode.Parse(v.GetRawText());
             json = node.ToJsonString(Options);

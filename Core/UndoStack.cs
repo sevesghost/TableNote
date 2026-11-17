@@ -110,7 +110,8 @@ public sealed class RowDeleteAction(
     string rowId,
     Dictionary<string, string> snoozes,
     string? recurrence,
-    ReminderInfo? reminders) : IUndoAction
+    ReminderInfo? reminders,
+    int? rowHeight = null) : IUndoAction
 {
     public string Label => Localizer.T("delete.undo_row");
 
@@ -123,7 +124,8 @@ public sealed class RowDeleteAction(
         doc.Recurrence.TryGetValue(id, out var rec);
         doc.Reminders.TryGetValue(id, out var rem);
         if (doc.Acknowledged.TryGetValue(id, out var ack)) sn["\u0001ack"] = ack;
-        return new RowDeleteAction(index, doc.Rows[index].ToList(), id, sn, rec, rem?.Clone());
+        int? height = doc.RowHeights != null && doc.RowHeights.TryGetValue(id, out var rh) ? rh : null;
+        return new RowDeleteAction(index, doc.Rows[index].ToList(), id, sn, rec, rem?.Clone(), height);
     }
 
     public void Undo(NoteDocument doc)
@@ -141,6 +143,7 @@ public sealed class RowDeleteAction(
         }
         if (recurrence != null) doc.Recurrence[rowId] = recurrence;
         if (reminders != null) doc.Reminders[rowId] = reminders.Clone();
+        if (rowHeight is int h) (doc.RowHeights ??= new(StringComparer.Ordinal))[rowId] = h;
     }
 
     public void Redo(NoteDocument doc)
@@ -196,11 +199,17 @@ public static class Snapshot
         public List<string> ColumnIds { get; set; } = [];
         public Dictionary<string, ColumnSetting> ColumnSettings { get; set; } = new(); // v2.4.0
         public Dictionary<string, RowStyle> RowStyles { get; set; } = new();
+        public List<ColumnGroup> ColumnGroups { get; set; } = []; // collapsible groups (create / ungroup / toggle)
         public List<List<string>> Rows { get; set; } = [];
         public List<string> RowIds { get; set; } = [];
         public List<int> ColumnWidths { get; set; } = [];
+        public Dictionary<string, int> RowHeights { get; set; } = new(); // v2.6
         public Dictionary<string, string> Recurrence { get; set; } = new();
         public Dictionary<string, List<int>> ReminderOffsets { get; set; } = new();
+        public bool StatusColumnOmitted { get; set; }
+        public bool DueColumnOmitted { get; set; }
+        /// <summary>Detail buttons and nested tables (JSON). Null when the note has none.</summary>
+        public string? CellDetails { get; set; }
     }
 
     public static string Serialize(NoteDocument doc)
@@ -218,11 +227,16 @@ public static class Snapshot
             ColumnIds = doc.ColumnIds.ToList(),
             ColumnSettings = ColumnSettingsOps.Clone(doc.ColumnSettings), // v2.4.0
             RowStyles = RowStyleOps.Clone(doc.RowStyles),
+            ColumnGroups = ColumnGroupOps.Clone(doc.ColumnGroups),
             Rows = doc.Rows.Select(r => r.ToList()).ToList(),
             RowIds = doc.RowIds.ToList(),
             ColumnWidths = doc.ColumnWidths.ToList(),
+            RowHeights = new Dictionary<string, int>(doc.RowHeights ?? new()),
             Recurrence = new Dictionary<string, string>(doc.Recurrence),
-            ReminderOffsets = doc.Reminders.Where(k => k.Value.Offsets.Count > 0).ToDictionary(k => k.Key, k => k.Value.Offsets.ToList())
+            ReminderOffsets = doc.Reminders.Where(k => k.Value.Offsets.Count > 0).ToDictionary(k => k.Key, k => k.Value.Offsets.ToList()),
+            StatusColumnOmitted = doc.StatusColumnOmitted,
+            DueColumnOmitted = doc.DueColumnOmitted,
+            CellDetails = CellDetailOps.IsEmpty(doc.CellDetails) ? null : CellDetailOps.ToJson(doc.CellDetails)
         }, Opt);
 
     /// <summary>
@@ -255,11 +269,15 @@ public static class Snapshot
         doc.ColumnRolesList = d.ColumnRoles;
         doc.ColumnIds = d.ColumnIds;
         doc.ColumnWidths = d.ColumnWidths;
+        doc.RowHeights = new Dictionary<string, int>(d.RowHeights ?? new(), StringComparer.Ordinal);
         doc.ColumnSettings = ColumnSettingsOps.Clone(d.ColumnSettings); // v2.4.0
         doc.RowStyles = RowStyleOps.Clone(d.RowStyles);
+        ColumnGroupOps.RestoreGroups(doc, d.ColumnGroups);
         doc.RowIds = order;
         doc.Rows = order.Select(id => snapRows[id].ToList()).ToList();
         doc.Recurrence = new Dictionary<string, string>(d.Recurrence, StringComparer.Ordinal);
+        doc.StatusColumnOmitted = d.StatusColumnOmitted;
+        doc.DueColumnOmitted = d.DueColumnOmitted;
         // Reminder offsets are content; acknowledged fires stay as they are now.
         foreach (var id in doc.Reminders.Keys.ToList())
             if (!d.ReminderOffsets.ContainsKey(id)) { doc.Reminders[id].Offsets = []; ReminderPlan.Prune(doc, id); }
@@ -269,9 +287,11 @@ public static class Snapshot
         var ids = new HashSet<string>(order, StringComparer.Ordinal);
         foreach (var k in doc.Reminders.Keys.Where(k => !ids.Contains(k)).ToList()) doc.Reminders.Remove(k);
         foreach (var k in doc.Snoozes.Keys.Where(k => !ids.Contains(k.Split('|')[0])).ToList()) doc.Snoozes.Remove(k);
+        doc.CellDetails = string.IsNullOrEmpty(d.CellDetails) ? new CellDetailStore() : CellDetailOps.ParseJson(d.CellDetails);
         doc.EnsureColumnRoles();
         doc.EnsureRowIds();
         doc.EnsureColumnIds();
+        ColumnGroupOps.Sanitize(doc);
     }
 
     public static NoteDocument CloneLite(NoteDocument doc)
@@ -283,6 +303,7 @@ public static class Snapshot
         n.LaunchAtLogin = doc.LaunchAtLogin;
         n.TrayNoticeShown = doc.TrayNoticeShown;
         n.ExtraFields = doc.ExtraFields;
+        n.PartColors = PartColorOps.Clone(doc.PartColors); // not inside the undo snapshot; a cell undo must not wipe colours
         n.View = doc.View;
         n.Version = doc.Version;
         return n;

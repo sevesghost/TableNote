@@ -3,8 +3,10 @@ namespace TableNote;
 /// <summary>In-memory note table. v5 adds stable column ids. v4 adds reminders. v3 adds column roles.</summary>
 public sealed class NoteDocument
 {
-    /// <summary>5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).</summary>
-    public const int CurrentVersion = 5;
+    /// <summary>6 = 2.5.0 (column groups, cell details, alert boxes, partColors, row heights).
+    /// 5 = 2.4.0 (stable columnIds). 4 = 2.2.0 (adds "reminders"). 3 = 2.1.0 (column roles).
+    /// A 2.4.2 file (version 5) still opens; the first save writes 6 and keeps its data.</summary>
+    public const int CurrentVersion = 6;
     public const int DefaultRowCount = 4;
     /// <summary>User-editable column cap; system roles may push AbsoluteMaxColumns.</summary>
     public const int MaxUserColumns = 30;
@@ -57,8 +59,22 @@ public sealed class NoteDocument
     public List<string> ColumnIds { get; set; } = [];
     /// <summary>v2.4.0: column type/options by column id ("columnSettings"). No entry = text column.</summary>
     public Dictionary<string, ColumnSetting> ColumnSettings { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>Collapsible groups ("columnGroups"). Empty for files saved before the field existed.</summary>
+    public List<ColumnGroup> ColumnGroups { get; set; } = [];
     /// <summary>v2.4.0: row colour/highlight by row id ("rowStyles"). No entry = normal row.</summary>
     public Dictionary<string, RowStyle> RowStyles { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Detail buttons and nested tables ("cellDetails"). Empty by default and omitted from note.json until used.
+    /// The document version is not bumped here; a build that does not know the field keeps it in ExtraFields.
+    /// </summary>
+    public CellDetailStore CellDetails { get; set; } = new();
+    /// <summary>Optional "alertBoxes" list in display order. Missing in the file means none. Each <see cref="AlertBox.Id"/> is stable. Not a format-version bump.</summary>
+    public List<AlertBox> AlertBoxes { get; set; } = [];
+    /// <summary>Part id → background/text colour ("partColors"). No entry = the built-in colour.
+    /// An alert box is <c>alert:{id}</c> in this map only. It does not read or write alertBoxes.</summary>
+    public Dictionary<string, PartColor> PartColors { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>v2.6: pixel row height by row id ("rowHeights"). No entry = auto (the row grows with its text, at least 32 px). Only rows the user set are stored.</summary>
+    public Dictionary<string, int> RowHeights { get; set; } = new(StringComparer.Ordinal);
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();
     public bool LaunchAtLogin { get; set; }
@@ -72,6 +88,13 @@ public sealed class NoteDocument
     public bool MuteSound { get; set; }
     public Dictionary<string, string> Snoozes { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, string> Recurrence { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>
+    /// The user deleted the status column on purpose. Missing or false on a 2.4.2 / 2.5.0 file,
+    /// so those files still receive a status column when it is absent.
+    /// </summary>
+    public bool StatusColumnOmitted { get; set; }
+    /// <summary>The user deleted the reminder date column on purpose. False when the field is absent.</summary>
+    public bool DueColumnOmitted { get; set; }
     /// <summary>Advance reminders per row id (offsets in minutes + acknowledged fires).</summary>
     public Dictionary<string, ReminderInfo> Reminders { get; set; } = new(StringComparer.Ordinal);
     /// <summary>Legacy (2.1.0) rowId → acknowledged due. Read for compatibility; new acks go to Reminders.</summary>
@@ -122,6 +145,9 @@ public sealed class NoteDocument
     {
         var byRole = IndexOfRole(ColumnRoles.Status);
         if (byRole >= 0) return byRole;
+        // Pre-2.1.0 files have no columnRoles, so the header name is still how status is found.
+        // That guess is skipped only after the user removed the status column on purpose.
+        if (StatusColumnOmitted) return -1;
         return IndexOfDefaultName(ColumnRoles.Status);
     }
 
@@ -129,6 +155,8 @@ public sealed class NoteDocument
     {
         var byRole = IndexOfRole(ColumnRoles.Due);
         if (byRole >= 0) return byRole;
+        // Same name fallback as status: kept for files with no columnRoles, off only when the user removed due.
+        if (DueColumnOmitted) return -1;
         return IndexOfDefaultName(ColumnRoles.Due);
     }
 
@@ -183,8 +211,11 @@ public sealed class NoteDocument
         {
             var idx = ColumnRolesList.Count;
             var inferred = ColumnRoles.InferFromName(Columns[idx]);
+            // A removed status/due role must not be guessed back onto a column with the same name.
+            if (!SystemColumnToggle.AllowsNameInference(this, inferred))
+                inferred = null;
             // Avoid duplicate roles when inferring
-            if (inferred != null && ColumnRolesList.Any(r => string.Equals(r, inferred, StringComparison.OrdinalIgnoreCase)))
+            else if (inferred != null && ColumnRolesList.Any(r => string.Equals(r, inferred, StringComparison.OrdinalIgnoreCase)))
                 inferred = null;
             ColumnRolesList.Add(inferred ?? "");
         }
@@ -227,6 +258,8 @@ public sealed class NoteDocument
         Recurrence.Remove(id);
         Acknowledged.Remove(id);
         Reminders.Remove(id);
+        CellDetailOps.OnRowRemoved(this, id);
+        RowHeights?.Remove(id);
         return true;
     }
 
@@ -253,15 +286,29 @@ public sealed class NoteDocument
         if (Columns.Count <= 1 || index < 0 || index >= Columns.Count) return false;
         EnsureColumnRoles();
         EnsureColumnIds();
-        // The due column is protected: reminders depend on it (DeletePlanner shows the Thai message).
-        if (index == DueColumnIndex()) return false;
-        if (index < ColumnIds.Count) this.OnColumnRemoved(ColumnIds[index]); // drop its settings (undo restores via snapshot)
+        var role = index < ColumnRolesList.Count ? ColumnRolesList[index] ?? "" : "";
+        var removedId = index < ColumnIds.Count ? ColumnIds[index] : null;
+        // Role tag, or the name fallback still used for files whose role list is blank.
+        // Captured before the flag flips, so the name fallback still sees this column.
+        var isStatus = SystemColumnToggle.IsStatus(role) || index == StatusColumnIndex();
+        var isDue = SystemColumnToggle.IsDue(role) || index == DueColumnIndex();
+        if (!string.IsNullOrEmpty(removedId))
+        {
+            this.OnColumnRemoved(removedId); // drop its settings (undo restores via snapshot)
+            CellDetailOps.OnColumnRemoved(this, removedId);
+            SystemColumnToggle.ForgetColumnColors(this, removedId);
+        }
         Columns.RemoveAt(index);
         if (index < ColumnRolesList.Count) ColumnRolesList.RemoveAt(index);
         if (index < ColumnWidths.Count) ColumnWidths.RemoveAt(index);
         if (index < ColumnIds.Count) ColumnIds.RemoveAt(index);
         foreach (var row in Rows)
             if (index < row.Count) row.RemoveAt(index);
+        // After the column is gone, so a repair pass cannot see the role and clear the marker.
+        if (isStatus) SystemColumnToggle.SetOmitted(this, ColumnRoles.Status, true);
+        if (isDue) SystemColumnToggle.SetOmitted(this, ColumnRoles.Due, true);
+        if (isDue) SystemColumnToggle.ClearDueSideEffects(this);
+        ColumnGroupOps.Sanitize(this); // dropped parent → group removed; dropped child → id removed; cells of the rest stay
         return true;
     }
 
@@ -281,44 +328,22 @@ public sealed class NoteDocument
     {
         DueColumnWarning = null;
         EnsureColumnRoles();
+        SystemColumnToggle.StripOmittedRoles(this);
+        SystemColumnToggle.EnsurePresent(this, ColumnRoles.Status, "load.no_status_column");
+        SystemColumnToggle.EnsurePresent(this, ColumnRoles.Due, "load.no_due_column_full");
 
-        if (IndexOfRole(ColumnRoles.Status) < 0 && IndexOfDefaultName(ColumnRoles.Status) < 0)
-        {
-            if (!AddColumn(DefaultColumnName(ColumnRoles.Status), ColumnRoles.Status))
-                DueColumnWarning = Localizer.T("load.no_status_column");
-            else
-                EnsureColumnRoles();
-        }
-        else if (IndexOfRole(ColumnRoles.Status) < 0)
-        {
-            var i = IndexOfDefaultName(ColumnRoles.Status);
-            if (i >= 0) { EnsureColumnRoles(); ColumnRolesList[i] = ColumnRoles.Status; }
-        }
-
-        if (IndexOfRole(ColumnRoles.Due) < 0 && IndexOfDefaultName(ColumnRoles.Due) < 0)
-        {
-            if (!AddColumn(DefaultColumnName(ColumnRoles.Due), ColumnRoles.Due))
-                DueColumnWarning = Localizer.T("load.no_due_column_full");
-            else
-                EnsureColumnRoles();
-        }
-        else if (IndexOfRole(ColumnRoles.Due) < 0)
-        {
-            var i = IndexOfDefaultName(ColumnRoles.Due);
-            if (i >= 0) { EnsureColumnRoles(); ColumnRolesList[i] = ColumnRoles.Due; }
-        }
-
-        // Seed title/detail roles if still blank and names match defaults
+        // Seed title/detail roles if still blank and names match defaults.
+        // Status and due are seeded only when the user has not removed them.
         for (var i = 0; i < Columns.Count; i++)
         {
             if (!string.IsNullOrEmpty(ColumnRolesList[i])) continue;
             var inferred = ColumnRoles.InferFromName(Columns[i]);
-            if (inferred == null) continue;
+            if (inferred == null || !SystemColumnToggle.AllowsNameInference(this, inferred)) continue;
             if (ColumnRolesList.Any(r => string.Equals(r, inferred, StringComparison.OrdinalIgnoreCase))) continue;
             ColumnRolesList[i] = inferred;
         }
 
-        if (DueColumnIndex() < 0 && string.IsNullOrEmpty(DueColumnWarning))
+        if (DueColumnIndex() < 0 && !DueColumnOmitted && string.IsNullOrEmpty(DueColumnWarning))
             DueColumnWarning = Localizer.T("load.no_due_column");
     }
 
@@ -376,6 +401,12 @@ public sealed class NoteDocument
 
         EnsureRowIds();
         EnsureColumnIds();
+        ColumnGroups ??= [];
+        CellDetails ??= new();
+        AlertBoxes ??= [];
+        PartColors ??= new(StringComparer.Ordinal);
+        RowHeights ??= new(StringComparer.Ordinal);
+        if (AlertBoxOps.Normalize(AlertBoxes)) clipped = true;
         Window ??= new WindowMemory();
         Window.Width = Math.Clamp(Window.Width <= 0 ? 780 : Window.Width, 340, 5000);
         Window.Height = Math.Clamp(Window.Height <= 0 ? 520 : Window.Height, 300, 5000);
@@ -398,7 +429,9 @@ public sealed class NoteDocument
         var dueIdx = DueColumnIndex();
         if (dueIdx >= 0 && (migrate || dueIdx >= widthsBefore) && ColumnWidths[dueIdx] == 140) ColumnWidths[dueIdx] = 200;
 
+        SizeSpec.PruneRowHeights(this); // drop heights of deleted rows and values outside 32–400 (never clamped)
         Version = Math.Max(Version, CurrentVersion); // never downgrade a newer file
+        ColumnGroupOps.Sanitize(this); // unknown ids dropped; never rewrites cell text
         return clipped;
     }
 

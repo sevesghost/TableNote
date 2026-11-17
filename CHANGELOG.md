@@ -2,6 +2,31 @@
 
 All notable changes to TableNote. [ภาษาไทย](CHANGELOG.th.md)
 
+- **2.5.0**
+  - Format version is 6. A 2.4.2 file (version 5, no new fields) still opens; the first save writes version 6 and keeps the table.
+  - Collapsible column groups, a detail table on chosen cells, user alert boxes, an RGB colour picker (`partColors`, alert boxes as `alert:{id}`), typed column width (72–800) and row height (`rowHeights`), and image export / print of the visible table.
+  - CSV, XLSX, and Excel copy include collapsed columns. Image export and print skip them (`ColumnGroupOps.IsHidden`) and use the saved row height.
+  - Image and print take cell background and text (`cell:{rowId}:{columnId}`), header background and text (`header:{columnId}`, falling back to `section:header`), and the row-number background (`rownum:{rowId}`). They do not draw `alert:` colours, row-number text colour, or `section:table`.
+  - Toolbar buttons are grouped into 5 labelled groups. A top menu bar (File / Table / Column / Row / View / Help) reuses the right-click menu builders.
+  - The status column and the reminder-date column can be deleted and added back, at most one of each. Files saved before that still open.
+  - Print fixes: a page break does not split a row, the column header is repeated on every page, a multi-page job is sent as one PDF, print pages are 200 dpi, and temporary print files are kept and removed after one hour.
+  - New: user-managed alert boxes above the table. Add a box, edit its title and text, delete it (the delete dialog asks first; this can't be undone), drag the ⋮⋮ grip to reorder, or use Up / Down without dragging. Content and order are saved in `note.json` (optional `alertBoxes`, format version stays 5, stable `id` per box). A missing or corrupt `alertBoxes` value is skipped and the table still opens. Unknown fields on a box are kept so a later per-box colour can use the same id. Alert-box edits are not part of Ctrl+Z.
+  - New: **Colors** on the toolbar opens an RGB / hex picker for the selected cell (background and text), the row number, column headers, and the main sections (window, toolbar, status bar, notice banner, table). The reminder window and each reminder card can be colored too. Choices are saved in `note.json` under optional `partColors` (the format version stays 5; a file without the field uses the built-in colors) and restored on startup. Reset clears a part back to its built-in color.
+  - An alert box is colored by its stable id in `partColors` as `alert:{id}` only. That still works when `alertBoxes` is a known list. A file with no `alertBoxes` still opens.
+
+Known limitations
+  - Pasting headers across collapsed groups is unsupported. There is no collapse/expand-all menu. A child column cannot be dragged out of its group. Excel (.xlsx) export does not use custom column widths. Multi-column selection is shift-click only. Edge-drag resize still uses the old method. Reset width sets 140 even for Status and Due.
+  - Not tested here: an 800px column, an empty table, and cancelling the print dialog on Windows.
+  - Printing has not been tested on a real Windows printer. If the PDF print verb fails, printing falls back to one PNG per page, which may show one dialog per page.
+  - Deleting the status column makes rows that were done but overdue alert again, because nothing marks them done.
+  - Undo does not restore `notify:*` colours.
+  - Toolbar group labels are a fixed 124px wide, so a long Thai label wraps.
+  - The “+ column” flyout itself does not check view mode. The hidden button and `AddSystemColumnAsync` guard it.
+  - Deleting an alert box leaves its `alert:{id}` colour in `partColors` (harmless; it is not drawn).
+  - Text (.txt) export includes the "(details)" column.
+  - Image and print do not draw row-number text colour or `section:table`.
+  - NotifyTests `CrashLog: unobserved task exception logged` is a pre-existing flake on main, not caused by this integration.
+  - The width field in the older Column settings dialog (`ColumnSettingsDialog`) still uses a numeric stepper. It silently clamps and rounds (801 becomes 800). The new 2.6 column-width dialog rejects a number outside 72–800. These two will be unified next round.
 - **2.4.2** (12 November 2026)
   - New: English is the primary language. All UI text lives in `lang/en.json` and `lang/th.json`; add a language by adding a JSON file (see CONTRIBUTING.md). Export labels, dates (`yyyy-MM-dd`, `yyyy-MM-dd HH:mm`), and the log are language-independent or English.
   - New: taskbar icon while editing, tray icon only when attached to the desktop background; the mode is kept after restart.

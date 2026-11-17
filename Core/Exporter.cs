@@ -130,6 +130,7 @@ public static class Exporter
         var headers = doc.Columns.ToList();
         var statusCol = doc.StatusColumnIndex();
         var rows = new List<TaskRow>();
+        var docRows = new List<int>();
         for (var r = 0; r < doc.Rows.Count; r++)
         {
             if (respectHideDone && doc.HideDone && statusCol >= 0 && TaskStatuses.IsDone(doc.GetCell(r, statusCol))) continue;
@@ -137,7 +138,11 @@ public static class Exporter
             for (var c = 0; c < headers.Count; c++)
                 cells[c] = doc.GetCell(r, c);
             rows.Add(new TaskRow(cells, doc.Recurrence.TryGetValue(doc.RowIdAt(r), out var rec) ? rec : null));
+            docRows.Add(r);
         }
+        // Detail columns are added before trailing blanks are dropped, so a blank main row that has a detail is kept.
+        // A note with no detail text is unchanged.
+        CellDetailOps.AppendExport(doc, headers, rows, docRows);
         // Blank rows in the middle stay (same row positions as on screen); trailing blank rows are dropped.
         while (rows.Count > 0 && rows[^1].Cells.All(string.IsNullOrEmpty)) rows.RemoveAt(rows.Count - 1);
         return (headers, rows);
