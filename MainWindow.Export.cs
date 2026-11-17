@@ -270,7 +270,7 @@ public sealed class ViewPrintWindow : Window
 /// Row-number text colour and <c>section:table</c> are not drawn.
 /// Header colour is <c>header:{columnId}</c> merged over <c>section:header</c>, same as on screen.
 /// </summary>
-public static class ImagePartColors
+public sealed class ImagePartColors
 {
     public Dictionary<(int Row, int Column), string?> CellColors { get; } = new();
     public Dictionary<(int Row, int Column), string?> CellTextColors { get; } = new();

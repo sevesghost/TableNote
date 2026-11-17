@@ -349,6 +349,31 @@ OnUi(() =>
         Ok("print of a live capture keeps that colour", Any(lp, "#112233"));
     }
 
+    var hidden = Doc();
+    Row(hidden, "Parent", "body", "", "");
+    var made = ColumnGroupOps.Create(hidden, 0, 1);
+    Ok("image group created", made.Ok, made.Error ?? "");
+    var parentCol = hidden.ColumnIds.IndexOf(hidden.ColumnGroups[0].ParentId);
+    var childCol = hidden.ColumnIds.IndexOf(hidden.ColumnGroups[0].ChildIds[0]);
+    hidden.SetCellRaw(0, childCol, "HIDDEN-IMG");
+    hidden.SetColumnWidth(childCol, 180);
+    ColumnGroupOps.Toggle(hidden, parentCol);
+    SizeSpec.ApplyRowHeights(hidden, [0], 96);
+    var paints = ImagePartColors.From(hidden);
+    var collapsedPlan = ViewImage.Plan(hidden, new ViewImageOptions
+    {
+        RespectHideDone = false,
+        IsHidden = ColumnGroupOps.IsHidden,
+        RowHeight = SizeSpec.StoredRowHeight,
+        CellColors = paints.CellColors,
+        CellTextColors = paints.CellTextColors,
+        HeaderColors = paints.HeaderColors,
+        RowNumberColors = paints.RowNumberColors
+    });
+    Ok("collapsed column is omitted from image and print",
+        !collapsedPlan.Headers.Contains(hidden.Columns[childCol]) && collapsedPlan.Rows[0].Cells.All(c => c.Text != "HIDDEN-IMG"));
+    Ok("image row height comes from rowHeights", collapsedPlan.Rows[0].Height == 96);
+
     var art = "/opt/cursor/artifacts";
     try
     {

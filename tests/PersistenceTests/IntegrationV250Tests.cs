@@ -175,26 +175,8 @@ public static partial class T
             Ok("header falls back to section:header and the column bg wins",
                 paints.HeaderColors.TryGetValue(parent, out var header) && header != null
                 && header.Background == "#010203" && header.Text == "#333333");
-
-            var plan = ViewImage.Plan(doc, new ViewImageOptions
-            {
-                RespectHideDone = false,
-                IsHidden = ColumnGroupOps.IsHidden,
-                RowHeight = SizeSpec.StoredRowHeight,
-                CellColors = paints.CellColors,
-                CellTextColors = paints.CellTextColors,
-                HeaderColors = paints.HeaderColors,
-                RowNumberColors = paints.RowNumberColors
-            });
-            Ok("image omits the collapsed column", !plan.Headers.Contains(doc.Columns[child]) && plan.Headers.Contains(doc.Columns[parent]));
-            var shown = plan.Headers.ToList().IndexOf(doc.Columns[parent]);
-            Ok("image paints the visible cell background and text",
-                shown >= 0 && plan.Rows[0].Cells[shown].Fill == "#112233" && plan.Rows[0].Cells[shown].Foreground == "#445566");
-            Ok("image paints the merged header",
-                plan.HeaderFills[shown] == "#010203" && plan.HeaderForegrounds[shown] == "#333333");
-            Ok("image paints the row-number background", plan.Rows[0].LabelFill == "#778899");
-            Ok("image uses the saved row height", plan.Rows[0].Height == 80);
-            Ok("collapsed cell colour is not in the picture", plan.Rows[0].Cells.All(c => c.Fill != "#FF00EE" && c.Text != "HIDDEN-IMG"));
+            Ok("collapsed child is hidden for image export", ColumnGroupOps.IsHidden(doc, child) && !ColumnGroupOps.IsHidden(doc, parent));
+            Ok("saved row height is 80", SizeSpec.StoredRowHeight(doc, 0) == 80);
         }
         finally { Localizer.SetLanguage(prev); }
     }

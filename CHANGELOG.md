@@ -7,6 +7,13 @@ All notable changes to TableNote. [ภาษาไทย](CHANGELOG.th.md)
   - Collapsible column groups, a detail table on chosen cells, user alert boxes, an RGB colour picker (`partColors`, alert boxes as `alert:{id}`), typed column width (72–800) and row height (`rowHeights`), and image export / print of the visible table.
   - CSV, XLSX, and Excel copy include collapsed columns. Image export and print skip them (`ColumnGroupOps.IsHidden`) and use the saved row height.
   - Image and print take cell background and text (`cell:{rowId}:{columnId}`), header background and text (`header:{columnId}`, falling back to `section:header`), and the row-number background (`rownum:{rowId}`). They do not draw `alert:` colours, row-number text colour, or `section:table`.
+
+Known limitations
+  - Pasting headers across collapsed groups is unsupported. There is no collapse/expand-all menu. A child column cannot be dragged out of its group. Excel (.xlsx) export does not use custom column widths. Multi-column selection is shift-click only. Edge-drag resize still uses the old method. Reset width sets 140 even for Status and Due.
+  - Not tested here: an 800px column, an empty table, multi-page print, and cancelling the print dialog on Windows.
+  - Deleting an alert box leaves its `alert:{id}` colour in `partColors` (harmless; it is not drawn).
+  - Text (.txt) export includes the "(details)" column.
+  - NotifyTests `CrashLog: unobserved task exception logged` is a pre-existing flake on main, not caused by this integration. It passed in the runs on this branch.
   - New: user-managed alert boxes above the table. Add a box, edit its title and text, delete it (the delete dialog asks first; this can't be undone), drag the ⋮⋮ grip to reorder, or use Up / Down without dragging. Content and order are saved in `note.json` (optional `alertBoxes`, format version stays 5, stable `id` per box). A missing or corrupt `alertBoxes` value is skipped and the table still opens. Unknown fields on a box are kept so a later per-box colour can use the same id. Alert-box edits are not part of Ctrl+Z.
   - New: **Colors** on the toolbar opens an RGB / hex picker for the selected cell (background and text), the row number, column headers, and the main sections (window, toolbar, status bar, notice banner, table). The reminder window and each reminder card can be colored too. Choices are saved in `note.json` under optional `partColors` (the format version stays 5; a file without the field uses the built-in colors) and restored on startup. Reset clears a part back to its built-in color.
   - An alert box is colored by its stable id in `partColors` as `alert:{id}` only. That still works when `alertBoxes` is a known list. A file with no `alertBoxes` still opens.
