@@ -45,6 +45,18 @@ public static class MenuCommandRules
     public static bool DeleteColumn(bool edit, int column, int count, bool isDue) =>
         edit && HasColumn(column, count) && !isDue && count > 1;
 
+    /// <summary>
+    /// Table-menu spot <c>spot:add-status</c>. Same rule as the + Column menu:
+    /// enabled only when the status column is not already in the table.
+    /// </summary>
+    public static bool AddStatusColumn(NoteDocument doc) => doc.IndexOfRole(ColumnRoles.Status) < 0;
+
+    /// <summary>
+    /// Table-menu spot <c>spot:add-alert-date</c>. Same rule as the + Column menu:
+    /// enabled only when the reminder date column is not already in the table.
+    /// </summary>
+    public static bool AddDueColumn(NoteDocument doc) => doc.IndexOfRole(ColumnRoles.Due) < 0;
+
     public static bool ToggleGroup(bool edit) => edit;
 
     public static bool AddChild(bool edit, int room, int childCount) =>

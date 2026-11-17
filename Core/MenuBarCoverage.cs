@@ -31,7 +31,6 @@ public static class MenuBarCoverage
         "colgroup.ungroup",
         "colgroup.child_of",
         "col.delete",
-        "col.delete_due",
     ];
 
     public static readonly string[] RowIds =
