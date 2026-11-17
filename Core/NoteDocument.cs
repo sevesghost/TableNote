@@ -59,6 +59,11 @@ public sealed class NoteDocument
     public Dictionary<string, ColumnSetting> ColumnSettings { get; set; } = new(StringComparer.Ordinal);
     /// <summary>v2.4.0: row colour/highlight by row id ("rowStyles"). No entry = normal row.</summary>
     public Dictionary<string, RowStyle> RowStyles { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Detail buttons and nested tables ("cellDetails"). Empty by default and omitted from note.json until used.
+    /// The document version is not bumped here; a build that does not know the field keeps it in ExtraFields.
+    /// </summary>
+    public CellDetailStore CellDetails { get; set; } = new();
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();
     public bool LaunchAtLogin { get; set; }
@@ -227,6 +232,7 @@ public sealed class NoteDocument
         Recurrence.Remove(id);
         Acknowledged.Remove(id);
         Reminders.Remove(id);
+        CellDetailOps.OnRowRemoved(this, id);
         return true;
     }
 
@@ -255,7 +261,12 @@ public sealed class NoteDocument
         EnsureColumnIds();
         // The due column is protected: reminders depend on it (DeletePlanner shows the Thai message).
         if (index == DueColumnIndex()) return false;
-        if (index < ColumnIds.Count) this.OnColumnRemoved(ColumnIds[index]); // drop its settings (undo restores via snapshot)
+        if (index < ColumnIds.Count)
+        {
+            var removedId = ColumnIds[index];
+            this.OnColumnRemoved(removedId); // drop its settings (undo restores via snapshot)
+            CellDetailOps.OnColumnRemoved(this, removedId);
+        }
         Columns.RemoveAt(index);
         if (index < ColumnRolesList.Count) ColumnRolesList.RemoveAt(index);
         if (index < ColumnWidths.Count) ColumnWidths.RemoveAt(index);
