@@ -58,6 +58,8 @@ public static class ViewImage
         var columns = new List<int>();
         var widths = new List<int>();
         var headers = new List<string>();
+        var headerFills = new List<string>();
+        var headerText = new List<string>();
         var hidden = options.IsHidden ?? DefaultIsHidden;
         for (var c = 0; c < doc.Columns.Count; c++)
         {
@@ -67,6 +69,15 @@ public static class ViewImage
             columns.Add(c);
             widths.Add(w);
             headers.Add(doc.Columns[c] ?? "");
+            var fill = HeaderFill;
+            var fg = Text;
+            if (options.HeaderColors != null && options.HeaderColors.TryGetValue(c, out var hc) && hc != null)
+            {
+                if (RowStyleOps.HexFor(hc.Background) is { } bf) fill = bf;
+                if (RowStyleOps.HexFor(hc.Text) is { } tf) fg = tf;
+            }
+            headerFills.Add(fill);
+            headerText.Add(fg);
         }
 
         var statusCol = doc.StatusColumnIndex();
@@ -103,6 +114,8 @@ public static class ViewImage
             RowLabelWidth = RowLabelWidth,
             ColumnWidths = widths.ToArray(),
             Headers = headers.ToArray(),
+            HeaderFills = headerFills.ToArray(),
+            HeaderForegrounds = headerText.ToArray(),
             Rows = rows.ToArray(),
             HeaderHeight = headerHeight,
             Width = Math.Max(1, totalWidth),
@@ -122,7 +135,11 @@ public static class ViewImage
 
         AddCell(grid, 0, 0, "", LabelFill, Text, bold: false, center: true);
         for (var c = 0; c < plan.Headers.Length; c++)
-            AddCell(grid, 0, c + 1, plan.Headers[c], HeaderFill, Text, bold: true, center: false);
+        {
+            var fill = c < plan.HeaderFills.Length ? plan.HeaderFills[c] : HeaderFill;
+            var fg = c < plan.HeaderForegrounds.Length ? plan.HeaderForegrounds[c] : Text;
+            AddCell(grid, 0, c + 1, plan.Headers[c], fill, fg, bold: true, center: false);
+        }
 
         for (var r = 0; r < plan.Rows.Length; r++)
         {
@@ -383,6 +400,9 @@ public static class ViewImage
             if (RowStyleOps.HexFor(style.Color) is { } hex) cellFill = hex;
             if (style.Highlight) labelFill = HighlightFill;
         }
+        if (options.RowNumberColors != null && options.RowNumberColors.TryGetValue(row, out var rowNumber)
+            && RowStyleOps.HexFor(rowNumber) is { } rowNumberFill)
+            labelFill = rowNumberFill;
 
         var cells = new ViewImageCell[columns.Count];
         var height = minLine;
@@ -403,6 +423,9 @@ public static class ViewImage
             var fg = Text;
             if (done) fg = DoneText;
             else if (type == ColumnTypes.Number && raw.Trim().Length > 0 && !ColumnSettingsOps.IsNumber(raw)) fg = InvalidNumber;
+            if (options.CellTextColors != null && options.CellTextColors.TryGetValue((row, c), out var textColor)
+                && RowStyleOps.HexFor(textColor) is { } textFill)
+                fg = textFill;
             cells[i] = new ViewImageCell { Text = text, Fill = fill, Foreground = fg, Strike = done, RightAlign = type == ColumnTypes.Number };
             height = Math.Max(height, LineHeight(text, widths[i], bold: false, minLine));
         }
@@ -559,6 +582,12 @@ public sealed class ViewImageOptions
     /// When rowHeights exists, set this to that row's pixel height. Values are not clamped here.
     /// </summary>
     public Func<NoteDocument, int, int?>? RowHeight { get; init; }
+    /// <summary>Per-cell foreground (#RRGGBB or a palette key). Null keeps the usual text colour.</summary>
+    public IReadOnlyDictionary<(int Row, int Column), string?>? CellTextColors { get; init; }
+    /// <summary>Per-column header background and text. Null keeps #F6E08A / the usual text colour. Hidden columns are not painted.</summary>
+    public IReadOnlyDictionary<int, ViewHeaderColor?>? HeaderColors { get; init; }
+    /// <summary>Per-row row-number background. Null keeps the status or highlight colour.</summary>
+    public IReadOnlyDictionary<int, string?>? RowNumberColors { get; init; }
     /// <summary>Per-cell fill, palette key or #RRGGBB. Invalid values are skipped.</summary>
     public IReadOnlyDictionary<(int Row, int Column), string?>? CellColors { get; init; }
     /// <summary>Extra lines under a cell (detail popup text, once that feature passes it in).</summary>
@@ -570,6 +599,8 @@ public sealed class ViewImagePlan
     public int RowLabelWidth { get; init; }
     public int[] ColumnWidths { get; init; } = [];
     public string[] Headers { get; init; } = [];
+    public string[] HeaderFills { get; init; } = [];
+    public string[] HeaderForegrounds { get; init; } = [];
     public ViewImageRow[] Rows { get; init; } = [];
     public int HeaderHeight { get; init; }
     public int Width { get; init; }
@@ -598,6 +629,12 @@ public sealed class ViewImageRow
     public string Fill { get; init; } = ViewImage.CellFill;
     public ViewImageCell[] Cells { get; init; } = [];
     public int Height { get; init; }
+}
+
+public sealed class ViewHeaderColor
+{
+    public string? Background { get; init; }
+    public string? Text { get; init; }
 }
 
 public sealed class ViewImageCell

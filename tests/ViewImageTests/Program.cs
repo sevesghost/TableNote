@@ -237,6 +237,36 @@ OnUi(() =>
         hooked.Rows[0].Cells.All(c => c.Text != "A") && hooked.ColumnWidths.Length == collapsed.Columns.Count - 2,
         string.Join("|", hooked.Rows[0].Cells.Select(c => c.Text)));
 
+    var tinted = Doc();
+    Row(tinted, "Aa", "", "", "");
+    var usual = ViewImage.Plan(tinted, new ViewImageOptions { Now = new DateTime(2026, 1, 1) });
+    Ok("colour hooks left null keep the usual header and text",
+        usual.HeaderFills.Length == usual.Headers.Length && usual.HeaderFills.All(h => h == ViewImage.HeaderFill)
+        && usual.Rows[0].LabelFill == ViewImage.LabelFill && usual.Rows[0].Cells[0].Foreground == ViewImage.Text);
+    var tint = new ViewImageOptions
+    {
+        Now = new DateTime(2026, 1, 1),
+        CellTextColors = new Dictionary<(int, int), string?> { [(0, 0)] = "#AA00AA" },
+        HeaderColors = new Dictionary<int, ViewHeaderColor?> { [0] = new() { Background = "#112233", Text = "#FFFFFF" }, [1] = new() { Background = "#FF00AA" } },
+        RowNumberColors = new Dictionary<int, string?> { [0] = "#00BB77" },
+        IsHidden = (_, col) => col == 1
+    };
+    var tintedPlan = ViewImage.Plan(tinted, tint);
+    Ok("CellTextColors, HeaderColors and RowNumberColors are used",
+        tintedPlan.Rows[0].Cells[0].Foreground == "#AA00AA"
+        && tintedPlan.HeaderFills[0] == "#112233" && tintedPlan.HeaderForegrounds[0] == "#FFFFFF"
+        && tintedPlan.Rows[0].LabelFill == "#00BB77");
+    Ok("header paint skips the hidden column", tintedPlan.HeaderFills.All(h => h != "#FF00AA") && !tintedPlan.Headers.Contains(tinted.Columns[1]));
+    using (var tintBmp = Decode(ViewImage.Render(tinted, ViewImageFormat.Png, tint)))
+    {
+        var head = tintedPlan.CellRect(-1, 0);
+        var num = tintedPlan.CellRect(0, -1);
+        Ok("header and row-number colours are painted, hidden header colour is not",
+            Same(At(tintBmp, head.Left + head.Width / 2, head.Top + head.Height / 2), "#112233")
+            && Same(At(tintBmp, num.Left + 4, num.Top + num.Height / 2), "#00BB77")
+            && !Any(tintBmp, "#FF00AA"));
+    }
+
     var v4path = Path.Combine(Path.GetTempPath(), "tn-v4-" + Guid.NewGuid().ToString("N") + ".json");
     File.WriteAllText(v4path, """
         {"version":4,"columns":["หัวข้อ","รายละเอียด","สถานะ","กำหนดส่ง"],"rows":[["กี่ปี่","ปู่","todo","2026-05-01"]],"rowIds":["r1"],"columnRoles":["title","detail","status","due"]}
