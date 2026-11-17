@@ -123,7 +123,7 @@ public partial class MainWindow : Window
         CopyHeadersButton.Click += async (_, _) => await CopyAsync(true, true);
         AddRowButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_row"), AddRowAsync));
         DeleteRowButton.Click += async (_, _) => await RunStructureAsync(DeleteRowAsync);
-        AddColumnButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), AddColumnAsync));
+        InitColumnToggle();
         DeleteColumnButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("delete.undo_column"), DeleteColumnAsync));
         SortDueButton.Click += (_, _) => SortByDue();
         ExportButton.Click += async (_, _) => await ExportAsync();
@@ -570,8 +570,7 @@ public partial class MainWindow : Window
             else
             {
                 Rebuild(); FlushSave();
-                if (_session.Doc.DueColumnIndex() < 0)
-                    ShowNotice(Localizer.T("ui.no_due_column"));
+                AfterColumnRemoved();
             }
         }
         finally { _busy = false; }

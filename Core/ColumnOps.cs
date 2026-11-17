@@ -118,12 +118,12 @@ public sealed partial class TableSession
         return new EditResult(true, null);
     }
 
-    /// <summary>v2.4.0: delete a given column from the header menu. Always asks, even for an empty column;
-    /// the due column stays protected (DeletePlanner / RemoveColumn).</summary>
+    /// <summary>v2.4.0: delete a given column from the header menu. Always asks, even for an empty column.
+    /// Status and the reminder date column can be deleted here (DeletePlanner.ForColumn still reports the old due block).</summary>
     public async Task<EditResult> DeleteColumnAtAsync(int column, Func<string, Task<bool>> confirm)
     {
         if (column < 0 || column >= Doc.Columns.Count) return new EditResult(false, Localizer.T("delete.no_column"));
-        var plan = DeletePlanner.ForColumn(Doc, column);
+        var plan = SystemColumnToggle.PlanHeaderDelete(Doc, column);
         if (!plan.CanDelete) return new EditResult(false, plan.StatusIfBlocked);
         Doc.EnsureColumnRoles();
         var name = Doc.Columns[column];

@@ -110,6 +110,7 @@ public static class ReminderPlan
 
     public static List<DueTask> Collect(NoteDocument doc, DateTime now, ISet<string>? exclude = null)
     {
+        if (doc.DueColumnIndex() < 0) return [];
         var list = new List<DueTask>();
         for (var i = 0; i < doc.Rows.Count; i++)
         {

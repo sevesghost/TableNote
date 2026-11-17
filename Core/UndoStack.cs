@@ -206,6 +206,8 @@ public static class Snapshot
         public Dictionary<string, int> RowHeights { get; set; } = new(); // v2.6
         public Dictionary<string, string> Recurrence { get; set; } = new();
         public Dictionary<string, List<int>> ReminderOffsets { get; set; } = new();
+        public bool StatusColumnOmitted { get; set; }
+        public bool DueColumnOmitted { get; set; }
         /// <summary>Detail buttons and nested tables (JSON). Null when the note has none.</summary>
         public string? CellDetails { get; set; }
     }
@@ -232,6 +234,8 @@ public static class Snapshot
             RowHeights = new Dictionary<string, int>(doc.RowHeights ?? new()),
             Recurrence = new Dictionary<string, string>(doc.Recurrence),
             ReminderOffsets = doc.Reminders.Where(k => k.Value.Offsets.Count > 0).ToDictionary(k => k.Key, k => k.Value.Offsets.ToList()),
+            StatusColumnOmitted = doc.StatusColumnOmitted,
+            DueColumnOmitted = doc.DueColumnOmitted,
             CellDetails = CellDetailOps.IsEmpty(doc.CellDetails) ? null : CellDetailOps.ToJson(doc.CellDetails)
         }, Opt);
 
@@ -272,6 +276,8 @@ public static class Snapshot
         doc.RowIds = order;
         doc.Rows = order.Select(id => snapRows[id].ToList()).ToList();
         doc.Recurrence = new Dictionary<string, string>(d.Recurrence, StringComparer.Ordinal);
+        doc.StatusColumnOmitted = d.StatusColumnOmitted;
+        doc.DueColumnOmitted = d.DueColumnOmitted;
         // Reminder offsets are content; acknowledged fires stay as they are now.
         foreach (var id in doc.Reminders.Keys.ToList())
             if (!d.ReminderOffsets.ContainsKey(id)) { doc.Reminders[id].Offsets = []; ReminderPlan.Prune(doc, id); }

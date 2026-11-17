@@ -36,7 +36,7 @@ var columnIds = new[]
     "colset.menu", "detail.column_toggle", "detail.cell_toggle", "size.col_menu",
     "colgroup.make", "colgroup.collapse", "colgroup.expand", "colgroup.add_child",
     "colgroup.rename_children", "colgroup.remove_child", "colgroup.remove_named",
-    "colgroup.ungroup", "colgroup.child_of", "col.delete", "col.delete_due"
+    "colgroup.ungroup", "colgroup.child_of", "col.delete"
 };
 var rowIds = new[]
 {
@@ -64,7 +64,7 @@ void InFile(string fileName, string source, params string[] ids)
 }
 
 InFile("ColumnMenu", columnMenu, "col.cut", "col.copy", "col.paste", "col.move_left", "col.move_right",
-    "col.move_first", "col.move_last", "col.delete", "col.delete_due",
+    "col.move_first", "col.move_last", "col.delete",
     "colgroup.make", "colgroup.collapse", "colgroup.expand", "colgroup.add_child",
     "colgroup.rename_children", "colgroup.remove_child", "colgroup.remove_named",
     "colgroup.ungroup", "colgroup.child_of");
@@ -116,13 +116,15 @@ var extra = columnMenu.IndexOf("_extraColumnMenuItems", StringComparison.Ordinal
 var group = columnMenu.IndexOf("BuildColumnGroupMenuItems(", StringComparison.Ordinal);
 Ok("group block is still after the extra column items", extra >= 0 && group > extra);
 
-Ok("menu bar leaves the alert-date and status spots disabled",
+Ok("menu bar binds the alert-date and status spots through MenuCommandRules",
     menuBar.Contains("Localizer.T(\"menu.spot.add_due\")", StringComparison.Ordinal) &&
     menuBar.Contains("Localizer.T(\"menu.spot.add_status\")", StringComparison.Ordinal) &&
     menuBar.Contains("spot:add-alert-date", StringComparison.Ordinal) &&
     menuBar.Contains("spot:add-status", StringComparison.Ordinal) &&
-    menuBar.Contains("_spotAddDueItem.IsEnabled = false", StringComparison.Ordinal) &&
-    menuBar.Contains("_spotAddStatusItem.IsEnabled = false", StringComparison.Ordinal));
+    menuBar.Contains("MenuCommandRules.AddDueColumn(", StringComparison.Ordinal) &&
+    menuBar.Contains("MenuCommandRules.AddStatusColumn(", StringComparison.Ordinal) &&
+    menuBar.Contains("AddSystemColumnAsync(ColumnRoles.Due)", StringComparison.Ordinal) &&
+    menuBar.Contains("AddSystemColumnAsync(ColumnRoles.Status)", StringComparison.Ordinal));
 Ok("toolbar groups are in the window layout",
     axaml.Contains("GroupTableLabel", StringComparison.Ordinal) &&
     axaml.Contains("GroupCopyLabel", StringComparison.Ordinal) &&
@@ -163,6 +165,20 @@ var due = doc.DueColumnIndex();
 var count = doc.Columns.Count;
 var room = NoteDocument.MaxUserColumns - count;
 Ok("sample has status and due", status == 2 && due == 3 && count == 4, $"status {status} due {due} count {count}");
+Ok("alert-date and status spots are disabled while those columns exist",
+    !MenuCommandRules.AddDueColumn(doc) && !MenuCommandRules.AddStatusColumn(doc));
+doc.RemoveColumn(doc.DueColumnIndex());
+Ok("alert-date spot enables after the reminder column is removed",
+    MenuCommandRules.AddDueColumn(doc) && !MenuCommandRules.AddStatusColumn(doc));
+doc.RemoveColumn(doc.StatusColumnIndex());
+Ok("status spot enables after the status column is removed",
+    MenuCommandRules.AddStatusColumn(doc) && MenuCommandRules.AddDueColumn(doc));
+Ok("re-adding status disables only that spot",
+    SystemColumnToggle.Add(doc, ColumnRoles.Status) == null &&
+    !MenuCommandRules.AddStatusColumn(doc) && MenuCommandRules.AddDueColumn(doc));
+Ok("re-adding the reminder column disables that spot again",
+    SystemColumnToggle.Add(doc, ColumnRoles.Due) == null &&
+    !MenuCommandRules.AddDueColumn(doc) && !MenuCommandRules.AddStatusColumn(doc));
 
 Ok("no column disables move and delete",
     !MenuCommandRules.MoveLeft(true, -1, count) &&

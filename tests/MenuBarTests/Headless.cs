@@ -1,3 +1,4 @@
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -130,6 +131,29 @@ static class MenuBarHeadless
             window.FindControl<TextBlock>("GroupSystemLabel")?.Text == "System",
             window.FindControl<TextBlock>("GroupTableLabel")?.Text ?? "");
         Save(window, "toolbar-menu-en");
+
+        var session = typeof(MainWindow).GetField("_session", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+        var doc = (NoteDocument)session.GetType().GetProperty("Doc")!.GetValue(session)!;
+        doc.RemoveColumn(doc.DueColumnIndex());
+        doc.RemoveColumn(doc.StatusColumnIndex());
+        typeof(MainWindow).GetField("_view", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, ViewMode.Background);
+        var tableEn = Item(menu, "Table");
+        tableEn.Open();
+        Pump(window);
+        var viewSpots = tableEn.Items.OfType<MenuItem>().Where(i => i.Tag is string t && t.StartsWith("spot:", StringComparison.Ordinal)).ToList();
+        ok("view mode disables both spots even when the columns are missing",
+            viewSpots.Count == 2 && viewSpots.All(s => s.IsEnabled == false),
+            string.Join(" | ", viewSpots.Select(s => $"{s.Tag} enabled={s.IsEnabled}")));
+        tableEn.Close();
+        Pump(window);
+        typeof(MainWindow).GetField("_view", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, ViewMode.Edit);
+        tableEn.Open();
+        Pump(window);
+        var editSpots = tableEn.Items.OfType<MenuItem>().Where(i => i.Tag is string t && t.StartsWith("spot:", StringComparison.Ordinal)).ToList();
+        ok("edit mode enables both spots when the columns are missing",
+            editSpots.Count == 2 && editSpots.All(s => s.IsEnabled),
+            string.Join(" | ", editSpots.Select(s => $"{s.Tag} enabled={s.IsEnabled}")));
+        tableEn.Close();
     }
 
     static MenuItem Item(Menu menu, string header) =>

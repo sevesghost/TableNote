@@ -567,6 +567,40 @@ OnUi(() =>
         !collapsedPlan.Headers.Contains(hidden.Columns[childCol]) && collapsedPlan.Rows[0].Cells.All(c => c.Text != "HIDDEN-IMG"));
     Ok("image row height comes from rowHeights", collapsedPlan.Rows[0].Height == 96);
 
+    var absent = Doc();
+    Row(absent, "keep", "body", "done", "2026-06-01 09:00");
+    absent.Recurrence[absent.RowIdAt(0)] = "daily";
+    var absentDue = absent.ColumnIdAt(absent.DueColumnIndex());
+    PartColorOps.Assign(absent.PartColors, PartColorKeys.HeaderColumn(absentDue), "#112233", null);
+    PartColorOps.Assign(absent.PartColors, PartColorKeys.Notify(absent.RowIdAt(0)), "#445566", null);
+    absent.RemoveColumn(absent.DueColumnIndex());
+    absent.RemoveColumn(absent.StatusColumnIndex());
+    absent.PartColors[PartColorKeys.HeaderColumn(absentDue)] = new PartColor { Background = "#112233" };
+    absent.PartColors[PartColorKeys.Notify(absent.RowIdAt(0))] = new PartColor { Background = "#445566" };
+    Exception? absentEx = null;
+    byte[] absentPng = [];
+    byte[] absentPage = [];
+    try
+    {
+        var absentPaints = ImagePartColors.From(absent);
+        var absentPlan = ViewImage.Plan(absent, new ViewImageOptions
+        {
+            Now = new DateTime(2026, 6, 1),
+            HeaderColors = absentPaints.HeaderColors,
+            CellColors = absentPaints.CellColors
+        });
+        absentPng = ViewImage.Render(absent, ViewImageFormat.Png, new ViewImageOptions { Now = new DateTime(2026, 6, 1) });
+        var absentPages = ViewImage.RenderPrintPages(absent, new ViewImageOptions { Now = new DateTime(2026, 6, 1) });
+        absentPage = absentPages.Count > 0 ? absentPages[0] : [];
+        Ok("image plan omits removed status and reminder columns",
+            absentPlan.Headers.SequenceEqual(absent.Columns) && !absentPlan.Headers.Contains("Status") && !absentPlan.Headers.Contains("Due date"));
+        Ok("paginated print still yields a page when status and due are absent",
+            absentPages.Count >= 1 && absentPage.Length > 32);
+    }
+    catch (Exception ex) { absentEx = ex; }
+    Ok("image and print do not throw when status and the reminder column are absent",
+        absentEx == null && absentPng.Length > 32 && absentPage.Length > 32, absentEx?.Message ?? "");
+
     var art = "/opt/cursor/artifacts";
     try
     {

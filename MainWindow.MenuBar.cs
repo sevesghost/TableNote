@@ -46,8 +46,8 @@ public partial class MainWindow
     private MenuItem _helpItem = null!;
     private MenuItem _logItem = null!;
 
-    // SPOT: team ตก — delete and re-add the alert-date column and the Status column (max 1 each).
-    // These stay disabled. Do not wire that feature in this branch.
+    // SPOT: team ตก — add the alert-date column and the Status column (max 1 each).
+    // Enabled only when that column is missing. Do not move these items.
     private MenuItem _spotAddDueItem = null!;
     private MenuItem _spotAddStatusItem = null!;
 
@@ -91,8 +91,12 @@ public partial class MainWindow
         _addColumnItem = Act("toolbar.add_column", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), AddColumnAsync)));
         _deleteColumnItem = Act("toolbar.delete_column", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("delete.undo_column"), DeleteColumnAsync)));
         _sortItem = Act("toolbar.sort_due", SortByDue);
-        _spotAddDueItem = new MenuItem { IsEnabled = false, Tag = "spot:add-alert-date" };
-        _spotAddStatusItem = new MenuItem { IsEnabled = false, Tag = "spot:add-status" };
+        _spotAddDueItem = new MenuItem { Tag = "spot:add-alert-date" };
+        _spotAddDueItem.Click += async (_, _) =>
+            await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), () => AddSystemColumnAsync(ColumnRoles.Due)));
+        _spotAddStatusItem = new MenuItem { Tag = "spot:add-status" };
+        _spotAddStatusItem.Click += async (_, _) =>
+            await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), () => AddSystemColumnAsync(ColumnRoles.Status)));
         _tableMenu.Items.Add(_colorItem);
         _tableMenu.Items.Add(_addRowItem);
         _tableMenu.Items.Add(_deleteRowItem);
@@ -111,8 +115,7 @@ public partial class MainWindow
             _addColumnItem.IsEnabled = edit;
             _deleteColumnItem.IsEnabled = edit;
             _sortItem.IsEnabled = _view == ViewMode.Edit;
-            _spotAddDueItem.IsEnabled = false;
-            _spotAddStatusItem.IsEnabled = false;
+            ApplySpecialColumnSpots();
         };
 
         _columnMenu = new MenuItem();
@@ -291,8 +294,7 @@ public partial class MainWindow
 
         _spotAddDueItem.Header = Localizer.T("menu.spot.add_due");
         _spotAddStatusItem.Header = Localizer.T("menu.spot.add_status");
-        ToolTip.SetTip(_spotAddDueItem, Localizer.T("menu.spot.pending"));
-        ToolTip.SetTip(_spotAddStatusItem, Localizer.T("menu.spot.pending"));
+        ApplySpecialColumnSpots();
 
         foreach (var refresh in _menuTextRefresh) refresh();
         FillLanguageMenu();
@@ -324,5 +326,16 @@ public partial class MainWindow
     private void RefreshChecks()
     {
         foreach (var refresh in _menuTextRefresh) refresh();
+    }
+
+    /// <summary>Reserved table-menu slots. Disabled in view mode, and while that column already exists.</summary>
+    private void ApplySpecialColumnSpots()
+    {
+        var doc = _session.Doc;
+        var edit = _view == ViewMode.Edit && !_busy;
+        _spotAddDueItem.IsEnabled = edit && MenuCommandRules.AddDueColumn(doc);
+        _spotAddStatusItem.IsEnabled = edit && MenuCommandRules.AddStatusColumn(doc);
+        ToolTip.SetTip(_spotAddDueItem, MenuCommandRules.AddDueColumn(doc) ? null : Localizer.T("col.only_one_due"));
+        ToolTip.SetTip(_spotAddStatusItem, MenuCommandRules.AddStatusColumn(doc) ? null : Localizer.T("col.only_one_status"));
     }
 }

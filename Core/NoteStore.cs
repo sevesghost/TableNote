@@ -39,6 +39,12 @@ public static class NoteStore
         /// <summary>v2.6: row id → pixel height. Null when no row was given a height, so old files stay unchanged.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Dictionary<string, int>? RowHeights { get; set; }
+        /// <summary>False (omitted) on older files, which still receive a status column if it is missing.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool StatusColumnOmitted { get; set; }
+        /// <summary>False (omitted) on older files, which still receive the reminder date column if it is missing.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool DueColumnOmitted { get; set; }
     }
 
     /// <summary>Problems found while reading optional sections (logged, not shown as "file corrupt").</summary>
@@ -115,7 +121,8 @@ public static class NoteStore
         "cellDetails", // nested detail tables; document version is unchanged until the integrator bumps it
         "alertBoxes", // optional; missing or bad → no boxes
         "partColors", // v2.5, optional. An alert box color is alert:{id} in this map.
-        "rowHeights" // v2.6; missing means every row is auto
+        "rowHeights", // v2.6; missing means every row is auto
+        "statusColumnOmitted", "dueColumnOmitted" // false when absent: older files still gain both columns
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)
@@ -561,6 +568,8 @@ public static class NoteStore
                 AlertBoxes = AlertBoxOps.Parse(Prop(root, "alertBoxes"), LastLoadIssues.Add),
                 PartColors = ParsePartColors(Prop(root, "partColors")),
                 RowHeights = ParseRowHeights(Prop(root, "rowHeights")), // v2.6
+                StatusColumnOmitted = GetBool(root, "statusColumnOmitted", false),
+                DueColumnOmitted = GetBool(root, "dueColumnOmitted", false),
                 Window = new WindowMemory
                 {
                     Width = win is { } a ? GetInt(a, "width", 720, true, "window.") : 720,
@@ -785,6 +794,8 @@ public static class NoteStore
             AlertBoxes = AlertBoxOps.ToElement(doc.AlertBoxes),
             PartColors = PartColorsElement(doc),
             RowHeights = doc.RowHeights is { Count: > 0 } ? new Dictionary<string, int>(doc.RowHeights) : null, // v2.6
+            StatusColumnOmitted = doc.StatusColumnOmitted,
+            DueColumnOmitted = doc.DueColumnOmitted,
             Window = new WindowDto
             {
                 Width = doc.Window.Width,
