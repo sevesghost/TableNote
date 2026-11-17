@@ -61,8 +61,8 @@ public sealed class NoteDocument
     public Dictionary<string, ColumnSetting> ColumnSettings { get; set; } = new(StringComparer.Ordinal);
     /// <summary>v2.4.0: row colour/highlight by row id ("rowStyles"). No entry = normal row.</summary>
     public Dictionary<string, RowStyle> RowStyles { get; set; } = new(StringComparer.Ordinal);
-    /// <summary>v2.5: part id → background/text colour ("partColors"). No entry = the built-in colour.
-    /// Alert-box colours are also mirrored onto alertBoxes[].color / textColor.</summary>
+    /// <summary>Part id → background/text colour ("partColors"). No entry = the built-in colour.
+    /// An alert box is <c>alert:{id}</c> in this map only. It does not read or write alertBoxes.</summary>
     public Dictionary<string, PartColor> PartColors { get; set; } = new(StringComparer.Ordinal);
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();

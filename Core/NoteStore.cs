@@ -504,7 +504,6 @@ public static class NoteStore
             foreach (var prop in root.EnumerateObject())
                 if (!KnownFields.Contains(prop.Name))
                     doc.ExtraFields[prop.Name] = prop.Value.Clone();
-            AlertColorSync.Import(doc, LastLoadIssues.Add); // color / textColor on each alert box, by its id
             if (version > NoteDocument.CurrentVersion)
                 LastLoadIssues.Add($"version {version}: file comes from a newer TableNote, will back up to note.v{version}.bak before saving and keep unknown fields ({doc.ExtraFields.Count} fields)");
 
@@ -674,7 +673,6 @@ public static class NoteStore
     public static long Save(string path, NoteDocument doc)
     {
         doc.Normalize();
-        AlertColorSync.Export(doc); // stamp partColors onto alertBoxes[].color / textColor before the extra fields are written
         TryBackupBeforeV3(path, doc);
         var dto = new FileDto
         {

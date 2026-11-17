@@ -12,7 +12,8 @@ namespace TableNote;
 /// <item><c>cell:{rowId}:{columnId}</c> — one table cell (ids survive moves and renames)</item>
 /// <item><c>header:{columnId}</c> — one column header; <c>section:header</c> is the fallback for every header</item>
 /// <item><c>rownum:{rowId}</c> — the row-number slot</item>
-/// <item><c>alert:{id}</c> — one alert box, also stored on that box as color / textColor</item>
+/// <item><c>alert:{id}</c> — one alert box. This map is the only copy that is loaded and saved.
+/// Mirroring onto the box (<c>color</c> / <c>textColor</c>) is optional and not required for the color to stick.</item>
 /// <item><c>notify:{id}</c> — one reminder-popup card (the task row id)</item>
 /// <item><c>section:window</c>, <c>section:toolbar</c>, <c>section:status</c>, <c>section:notice</c>,
 /// <c>section:table</c>, <c>section:popup</c>, <c>section:popup-card</c> — the shared chrome</item>
@@ -47,8 +48,8 @@ public static class PartColorKeys
     /// <summary>Reminder-popup card for one task. Stored only in partColors.</summary>
     public static string Notify(string id) => "notify:" + id;
 
-    /// <summary>One user alert box (note.json alertBoxes, the id on the box). Also written as the box's
-    /// <c>color</c> / <c>textColor</c> properties.</summary>
+    /// <summary>One user alert box, keyed by the box's stable id. Stored only in partColors
+    /// (<c>alert:{id}</c>), so it does not matter whether alertBoxes is an extra field or a known list.</summary>
     public static string Alert(string id) => "alert:" + id;
 
     public static string? Fixed(PartTarget target) => target switch
@@ -231,127 +232,4 @@ public static class PartColorOps
                 Background = NormalizeHex(kv.Value.Background),
                 Foreground = NormalizeHex(kv.Value.Foreground)
             }, StringComparer.Ordinal);
-}
-
-/// <summary>
-/// Alert boxes live in note.json "alertBoxes" (format version 6). This build does not own that list:
-/// it is kept as an unknown field and written back. Per-box colours are the <c>color</c> and
-/// <c>textColor</c> properties on each box (a missing or unreadable value is skipped) and are mirrored
-/// in <see cref="NoteDocument.PartColors"/> under <c>alert:{id}</c>.
-/// </summary>
-public static class AlertColorSync
-{
-    public const string BackgroundName = "color";
-    public const string ForegroundName = "textColor";
-
-    public static void Import(NoteDocument doc, Action<string>? issue = null)
-    {
-        if (!TryGetBoxes(doc, out _, out var raw) || raw.ValueKind != JsonValueKind.Array) return;
-        foreach (var item in raw.EnumerateArray())
-        {
-            if (item.ValueKind != JsonValueKind.Object) continue;
-            var id = ReadId(item);
-            if (id == null) continue;
-            var bg = ReadChannel(item, BackgroundName, id, issue);
-            var fg = ReadChannel(item, ForegroundName, id, issue);
-            if (bg.Present == false && fg.Present == false) continue;
-            var key = PartColorKeys.Alert(id);
-            doc.PartColors.TryGetValue(key, out var existing);
-            var merged = existing ?? new PartColor();
-            if (bg.Present && bg.Hex != null) merged.Background = bg.Hex;
-            if (fg.Present && fg.Hex != null) merged.Foreground = fg.Hex;
-            if (merged.Background == null && merged.Foreground == null) doc.PartColors.Remove(key);
-            else doc.PartColors[key] = merged;
-        }
-    }
-
-    /// <summary>Write partColors back onto each alert box. Other properties (id, title, text, anything else) stay.</summary>
-    public static void Export(NoteDocument doc)
-    {
-        if (!TryGetBoxes(doc, out var key, out var raw) || key == null || raw.ValueKind != JsonValueKind.Array) return;
-        var arr = new JsonArray();
-        foreach (var item in raw.EnumerateArray())
-        {
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                arr.Add(JsonNode.Parse(item.GetRawText()));
-                continue;
-            }
-            var o = (JsonObject)JsonNode.Parse(item.GetRawText())!;
-            var id = ReadId(item);
-            if (id != null)
-            {
-                doc.PartColors.TryGetValue(PartColorKeys.Alert(id), out var color);
-                SetChannel(o, BackgroundName, PartColorOps.NormalizeHex(color?.Background));
-                SetChannel(o, ForegroundName, PartColorOps.NormalizeHex(color?.Foreground));
-            }
-            arr.Add(o);
-        }
-        using var parsed = JsonDocument.Parse(arr.ToJsonString(new JsonSerializerOptions
-        {
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        }));
-        doc.ExtraFields[key] = parsed.RootElement.Clone();
-    }
-
-    private readonly struct Channel
-    {
-        public bool Present { get; init; }
-        public string? Hex { get; init; }
-    }
-
-    private static Channel ReadChannel(JsonElement box, string name, string id, Action<string>? issue)
-    {
-        foreach (var p in box.EnumerateObject())
-        {
-            if (!string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)) continue;
-            if (p.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
-                return new Channel { Present = true, Hex = null };
-            if (p.Value.ValueKind != JsonValueKind.String)
-            {
-                issue?.Invoke($"alertBoxes.{id}.{name}: not a string, ignored");
-                return new Channel { Present = true, Hex = null };
-            }
-            var hex = PartColorOps.NormalizeHex(p.Value.GetString());
-            if (hex == null && !string.IsNullOrWhiteSpace(p.Value.GetString()))
-                issue?.Invoke($"alertBoxes.{id}.{name}: \"{p.Value.GetString()}\" is not a color, ignored");
-            return new Channel { Present = true, Hex = hex };
-        }
-        return new Channel { Present = false };
-    }
-
-    private static void SetChannel(JsonObject box, string name, string? hex)
-    {
-        foreach (var k in box.Select(p => p.Key).ToList())
-            if (string.Equals(k, name, StringComparison.OrdinalIgnoreCase) && k != name)
-                box.Remove(k);
-        if (hex == null) box.Remove(name);
-        else box[name] = hex;
-    }
-
-    private static string? ReadId(JsonElement box)
-    {
-        foreach (var p in box.EnumerateObject())
-        {
-            if (!string.Equals(p.Name, "id", StringComparison.OrdinalIgnoreCase)) continue;
-            if (p.Value.ValueKind != JsonValueKind.String) return null;
-            var id = (p.Value.GetString() ?? "").Trim();
-            return id.Length == 0 || id.Length > 80 ? null : id;
-        }
-        return null;
-    }
-
-    private static bool TryGetBoxes(NoteDocument doc, out string? key, out JsonElement raw)
-    {
-        foreach (var kv in doc.ExtraFields)
-        {
-            if (!string.Equals(kv.Key, "alertBoxes", StringComparison.OrdinalIgnoreCase)) continue;
-            key = kv.Key;
-            raw = kv.Value;
-            return true;
-        }
-        key = null;
-        raw = default;
-        return false;
-    }
 }
