@@ -89,6 +89,7 @@ public partial class MainWindow : Window
         _loadWarning = loaded.Warning ?? startupMsg;
         _confirm = new DialogDeleteConfirm(this);
         InitSettings(); // v2.4.0: column settings item in the header menu
+        InitSizing(); // v2.6: Column width… / Row height… on the existing menus
 
         MinWidth = 480;
         MinHeight = 300;
@@ -1254,6 +1255,7 @@ public partial class MainWindow : Window
             Grid.SetColumn(cell, c + 1);
             grid.Children.Add(cell);
         }
+        ApplySavedRowHeight(grid, rowIndex); // v2.6: a set height clips; auto rows are unchanged
     }
 
     private (IBrush label, IBrush cell) RowBackground(int row) => WithRowStyle(row, StatusRowBackground(row)); // v2.4.0

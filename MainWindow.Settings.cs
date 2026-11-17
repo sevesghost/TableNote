@@ -259,6 +259,7 @@ public sealed class ColumnSettingsDialog : Window
         };
         var widthBox = new NumericUpDown
         {
+            // v2.6: same 72–800 px range as the Column width dialog (TableLimits, pixels at 100% zoom).
             Minimum = TableLimits.MinColumnWidth, Maximum = TableLimits.MaxColumnWidth, Increment = 10,
             Value = width, FormatString = "0", Width = 140, HorizontalAlignment = HorizontalAlignment.Left
         };

@@ -59,6 +59,8 @@ public sealed class NoteDocument
     public Dictionary<string, ColumnSetting> ColumnSettings { get; set; } = new(StringComparer.Ordinal);
     /// <summary>v2.4.0: row colour/highlight by row id ("rowStyles"). No entry = normal row.</summary>
     public Dictionary<string, RowStyle> RowStyles { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>v2.6: pixel row height by row id ("rowHeights"). No entry = auto (the row grows with its text, at least 32 px). Only rows the user set are stored.</summary>
+    public Dictionary<string, int> RowHeights { get; set; } = new(StringComparer.Ordinal);
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();
     public bool LaunchAtLogin { get; set; }
@@ -227,6 +229,7 @@ public sealed class NoteDocument
         Recurrence.Remove(id);
         Acknowledged.Remove(id);
         Reminders.Remove(id);
+        RowHeights?.Remove(id);
         return true;
     }
 
@@ -398,6 +401,7 @@ public sealed class NoteDocument
         var dueIdx = DueColumnIndex();
         if (dueIdx >= 0 && (migrate || dueIdx >= widthsBefore) && ColumnWidths[dueIdx] == 140) ColumnWidths[dueIdx] = 200;
 
+        SizeSpec.PruneRowHeights(this); // drop heights of deleted rows and values outside 32–400 (never clamped)
         Version = Math.Max(Version, CurrentVersion); // never downgrade a newer file
         return clipped;
     }
