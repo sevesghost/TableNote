@@ -326,6 +326,35 @@ Moving columns or rows, deleting a column, changing column settings, and changin
 
 Above the table, **+ Alert** adds a box. Each box has a title and a text you can edit. **Delete** asks for confirmation, then removes that box. This can't be undone. Drag the **⋮⋮** grip to change the order, or use **Up** and **Down** — those buttons work without dragging and can be reached with the keyboard. The boxes and their order are saved in `note.json` and are still there after you close and open TableNote. They are separate from due-date reminders. Ctrl+Z does not undo alert-box changes.
 
+## 16. Exporting an image and printing
+
+**Export an image**
+1. Click **Export image** on the toolbar.
+2. Choose **PNG (.png)** or **JPEG (.jpg)** and pick a folder. The suggested file name is `TableNote-YYYY-MM-DD`.
+
+**Print** (sending to a printer works on Windows only)
+1. Click **Print** on the toolbar. A **Print preview** window opens.
+2. Click **Print** to send it to the printer, or **Close** to cancel.
+
+**Good to know**
+- The image and the printout show only the table. The toolbar, the selected cell and the buttons in cells are not included.
+- Header colours, row-number colours, status colours, row colours and per-cell colours are kept. A cell colour replaces the row colour, and a row colour replaces the status colour, the same as on screen.
+- The ⚠ and ⏰ marks appear as on screen. Dates are shown as `dd/MM/yyyy`, as on screen.
+- Only the rows you can see are included. When **Hide done rows** is ticked, done tasks are left out. Collapsed columns are left out too (.csv and .xlsx exports still contain every column).
+- A table wider than the page is scaled down to fit the page width. A long table continues on the next page, breaking between rows, and the column headers repeat on every page.
+- When there are several pages, they are combined into one file and printed in one job.
+- Text in the print preview can look slightly blurrier than the real printout. The printed page is sharper.
+- Zoom does not change the image. Export image and Print work only while you are editing the table, not while it is pinned to the desktop, and they do not change `note.json`.
+
+**Limitations in this version**
+- Only A4 paper is supported. Set margins and colour or black-and-white printing in the Windows print dialog.
+- If no installed program can print PDF files through Windows (for example, when Edge opens PDFs), each page is printed separately and the print dialog may open once per page.
+- A single row taller than a page continues on the next page and may be cut in the middle of a line.
+- Print files stay in `%TEMP%\TableNote-print` until TableNote is opened again or you print again.
+- The printout is an image. If you print to PDF, you cannot copy or search the text in the file.
+- A very wide table is scaled down so much that the text becomes very small.
+- The exported image has screen resolution. For a sharp printout, use **Print** in TableNote.
+- The text colour of row numbers and the background colour of the whole table are not included in the image or printout yet.
 
 ---
 *This guide is based on the TableNote 2.4.0 code as of 11 Nov 2026 (Thailand time, UTC+7).*
