@@ -30,7 +30,7 @@ public static class NoteStore
         /// <summary>v2.4.0: parsed leniently per entry, like reminders.</summary>
         public JsonElement? ColumnSettings { get; set; }
         public JsonElement? RowStyles { get; set; }
-        /// <summary>Format v6: user alert boxes, in order. Parsed leniently per entry.</summary>
+        /// <summary>Optional alert boxes, in order. Missing → empty. Parsed leniently per entry.</summary>
         public JsonElement? AlertBoxes { get; set; }
     }
 
@@ -104,7 +104,7 @@ public static class NoteStore
         "version", "columns", "rows", "launchAtLogin", "trayNoticeShown", "columnWidths", "viewMode", "window",
         "hideDone", "snoozes", "recurrence", "rowIds", "columnIds", "columnRoles", "muteSound", "acknowledged", "reminders",
         "columnSettings", "rowStyles", // v2.4.0
-        "alertBoxes" // format v6: user alert boxes
+        "alertBoxes" // optional; missing or bad → no boxes
     };
 
     private static JsonElement? Prop(JsonElement obj, string name)

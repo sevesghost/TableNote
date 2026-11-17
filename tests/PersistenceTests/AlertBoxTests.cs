@@ -75,8 +75,8 @@ public static partial class T
             loaded.AlertBoxes[1].Extra.TryGetValue("color", out var color) && color.GetString() == "#112233");
         using var json = JsonDocument.Parse(File.ReadAllText(p));
         var arr = json.RootElement.GetProperty("alertBoxes");
-        Ok("file version is 6 and alertBoxes is the saved order",
-            json.RootElement.GetProperty("version").GetInt32() == 6 &&
+        Ok("format version stays 5 and alertBoxes is the saved order",
+            json.RootElement.GetProperty("version").GetInt32() == 5 &&
             arr.GetArrayLength() == 2 &&
             arr[0].GetProperty("id").GetString() == ids[1] &&
             arr[1].GetProperty("color").GetString() == "#112233");
@@ -85,10 +85,19 @@ public static partial class T
 
     public static void TestAlertBoxesMissingAndCorrupt()
     {
-        var (old, _) = LoadJson("alert-old", "{\"version\":5,\"columns\":[\"หัวข้อ\",\"รายละเอียด\",\"สถานะ\",\"กำหนดส่ง\"],\"rows\":[[\"a\",\"b\",\"\",\"\"]],\"rowIds\":[\"r1\"],\"columnRoles\":[\"title\",\"detail\",\"status\",\"due\"]}");
+        var (old, oldDir) = LoadJson("alert-old", "{\"version\":5,\"columns\":[\"หัวข้อ\",\"รายละเอียด\",\"สถานะ\",\"กำหนดส่ง\"],\"rows\":[[\"a\",\"b\",\"\",\"\"]],\"rowIds\":[\"r1\"],\"columnRoles\":[\"title\",\"detail\",\"status\",\"due\"]}");
         Ok("v5 file with no alertBoxes → empty list, no alert issue",
-            old.Document.AlertBoxes.Count == 0 && old.Document.Rows[0][0] == "a" &&
+            old.Document.AlertBoxes.Count == 0 && old.Document.Version == NoteDocument.CurrentVersion && old.Document.Rows[0][0] == "a" &&
             !old.Issues.Any(i => i.StartsWith("alertBoxes", StringComparison.Ordinal)));
+        old.Document.AlertBoxes.Add(AlertBoxOps.Create("Hi", "there"));
+        var oldPath = Path.Combine(oldDir, "note.json");
+        NoteStore.Save(oldPath, old.Document);
+        Ok("saving alert boxes does not bump the format or write note.v5.bak",
+            NoteDocument.CurrentVersion == 5 && !Directory.GetFiles(oldDir, "note.v5*.bak").Any() &&
+            JsonDocument.Parse(File.ReadAllText(oldPath)).RootElement.GetProperty("version").GetInt32() == 5);
+        var reloaded = NoteStore.Load(oldPath).Document;
+        Ok("a file written by this build reloads the box",
+            reloaded.Version == 5 && reloaded.AlertBoxes.Count == 1 && reloaded.AlertBoxes[0].Title == "Hi" && reloaded.Rows[0][0] == "a");
 
         var issues = new List<string>();
         const string bad = """
@@ -114,13 +123,13 @@ public static partial class T
         }
         Ok("corrupt alert entries are logged in English", issues.Count >= 4 && issues.All(i => i.StartsWith("alertBoxes", StringComparison.Ordinal)));
 
-        var (wrong, _) = LoadJson("alert-type", "{\"version\":6,\"columns\":[\"Title\",\"Details\",\"Status\",\"Due date\"],\"columnRoles\":[\"title\",\"detail\",\"status\",\"due\"],\"rows\":[[\"keep\",\"\",\"\",\"\"]],\"rowIds\":[\"r1\"],\"alertBoxes\":\"nope\"}");
+        var (wrong, _) = LoadJson("alert-type", "{\"version\":5,\"columns\":[\"Title\",\"Details\",\"Status\",\"Due date\"],\"columnRoles\":[\"title\",\"detail\",\"status\",\"due\"],\"rows\":[[\"keep\",\"\",\"\",\"\"]],\"rowIds\":[\"r1\"],\"alertBoxes\":\"nope\"}");
         Ok("alertBoxes that is not an array → empty, table kept",
             wrong.Document.AlertBoxes.Count == 0 && wrong.Document.Rows[0][0] == "keep" &&
             wrong.Issues.Any(i => i == "alertBoxes: not an array, all skipped"));
 
         var many = string.Join(",", Enumerable.Range(0, 40).Select(i => "{\"id\":\"id" + i + "\",\"title\":\"t" + i + "\",\"text\":\"\"}"));
-        var (capped, _) = LoadJson("alert-cap", "{\"version\":6,\"columns\":[\"Title\",\"Details\",\"Status\",\"Due date\"],\"columnRoles\":[\"title\",\"detail\",\"status\",\"due\"],\"rows\":[[\"z\",\"\",\"\",\"\"]],\"rowIds\":[\"r1\"],\"alertBoxes\":[" + many + "]}");
+        var (capped, _) = LoadJson("alert-cap", "{\"version\":5,\"columns\":[\"Title\",\"Details\",\"Status\",\"Due date\"],\"columnRoles\":[\"title\",\"detail\",\"status\",\"due\"],\"rows\":[[\"z\",\"\",\"\",\"\"]],\"rowIds\":[\"r1\"],\"alertBoxes\":[" + many + "]}");
         Ok("more than 30 boxes → first 30 kept, in order",
             capped.Document.AlertBoxes.Count == 30 &&
             capped.Document.AlertBoxes[0].Id == "id0" && capped.Document.AlertBoxes[29].Id == "id29" &&
