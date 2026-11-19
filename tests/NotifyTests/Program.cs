@@ -190,5 +190,66 @@ foreach (var n in new[] { 5, 30 })
     ReminderPopup.CloseSilently(); mw.Close(); Pump(50);
 }
 
+// ── 12. note.json locked at start-up (another program holds it): stand-in table, then the real note ──
+string Notice(Window w) => w.FindControl<TextBlock>("ModeNotice")?.Text ?? "";
+NoteDocument DueNote(int n, bool launchAtLogin)
+{
+    var doc = NoteDocument.CreateDefault(); doc.Rows.Clear();
+    for (int i = 0; i < n; i++) { var r = Enumerable.Repeat("", doc.Columns.Count).ToList(); r[0] = "Locked " + i; r[doc.DueColumnIndex()] = DueDates.Format(DateTime.Now.AddMinutes(-1)); doc.Rows.Add(r); }
+    doc.EnsureRowIds(); doc.Window.Layer = DesktopLayerKind.Window; doc.LaunchAtLogin = launchAtLogin; doc.TrayNoticeShown = true;
+    return doc;
+}
+var prevXdg = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+var xdg = Path.Combine(dir, "xdg");
+var autostart = Path.Combine(xdg, "autostart", "TableNote.desktop"); // Linux twin of the Windows Run entry
+Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", xdg);
+try
+{
+    foreach (var typeIntoStandIn in new[] { false, true })
+    {
+        Reset();
+        var tag = typeIntoStandIn ? "locked + typed" : "locked";
+        var d = Path.Combine(dir, typeIntoStandIn ? "locked-typed" : "locked"); Directory.CreateDirectory(d);
+        var notePath = Path.Combine(d, "note.json");
+        Environment.SetEnvironmentVariable("TABLENOTE_DATA", notePath);
+        NoteStore.Save(notePath, DueNote(3, launchAtLogin: true));
+        Directory.CreateDirectory(Path.GetDirectoryName(autostart)!);
+        File.WriteAllText(autostart, "[Desktop Entry]\nName=TableNote\n");
+        var hold = new FileStream(notePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var mw = new MainWindow(); mw.Show(); Pump(300);
+        Ok(File.Exists(autostart), $"{tag}: the stand-in table leaves the sign-in entry alone (it used to delete it)");
+        Ok(ReminderPopup.CurrentWindow == null && Notice(mw).Contains("note.json"), $"{tag}: empty stand-in, nothing to remind, notice: {Notice(mw)}");
+        if (typeIntoStandIn) { Click(mw.FindControl<Button>("AddRowButton")!); Pump(300); }
+        hold.Dispose(); // the other program lets go
+        var t0 = Stopwatch.StartNew();
+        while (ReminderPopup.CurrentWindow == null && t0.ElapsedMilliseconds < 8000) Pump(50);
+        if (!typeIntoStandIn)
+        {
+            Ok(ReminderPopup.OpenRowCount == 3, $"{tag}: note.json opens as soon as it can be read and its 3 due tasks remind ({ReminderPopup.OpenRowCount} after {t0.ElapsedMilliseconds / 1000.0:0.0} s)");
+            Ok(File.Exists(autostart) && !File.Exists(Path.Combine(d, "note.unsaved.json")) && Notice(mw).Contains("note.json"),
+                $"{tag}: sign-in entry kept, no side copy, notice: {Notice(mw)}");
+        }
+        else
+        {
+            Ok(ReminderPopup.CurrentWindow == null && Notice(mw).Contains("note.unsaved.json"), $"{tag}: the edited stand-in is not swapped; notice: {Notice(mw)}");
+            Ok(NoteStore.Load(Path.Combine(d, "note.unsaved.json")).Document.Rows.Count == 5 && NoteStore.Load(notePath).Document.Rows.Count == 3,
+                $"{tag}: the typed row is in note.unsaved.json, note.json untouched");
+        }
+        ReminderPopup.CloseSilently(); mw.Close(); Pump(50);
+        if (!typeIntoStandIn) continue;
+
+        // Next start: the earlier side copy is kept under its own name (never overwritten) and note.json opens.
+        Reset();
+        var mw2 = new MainWindow(); mw2.Show(); Pump(300);
+        var kept = Directory.GetFiles(d, "note.unsaved-*.json");
+        t0 = Stopwatch.StartNew();
+        while (ReminderPopup.CurrentWindow == null && t0.ElapsedMilliseconds < 8000) Pump(50);
+        Ok(kept.Length == 1 && !File.Exists(Path.Combine(d, "note.unsaved.json")) && Notice(mw2).Contains(Path.GetFileName(kept[0])) && ReminderPopup.OpenRowCount == 3,
+            $"{tag}, next start: edits kept as {string.Join(",", kept.Select(Path.GetFileName))}, note.json open ({ReminderPopup.OpenRowCount} reminders), notice: {Notice(mw2)}");
+        ReminderPopup.CloseSilently(); mw2.Close(); Pump(50);
+    }
+}
+finally { Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", prevXdg); }
+
 Console.WriteLine(fail == 0 ? $"NotifyTests: all {pass} passed" : $"NotifyTests: {fail} failed, {pass} passed");
 Environment.Exit(fail == 0 ? 0 : 1);

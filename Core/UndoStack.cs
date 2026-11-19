@@ -27,6 +27,13 @@ public sealed class UndoStack
         Trim();
     }
 
+    /// <summary>Forget every step (the document was replaced, e.g. note.json opened after a stand-in table).</summary>
+    public void Clear()
+    {
+        _undo.Clear();
+        _redo.Clear();
+    }
+
     public string? Undo(NoteDocument doc)
     {
         if (_undo.Count == 0) return null;

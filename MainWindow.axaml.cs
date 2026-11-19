@@ -45,11 +45,11 @@ public partial class MainWindow : Window
     }
 
     private readonly string _path;
-    private readonly TableSession _session;
+    private TableSession _session; // replaced once when note.json opens after a stand-in table (MainWindow.Reload.cs)
     private readonly DialogDeleteConfirm _confirm;
     private readonly DispatcherTimer _saveTimer;
     private readonly IStartupRegistration _startup;
-    private readonly string? _loadWarning;
+    private string? _loadWarning;
     private readonly IDesktopShell _shell = DesktopShell.Create();
     private readonly ReattachScheduler _reattach = new();
     private readonly ReminderService _reminders;
@@ -80,12 +80,17 @@ public partial class MainWindow : Window
         // UI language + zoom live in settings.json (never note.json). Missing/bad → English, 100 %.
         _settings = AppSettings.Load(_path);
         Localizer.SetLanguage(_settings.Language);
+        // Before anything can write a new side copy: keep an earlier run's note.unsaved.json under its own name.
+        _archivedUnsaved = NoteStore.ArchiveUnsaved(_path);
         var loaded = NoteStore.Load(_path);
         _session = new TableSession(loaded.Document);
+        _placeholder = loaded.Placeholder;
         _preserveExistingFile = loaded.PreserveExistingFile;
-        if (_preserveExistingFile) _preserveBaseline = Snapshot.Serialize(_session.Doc);
+        if (_preserveExistingFile) _preserveBaseline = PreserveKey(_session.Doc);
         _startup = StartupLaunch.ForCurrentMachine();
-        var startupMsg = SyncStartup(_session.Doc.LaunchAtLogin);
+        // A stand-in table (note.json locked) has "launch at sign-in" off only because it is a default document:
+        // syncing that deleted the user's sign-in entry, so TableNote did not start at the next sign-in either.
+        var startupMsg = _placeholder ? null : SyncStartup(_session.Doc.LaunchAtLogin);
         _loadWarning = loaded.Warning ?? startupMsg;
         _confirm = new DialogDeleteConfirm(this);
         InitSettings(); // v2.4.0: column settings item in the header menu
@@ -152,7 +157,9 @@ public partial class MainWindow : Window
         ApplyLanguageTexts();
         Rebuild();
         UpdateStatus();
-        if (!string.IsNullOrEmpty(_session.Doc.DueColumnWarning))
+        if (_placeholder)
+            ShowNotice(Localizer.T("load.locked_waiting")); // MainWindow.Reload.cs keeps trying to open note.json
+        else if (!string.IsNullOrEmpty(_session.Doc.DueColumnWarning))
             ShowNotice(_session.Doc.DueColumnWarning);
         else if (!string.IsNullOrEmpty(loaded.Notice))
             ShowNotice(loaded.Notice); // non-blocking banner; details in tablenote.log
@@ -196,6 +203,15 @@ public partial class MainWindow : Window
 
         if (!_hotkeyReady)
             ShowNotice(JoinNotice(ModeNotice.Text, RecoveryHotkey.FailureNotice(false, _hotkeyCollided)));
+        // After the mode is set: entering the editor's "normal window" layer clears the banner.
+        if (_placeholder)
+        {
+            var waiting = Localizer.T("load.locked_waiting");
+            if (!(ModeNotice.Text ?? "").Contains(waiting, StringComparison.Ordinal)) ShowNotice(JoinNotice(ModeNotice.Text, waiting));
+            StartReloadRetry();
+        }
+        else if (_archivedUnsaved is { } kept)
+            ShowNotice(JoinNotice(ModeNotice.Text, UnsavedKeptNotice(kept)));
 
         _reminders.Start();
         StartColourClock();
@@ -277,6 +293,7 @@ public partial class MainWindow : Window
         }
         WindowsHotkey.Unregister(WindowHandle());
         _reminders.Dispose();
+        _reloadTimer?.Stop();
         ReminderPopup.CloseSilently(); // v2.3.1: no popup left calling into a closed window
         base.OnClosing(e);
     }
@@ -875,7 +892,8 @@ public partial class MainWindow : Window
         {
             // v2.4.1: note.json stays untouched, but edits of this session go to note.unsaved.json
             // (before: nothing was written and quitting reported success → the whole session was lost).
-            if (Snapshot.Serialize(_session.Doc) == _preserveBaseline)
+            // PreserveKey also covers alert boxes and colours, which the undo snapshot leaves out.
+            if (PreserveKey(_session.Doc) == _preserveBaseline)
             {
                 StatusText.Text = _loadWarning ?? TableLimits.FileTooBigKeptMessage;
                 return true;
@@ -883,6 +901,7 @@ public partial class MainWindow : Window
             try
             {
                 var side = NoteStore.SaveSideCopy(_path, _session.Doc);
+                _sideCopyName = Path.GetFileName(side);
                 _saveFailureMessage = null;
                 StatusText.Text = Localizer.T("ui.saved_side", _loadWarning ?? TableLimits.FileTooBigKeptMessage, Path.GetFileName(side));
                 return true;

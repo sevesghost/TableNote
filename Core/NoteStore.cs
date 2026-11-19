@@ -436,12 +436,16 @@ public static class NoteStore
 
     public static LoadResult Load(string path) => Load(path, TableLimits.MaxSaveFileBytes);
 
-    public static LoadResult Load(string path, int maxBytes)
+    public static LoadResult Load(string path, int maxBytes) => Load(path, maxBytes, retries: 3);
+
+    /// <param name="retries">Extra attempts, 150 ms apart, while note.json can't be read (locked). MainWindow's
+    /// background retry passes 0, so the UI thread never sleeps there.</param>
+    public static LoadResult Load(string path, int maxBytes, int retries)
     {
         var result = LoadCore(path, maxBytes);
         // v2.4.1: OneDrive / antivirus may hold note.json for a moment at log-in (same as L15 for Save).
         // Before, ONE IOException at start-up opened an empty note in "keep existing file" mode for the whole session.
-        for (var attempt = 1; attempt < 4 && result.PreserveExistingFile && result.Warning == WarningReadFailed && File.Exists(path); attempt++)
+        for (var attempt = 1; attempt <= retries && result.PreserveExistingFile && result.Warning == WarningReadFailed && File.Exists(path); attempt++)
         {
             Thread.Sleep(150);
             result = LoadCore(path, maxBytes);
@@ -505,7 +509,7 @@ public static class NoteStore
                     return new LoadResult { Document = NoteDocument.CreateDefault(), Warning = WarningCorrupt };
                 return new LoadResult
                 {
-                    Document = NoteDocument.CreateDefault(), PreserveExistingFile = true,
+                    Document = NoteDocument.CreateDefault(), PreserveExistingFile = true, Placeholder = true,
                     Warning = Localizer.T("load.unreadable_kept")
                 };
             }
@@ -671,7 +675,7 @@ public static class NoteStore
                 return new LoadResult { Document = NoteDocument.CreateDefault(), Warning = WarningCorrupt };
             return new LoadResult
             {
-                Document = NoteDocument.CreateDefault(), PreserveExistingFile = true,
+                Document = NoteDocument.CreateDefault(), PreserveExistingFile = true, Placeholder = true,
                 Warning = Localizer.T("load.unreadable_kept")
             };
         }
@@ -679,7 +683,7 @@ public static class NoteStore
         {
             return new LoadResult
             {
-                Document = NoteDocument.CreateDefault(), PreserveExistingFile = true,
+                Document = NoteDocument.CreateDefault(), PreserveExistingFile = true, Placeholder = true,
                 Warning = WarningReadFailed
             };
         }
@@ -701,7 +705,7 @@ public static class NoteStore
                 return new LoadResult { Document = NoteDocument.CreateDefault(), Warning = WarningCorrupt };
             return new LoadResult
             {
-                Document = NoteDocument.CreateDefault(), PreserveExistingFile = true,
+                Document = NoteDocument.CreateDefault(), PreserveExistingFile = true, Placeholder = true,
                 Warning = Localizer.T("load.unreadable_kept")
             };
         }
@@ -709,6 +713,17 @@ public static class NoteStore
 
     /// <summary>Warning of LoadCore's IOException/UnauthorizedAccess branch (must match the text there).</summary>
     private static string WarningReadFailed => Localizer.T("load.read_failed");
+
+    /// <summary>note.json exists and can be opened for reading right now (no other program holds it).</summary>
+    public static bool CanRead(string path)
+    {
+        try
+        {
+            using var _ = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
+    }
 
     /// <summary>Side file used while note.json must not be overwritten (<see cref="LoadResult.PreserveExistingFile"/>).</summary>
     public static string UnsavedPath(string path) => Path.Combine(Path.GetDirectoryName(path) ?? ".", "note.unsaved.json");
@@ -720,9 +735,56 @@ public static class NoteStore
     /// </summary>
     public static string SaveSideCopy(string path, NoteDocument doc)
     {
-        var side = UnsavedPath(path);
+        // A note.unsaved.json from an EARLIER run holds edits that exist nowhere else: never write over it.
+        // (MainWindow renames it at start-up with ArchiveUnsaved; if that failed, this run gets its own name.)
+        var key = Path.GetFullPath(path);
+        string? side;
+        lock (SideCopies)
+        {
+            if (!SideCopies.TryGetValue(key, out side))
+            {
+                side = UnsavedPath(path);
+                if (File.Exists(side)) side = UnsavedArchiveName(path, DateTime.Now);
+                SideCopies[key] = side;
+            }
+        }
         Save(side, doc); // full document (same Normalize as a normal save)
         return side;
+    }
+
+    private static readonly Dictionary<string, string> SideCopies = new(StringComparer.Ordinal); // note.json → this run's side file
+
+    private static string UnsavedArchiveName(string path, DateTime time)
+    {
+        var dir = Path.GetDirectoryName(path) ?? ".";
+        var name = Path.Combine(dir, $"note.unsaved-{time:yyyyMMdd-HHmmss}.json");
+        for (var i = 1; File.Exists(name); i++) name = Path.Combine(dir, $"note.unsaved-{time:yyyyMMdd-HHmmss}-{i}.json");
+        return name;
+    }
+
+    /// <summary>
+    /// Start-up: an earlier session that could not use note.json saved its edits to note.unsaved.json, which no later
+    /// start read. Rename it to note.unsaved-&lt;its time&gt;.json, so this session can never write over it, and return the
+    /// new name and its time for a notice. Null when there is none, or when it can't be renamed (then it is logged and
+    /// <see cref="SaveSideCopy"/> still won't overwrite it).
+    /// </summary>
+    public static (string FileName, DateTime Saved)? ArchiveUnsaved(string path)
+    {
+        var side = UnsavedPath(path);
+        try
+        {
+            if (!File.Exists(side)) return null;
+            var saved = File.GetLastWriteTime(side);
+            var name = UnsavedArchiveName(path, saved);
+            File.Move(side, name, overwrite: false);
+            AppLog.Write("load", $"note.unsaved.json (saved {saved:yyyy-MM-dd HH:mm}) kept as {Path.GetFileName(name)}");
+            return (Path.GetFileName(name), saved);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppLog.Write("load", "note.unsaved.json could not be renamed: " + ex.Message);
+            return null;
+        }
     }
 
     /// <summary>Thrown by <see cref="Save"/> when the file would exceed the 8 MB cap; note.json is not touched.</summary>
