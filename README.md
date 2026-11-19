@@ -4,7 +4,7 @@
 
 A lightweight, Excel-like task table for Windows with due-date and advance reminders, built with Avalonia on .NET 10.
 
-Current version: **2.5.0**. The interface is English by default; switch to Thai with the **EN/TH** button. English manual: [`docs/manual-en.md`](docs/manual-en.md).
+Current version: **2.5.1** (19 November 2026). The interface is English by default; switch to Thai with the **EN/TH** button. English manual: [`docs/manual-en.md`](docs/manual-en.md).
 
 ## What is TableNote?
 

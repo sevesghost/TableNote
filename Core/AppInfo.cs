@@ -2,9 +2,9 @@ namespace TableNote;
 
 public static class AppInfo
 {
-    public const string Version = "2.4.2";
+    public const string Version = "2.5.1";
     public const string ConfirmedCommit = "rewrite-" + Version;
-    public const string BuildNote = "วันบิลด์: 12 พฤศจิกายน 2026 (เวลาไทย UTC+7) — แก้บั๊กข้อมูลหาย การบันทึก การส่งออก และข้อความภาษาอังกฤษ";
+    public const string BuildNote = "วันบิลด์: 19 พฤศจิกายน 2026 (เวลาไทย UTC+7) — แก้บั๊ก 7 ข้อ เอา toast ออก และไฟล์ exe เล็กลงเหลือราว 24 MB";
 
     public static string HelpText => Localizer.Current == "th" ? HelpTextTh : HelpTextEn;
     public static string LogText => Localizer.Current == "th" ? LogTextTh : LogTextEn;
@@ -157,11 +157,24 @@ Files
   สถานะและทำซ้ำเป็นป้ายตามภาษาที่เลือก  วันที่เป็น yyyy-MM-dd [HH:mm] ปี ค.ศ.
   ค่าที่ขึ้นต้นด้วย = + - @ ใน .csv/.txt มี ' นำหน้า (ไม่ให้เป็นสูตร) ยกเว้นตัวเลขล้วน
   ถ้าซ่อนงานเสร็จอยู่ จะถามว่าจะรวมแถวที่ซ่อนหรือไม่
-  ลบคอลัมน์กำหนดส่งไม่ได้ (การแจ้งเตือนใช้คอลัมน์นี้)
+  ลบคอลัมน์กำหนดส่งได้ (ถามก่อน) แต่จะไม่มีการเตือนจนกว่าจะเพิ่มกลับจากปุ่ม + คอลัมน์
 ").Replace("{VERSION}", Version);
 
     public static string LogTextEn { get; } =
-@"TableNote " + Version + @" — built 12 Nov 2026 (Bangkok time, UTC+7)
+@"TableNote " + Version + @" — built 19 Nov 2026 (Bangkok time, UTC+7)
+
+19 Nov 2026 — 2.5.1
+Fixed: a due date with a month name or a two-digit year (5 Jan 2026, 5-Jan-26, 5/1/26), e.g. pasted from Excel, was read as 1483 or 1983 and reminded at once as missed.
+Fixed: with Hide done on, pasting several lines wrote into the hidden done rows.
+Fixed: Ctrl+Z after deleting a row lost its detail tables; after deleting a column, its colours; after deleting the Due column, acknowledged reminders popped up again.
+Fixed: if another program was using note.json at start-up, the whole session ran on an empty table with no reminders, and the launch-at-sign-in entry was removed. TableNote now opens note.json as soon as it can be read and leaves that setting alone.
+Fixed: without a tray icon, closing the window left TableNote running invisibly; it now exits.
+Changed: the silent Windows toast is removed (the reminder window and its sound are unchanged). TableNote.exe is about 24 MB instead of 56 MB.
+
+17 Nov 2026 — 2.5.0
+New: collapsible column groups, a detail table on chosen cells, alert boxes above the table, RGB colours for cells, headers, rows and sections, typed column width and row height, image export and printing.
+New: toolbar groups and a menu bar (File / Table / Column / Row / View / Help); the Status and Due columns can be deleted and added back.
+Compatibility: note.json format version 6. A 2.4.2 file opens, and the first save writes version 6.
 
 12 Nov 2026 — 2.4.2
 New: English is the primary language; UI text comes from lang/en.json and lang/th.json, and other languages can be added as JSON files.
@@ -200,6 +213,19 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 @"ตารางโน้ต
 รุ่นที่แสดง: " + Version + @"
 " + BuildNote + @"
+
+19 พ.ย. 2026 — 2.5.1
+แก้: กำหนดส่งที่มีชื่อเดือนหรือปีสองหลัก (5 Jan 2026, 5-Jan-26, 5/1/26) เช่น วางจาก Excel ถูกอ่านเป็นปี 1483 หรือ 1983 และเด้งเตือนว่าพลาดทันที
+แก้: ติ๊ก ""ซ่อนงานเสร็จ"" แล้ววางหลายบรรทัด ข้อมูลลงไปในแถวงานเสร็จที่ซ่อนอยู่
+แก้: Ctrl+Z หลังลบแถวแล้วตารางรายละเอียดหาย หลังลบคอลัมน์แล้วสีหาย หลังลบคอลัมน์กำหนดส่งแล้วเตือนที่รับทราบไปแล้วเด้งใหม่
+แก้: ถ้าตอนเปิดโปรแกรม note.json ถูกโปรแกรมอื่นใช้อยู่ ทั้งรอบจะเป็นตารางว่างที่ไม่เตือน และรายการเปิดเมื่อเข้าสู่ระบบถูกลบ ตอนนี้เปิด note.json ทันทีที่อ่านได้ และไม่แตะค่านั้น
+แก้: ถ้าไม่มีไอคอนในถาด ปิดหน้าต่างแล้วโปรแกรมค้างอยู่เบื้องหลัง ตอนนี้ออกจากโปรแกรม
+เปลี่ยน: เอา toast ของ Windows ที่ไม่มีเสียงออก (หน้าต่างเตือนและเสียงเหมือนเดิม) TableNote.exe เหลือราว 24 MB จาก 56 MB
+
+17 พ.ย. 2026 — 2.5.0
+ใหม่: กลุ่มคอลัมน์ยุบได้ ตารางรายละเอียดในช่อง กล่องแจ้งเตือนเหนือตาราง สี RGB ของช่อง หัวคอลัมน์ แถว และส่วนต่างๆ กำหนดความกว้างคอลัมน์และความสูงแถว ส่งออกภาพและพิมพ์
+ใหม่: ปุ่มบนแถบเครื่องมือแบ่งเป็นกลุ่ม มีแถบเมนู (ไฟล์ / ตาราง / คอลัมน์ / แถว / มุมมอง / ช่วยเหลือ) ลบคอลัมน์สถานะและกำหนดส่งแล้วเพิ่มกลับได้
+ความเข้ากันได้: note.json รูปแบบรุ่น 6 ไฟล์ 2.4.2 เปิดได้ และบันทึกครั้งแรกเป็นรุ่น 6
 
 12 พ.ย. 2026 — 2.4.2
 ใหม่: ภาษาอังกฤษเป็นภาษาหลัก ข้อความหน้าจอมาจาก lang/en.json และ lang/th.json เพิ่มภาษาอื่นได้ด้วยไฟล์ JSON
