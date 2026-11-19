@@ -208,8 +208,12 @@ public static class Snapshot
         WriteIndented = false
     };
 
+    /// <summary>Source-generated metadata bound to <see cref="Opt"/> (trimming-safe; same JSON as before).</summary>
+    private static readonly TableNoteJson Json = new(Opt);
+
     // Content only. Snoozes, acknowledgements, hide-done and mute are NOT part of undo (spec U-list).
-    private sealed class Dto
+    // internal (was private): the source-generated JSON metadata in TableNoteJson must be able to see it.
+    internal sealed class Dto
     {
         public List<string> Columns { get; set; } = [];
         public List<string> ColumnRoles { get; set; } = [];
@@ -254,7 +258,7 @@ public static class Snapshot
             StatusColumnOmitted = doc.StatusColumnOmitted,
             DueColumnOmitted = doc.DueColumnOmitted,
             CellDetails = CellDetailOps.IsEmpty(doc.CellDetails) ? null : CellDetailOps.ToJson(doc.CellDetails)
-        }, Opt);
+        }, Json.Dto);
 
     /// <summary>
     /// Restore content by row id. Rows that exist both now and in the snapshot keep their CURRENT
@@ -263,7 +267,7 @@ public static class Snapshot
     /// </summary>
     public static void Restore(NoteDocument doc, string json)
     {
-        var d = System.Text.Json.JsonSerializer.Deserialize<Dto>(json, Opt) ?? new Dto();
+        var d = System.Text.Json.JsonSerializer.Deserialize(json, Json.Dto) ?? new Dto();
         var snapRows = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         for (var i = 0; i < d.Rows.Count && i < d.RowIds.Count; i++) snapRows[d.RowIds[i]] = d.Rows[i];
         var snapSet = new HashSet<string>(snapRows.Keys, StringComparer.Ordinal);

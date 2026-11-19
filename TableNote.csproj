@@ -5,6 +5,11 @@
          WinRT toast, which put the 24 MB Windows SDK projection into the exe; the toast is gone (the reminder window and
          its sound are unchanged). -->
     <TargetFramework>net10.0</TargetFramework>
+    <!-- The Windows exe is trimmed (below) and a trimmed app can't use reflection-based JsonSerializer, so note.json and
+         undo snapshots use source-generated metadata (Core/TableNoteJson.cs). Reflection is off in EVERY build, not only
+         the trimmed one, so a missed call fails on Linux and in tests too; the analyzer flags trimming problems on build. -->
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
@@ -22,11 +27,14 @@
     <SatelliteResourceLanguages>en;th</SatelliteResourceLanguages>
   </PropertyGroup>
 
-  <!-- P9: the Windows publish is win-x64 only, single file, no other platforms' native files. Not trimmed
-       (Avalonia + the toast toolkit use reflection; trimming is not proven safe — see release notes). -->
+  <!-- P9: the Windows publish is win-x64 only, single file, no other platforms' native files.
+       Trimmed, partial mode: unused code of .NET and Avalonia is removed, TableNote.dll itself is kept whole
+       (about 24 MB instead of 56 MB with the toast stack). -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>none</DebugType>

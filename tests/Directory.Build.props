@@ -1,0 +1,7 @@
+<Project>
+  <!-- Test programs run TableNote code the way the trimmed Windows exe does: reflection-based JsonSerializer is off
+       (see TableNote.csproj and Core/TableNoteJson.cs), so a JSON call that would fail there fails here as well. -->
+  <PropertyGroup>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+</Project>

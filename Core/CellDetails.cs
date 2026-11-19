@@ -495,7 +495,7 @@ public static class CellDetailOps
         if (values.Count == 0) return;
         var arr = new JsonArray();
         foreach (var v in values.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal))
-            arr.Add(JsonValue.Create(v));
+            arr.Add((JsonNode?)JsonValue.Create(v)); // JsonNode overload: the generic Add<T> is not trimming-safe
         o[name] = arr;
     }
 
@@ -508,14 +508,14 @@ public static class CellDetailOps
     private static JsonArray StringArray(IEnumerable<string> values)
     {
         var arr = new JsonArray();
-        foreach (var v in values) arr.Add(JsonValue.Create(v ?? ""));
+        foreach (var v in values) arr.Add((JsonNode?)JsonValue.Create(v ?? ""));
         return arr;
     }
 
     private static JsonArray RowArray(List<List<string>> rows)
     {
         var arr = new JsonArray();
-        foreach (var r in rows) arr.Add(StringArray(r));
+        foreach (var r in rows) arr.Add((JsonNode)StringArray(r));
         return arr;
     }
 

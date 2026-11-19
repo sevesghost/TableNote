@@ -208,7 +208,7 @@ public static class AlertBoxOps
                     var node = JsonNode.Parse(v.GetRawText());
                     if (node != null) o[k] = node;
                 }
-                arr.Add(o);
+                arr.Add((JsonNode)o); // JsonNode overload: the generic Add<T> is not trimming-safe
             }
         }
         using var doc = JsonDocument.Parse(arr.ToJsonString(WriteOptions));

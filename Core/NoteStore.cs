@@ -7,7 +7,8 @@ namespace TableNote;
 
 public static class NoteStore
 {
-    private sealed class FileDto
+    // internal (was private): the source-generated JSON metadata in TableNoteJson must be able to see it.
+    internal sealed class FileDto
     {
         public int Version { get; set; } = 1;
         public List<string?>? Columns { get; set; }
@@ -385,7 +386,7 @@ public static class NoteStore
         AppLog.WriteFor(path, "load", LastLoadIssues); // same 256 KB rotation as every other log line
     }
 
-    private sealed class WindowDto
+    internal sealed class WindowDto
     {
         public int Width { get; set; } = 720;
         public int Height { get; set; } = 480;
@@ -410,6 +411,9 @@ public static class NoteStore
         AllowTrailingCommas = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.Never
     };
+
+    /// <summary>Source-generated metadata bound to <see cref="Options"/> (trimming-safe; same JSON as before).</summary>
+    private static readonly TableNoteJson Json = new(Options);
 
     public static string DefaultPath()
     {
@@ -780,16 +784,16 @@ public static class NoteStore
             ColumnWidths = doc.ColumnWidths,
             ViewMode = RecoveryGate.Format(doc.View),
             HideDone = doc.HideDone,
-            Snoozes = JsonSerializer.SerializeToElement(doc.Snoozes, Options),
-            Recurrence = JsonSerializer.SerializeToElement(doc.Recurrence, Options),
+            Snoozes = JsonSerializer.SerializeToElement(doc.Snoozes, Json.DictionaryStringString),
+            Recurrence = JsonSerializer.SerializeToElement(doc.Recurrence, Json.DictionaryStringString),
             RowIds = doc.RowIds.Select(id => (string?)id).ToList(),
             ColumnIds = doc.ColumnIds.Select(id => (string?)id).ToList(),
             ColumnRoles = doc.ColumnRolesList.Select(r => (string?)r).ToList(),
             MuteSound = doc.MuteSound,
-            Acknowledged = JsonSerializer.SerializeToElement(doc.Acknowledged, Options),
-            Reminders = JsonSerializer.SerializeToElement(doc.Reminders, Options),
-            ColumnSettings = JsonSerializer.SerializeToElement(doc.ColumnSettings, Options), // v2.4.0
-            RowStyles = JsonSerializer.SerializeToElement(doc.RowStyles, Options),
+            Acknowledged = JsonSerializer.SerializeToElement(doc.Acknowledged, Json.DictionaryStringString),
+            Reminders = JsonSerializer.SerializeToElement(doc.Reminders, Json.DictionaryStringReminderInfo),
+            ColumnSettings = JsonSerializer.SerializeToElement(doc.ColumnSettings, Json.DictionaryStringColumnSetting), // v2.4.0
+            RowStyles = JsonSerializer.SerializeToElement(doc.RowStyles, Json.DictionaryStringRowStyle),
             ColumnGroups = ColumnGroupOps.Clone(doc.ColumnGroups),
             AlertBoxes = AlertBoxOps.ToElement(doc.AlertBoxes),
             PartColors = PartColorsElement(doc),
@@ -812,12 +816,12 @@ public static class NoteStore
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
         string json;
-        if (doc.ExtraFields.Count == 0 && CellDetailOps.IsEmpty(doc.CellDetails)) json = JsonSerializer.Serialize(dto, Options);
+        if (doc.ExtraFields.Count == 0 && CellDetailOps.IsEmpty(doc.CellDetails)) json = JsonSerializer.Serialize(dto, Json.FileDto);
         else
         {
             // Preserve unknown top-level fields (from a newer version) instead of dropping them silently.
             // cellDetails is written only when the note actually has detail buttons or tables.
-            var node = (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(dto, Options))!;
+            var node = (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(dto, Json.FileDto))!;
             CellDetailOps.WriteProperty(node, doc.CellDetails);
             foreach (var (k, v) in doc.ExtraFields)
                 if (!node.ContainsKey(k)) node[k] = System.Text.Json.Nodes.JsonNode.Parse(v.GetRawText());
