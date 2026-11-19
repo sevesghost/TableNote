@@ -26,6 +26,16 @@ public static class DueDates
     }
 
     private static readonly CultureInfo Gregorian = CultureInfo.InvariantCulture; // invariant = Gregorian calendar
+    private static readonly CultureInfo ThaiBuddhist = CultureInfo.GetCultureInfo("th-TH");
+    private static readonly CultureInfo ThaiGregorian = ThaiWithGregorianCalendar();
+
+    /// <summary>th-TH (Thai month names) on the Gregorian calendar, so "2026" stays 2026.</summary>
+    private static CultureInfo ThaiWithGregorianCalendar()
+    {
+        var c = (CultureInfo)CultureInfo.GetCultureInfo("th-TH").Clone();
+        c.DateTimeFormat.Calendar = c.OptionalCalendars.OfType<GregorianCalendar>().FirstOrDefault() ?? new GregorianCalendar();
+        return CultureInfo.ReadOnly(c);
+    }
 
     public static string Format(DateTime local) =>
         local.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
@@ -57,11 +67,20 @@ public static class DueDates
             return true;
         }
 
-        if (DateTime.TryParse(t, CultureInfo.GetCultureInfo("th-TH"),
-                DateTimeStyles.AssumeLocal | DateTimeStyles.AllowWhiteSpaces, out local))
+        // Thai month names ("5 ม.ค. 2569") need th-TH, but its default calendar is Buddhist: a C.E. year was read as
+        // B.E. ("5 Jan 2026" → 1483, "5-Jan-26" → 2526 B.E. = 1983). Read it with both calendars and keep the date
+        // nearest to today; B.E. years ≥ 2400 still become C.E. through NormalizeBuddhistYear.
+        const DateTimeStyles styles = DateTimeStyles.AssumeLocal | DateTimeStyles.AllowWhiteSpaces;
+        var okBuddhist = DateTime.TryParse(t, ThaiBuddhist, styles, out var buddhist);
+        var okGregorian = DateTime.TryParse(t, ThaiGregorian, styles, out var gregorian);
+        if (okBuddhist || okGregorian)
         {
-            // th-TH may already convert พ.ศ.; still normalize if year stayed Buddhist
-            local = NormalizeBuddhistYear(local, t);
+            if (okBuddhist) buddhist = NormalizeBuddhistYear(buddhist, t);
+            if (okGregorian) gregorian = NormalizeBuddhistYear(gregorian, t);
+            var now = DateTime.Now;
+            local = !okGregorian ? buddhist
+                : !okBuddhist ? gregorian
+                : (buddhist - now).Duration() <= (gregorian - now).Duration() ? buddhist : gregorian;
             return true;
         }
 
