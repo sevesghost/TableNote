@@ -2,13 +2,14 @@
 
 All notable changes to TableNote. [ภาษาไทย](CHANGELOG.th.md)
 
-- **Unreleased**
+- **2.5.1** (19 November 2026)
   - Fixed: a due date with a month name or a two-digit year (`5 Jan 2026`, `January 5, 2026`, `5 ม.ค. 2026`, `5-Jan-26`, `5/1/26`), for example pasted from Excel, was read as 1483 or 1983: the task showed as overdue at once, a "missed" reminder popped up, and a monthly repeat created its next task in 1683. It happened on English Windows too. Buddhist Era input converts as before.
   - Fixed: with **Hide done** on, pasting several lines wrote into the hidden done rows, so a pasted line disappeared and that task's text was overwritten. Pasted lines now go into the visible rows only.
   - Fixed: undoing a row delete (Ctrl+Z) brought the row back without its detail tables and detail buttons, which were then lost for good.
   - Fixed: undoing a column delete brought the column back without its header and cell colours. Undoing a delete of the reminder date column made every acknowledged overdue task pop up again and lost snoozes and reminder-card colours.
   - Fixed: if another program was using `note.json` at start-up (antivirus, a backup tool), TableNote ran the whole session on an empty stand-in table, so nothing reminded (started at sign-in, it sat in the tray all day), and the stand-in's default "launch at sign-in: off" deleted the sign-in entry, so TableNote didn't start at the next sign-in either. Now the sign-in setting is left alone, and TableNote keeps trying and opens `note.json` as soon as it can be read. If something was typed into the stand-in table, it is kept in `note.unsaved.json` and TableNote asks for a restart instead. The next start renames that file to `note.unsaved-<time>.json`, so a later session can't overwrite it, and says so. A new alert box or colour in such a session is now saved too.
   - Fixed: when the tray icon couldn't be created, closing the window left TableNote running invisibly (starting it again did nothing until it was ended in Task Manager). Closing the window now exits, as the README says.
+  - Fixed: the Help window showed version 2.4.2, and the in-app change log had no 2.5.0 entry.
   - Changed: the silent Windows toast is removed; the reminder window and its sound are unchanged. The Windows exe is trimmed: about 24 MB instead of 56 MB, and it uses less memory. `note.json` is written exactly as before.
 - **2.5.0**
   - Format version is 6. A 2.4.2 file (version 5, no new fields) still opens; the first save writes version 6 and keeps the table.
