@@ -4,7 +4,7 @@
 
 A lightweight, Excel-like task table for Windows with due-date and advance reminders, built with Avalonia on .NET 10.
 
-Current version: **2.4.2** (12 November 2026). The interface is English by default; switch to Thai with the **EN/TH** button. English manual: [`docs/manual-en.md`](docs/manual-en.md).
+Current version: **2.5.0**. The interface is English by default; switch to Thai with the **EN/TH** button. English manual: [`docs/manual-en.md`](docs/manual-en.md).
 
 ## What is TableNote?
 
@@ -35,7 +35,7 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
   - An overdue task only shows the on-time reminder "ครบกำหนดแล้ว" (Due now). If it is more than 2 minutes late, the popup also says when it was missed. Missed advance reminders don't pop up.
   - If an advance reminder fires late (for example, TableNote was just started), the popup shows the real time left and "พลาดการเตือนเมื่อ …" (missed at …). An advance popup left open past the due time turns into the on-time reminder.
   - Changing the advance reminders keeps earlier acknowledgements. They are cleared only when you edit the due date, or switch a done task back to not done (reminders are then recalculated from that moment).
-- Reminders are checked about every 30 seconds. Several tasks are combined into one popup that doesn't steal keyboard focus, and plays the Windows system sound. A silent Windows toast notification is also shown.
+- Reminders are checked about every 30 seconds. Several tasks are combined into one popup that doesn't steal keyboard focus, and plays the Windows system sound.
   - Each task has **เลื่อน 10 นาที** (Snooze 10 min), **เสร็จแล้ว** (Done), and **รับทราบ** (Acknowledge).
   - Snooze applies only to that reminder time. If an advance reminder is snoozed past the due time, it merges into the on-time reminder.
   - **ปิด** (Close) acknowledges all remaining tasks.
@@ -150,7 +150,7 @@ dotnet restore
 dotnet build -c Release
 ```
 
-Publish for Windows (win-x64, self-contained, single file). With `-r win-x64` the project targets `net10.0-windows10.0.19041.0`, which enables Windows toast notifications.
+Publish for Windows (win-x64, self-contained, single file, trimmed; about 24 MB).
 
 ```bash
 dotnet publish -c Release -r win-x64 --self-contained true \
@@ -172,7 +172,7 @@ Source layout:
 
 - `Core/`: table model, JSON storage, Excel paste and copy, recurrence, reminder scheduling (`ReminderPlan.cs`), and undo.
 - `Platform/`: Windows desktop shell, hotkey, tray, and autostart.
-- `Services/`: reminder timer, popup, ⏰ dialog, sound, and toast.
+- `Services/`: reminder timer, popup, ⏰ dialog, and sound.
 - `MainWindow.axaml(.cs)`: main UI.
 - `Assets/`: Noto Sans Thai fonts and tray icon.
 

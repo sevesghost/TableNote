@@ -2,6 +2,12 @@
 
 All notable changes to TableNote. [ภาษาไทย](CHANGELOG.th.md)
 
+- **Unreleased**
+  - Fixed: a due date with a month name or a two-digit year (`5 Jan 2026`, `January 5, 2026`, `5 ม.ค. 2026`, `5-Jan-26`, `5/1/26`), for example pasted from Excel, was read as 1483 or 1983: the task showed as overdue at once, a "missed" reminder popped up, and a monthly repeat created its next task in 1683. It happened on English Windows too. Buddhist Era input converts as before.
+  - Fixed: with **Hide done** on, pasting several lines wrote into the hidden done rows, so a pasted line disappeared and that task's text was overwritten. Pasted lines now go into the visible rows only.
+  - Fixed: undoing a row delete (Ctrl+Z) brought the row back without its detail tables and detail buttons, which were then lost for good.
+  - Fixed: undoing a column delete brought the column back without its header and cell colours. Undoing a delete of the reminder date column made every acknowledged overdue task pop up again and lost snoozes and reminder-card colours.
+  - Changed: the silent Windows toast is removed; the reminder window and its sound are unchanged. The Windows exe is trimmed: about 24 MB instead of 56 MB, and it uses less memory. `note.json` is written exactly as before.
 - **2.5.0**
   - Format version is 6. A 2.4.2 file (version 5, no new fields) still opens; the first save writes version 6 and keeps the table.
   - Collapsible column groups, a detail table on chosen cells, user alert boxes, an RGB colour picker (`partColors`, alert boxes as `alert:{id}`), typed column width (72–800) and row height (`rowHeights`), and image export / print of the visible table.
