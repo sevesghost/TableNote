@@ -84,7 +84,7 @@ Good to know
 - Pasting from Excel doesn't create next occurrences.
 - If the table is already full (1,000 rows), the next occurrence can't be created and a message tells you so.
 
-**Pasting dates from Excel**: TableNote reads many formats, such as `2026-11-20 14:30`, `20/11/2026 14:30`, `5/1/2026 9:00` or `2026-11-20`. It always reads them as **day/month/year** (`5/1/2026 9:00` is 5 January 2026 at 09:00), whatever language or calendar your computer uses. Single-digit hours and seconds are fine. With no time, 00:00 is used. If you enter a Buddhist Era year, such as `09/11/2569`, TableNote converts it to 2026 for you.
+**Pasting dates from Excel**: TableNote reads many formats, such as `2026-11-20 14:30`, `20/11/2026 14:30`, `5/1/2026 9:00` or `2026-11-20`. It always reads them as **day/month/year** (`5/1/2026 9:00` is 5 January 2026 at 09:00), whatever language or calendar your computer uses. Single-digit hours and seconds are fine. With no time, 00:00 is used. If you enter a Buddhist Era year, such as `09/11/2569`, TableNote converts it to 2026 for you. Dates with a month name (`5 Jan 2026`, `5 ม.ค. 2569`) and two-digit years (`5/1/26`) work too; a two-digit year is read as the C.E. or B.E. year nearest to today.
 
 When you change the due date with the calendar, the time box or the 📅 button, that task's snoozes and acknowledgements are cancelled, and reminder times (both advance and on-time) are recalculated immediately.
 
@@ -94,7 +94,7 @@ The **Sort by due** button puts the tasks closest to their due time first. Tasks
 
 TableNote checks tasks about every 30 seconds, so a reminder appears within roughly half a minute of its set time. Tasks marked `Done` don't remind you.
 
-When the time comes, you get the **Windows notification sound**, a toast notification in the corner of the screen (silent, so the sound doesn't play twice), and a yellow window on top of everything. This window **doesn't take focus**, so you can keep typing in whatever you're doing. If several tasks are due at the same time, they are listed together in one window. From 2.3.0 there is only ever one reminder window: reminders that come in while it is open are added to its list instead of opening a new window.
+When the time comes, you get the **Windows notification sound** and a yellow window on top of everything. This window **doesn't take focus**, so you can keep typing in whatever you're doing. If several tasks are due at the same time, they are listed together in one window. From 2.3.0 there is only ever one reminder window: reminders that come in while it is open are added to its list instead of opening a new window.
 
 Each task shows what kind of reminder it is:
 - **⏰ Due in 15 minutes** (or 1 hour, 1 day, and so on) is an advance reminder.
@@ -124,7 +124,7 @@ At the bottom of the window are buttons that apply to every task still in the wi
 
 To turn off the sound, tick **Mute reminders** on the toolbar. The reminder window still appears as usual.
 
-If Windows notifications are turned off (for example, in Focus mode), the toast may not appear, but the yellow reminder window always does.
+The yellow reminder window appears even when Windows notifications are turned off (for example, in Focus mode).
 
 ## 5. What the colors mean
 
@@ -141,7 +141,7 @@ Tick **Hide done** to hide rows that are done, and untick it to show them again.
 
 ## 6. Pasting from Excel and copying out
 
-- **Paste from Excel**: copy a range from Excel or Google Sheets, click the cell where pasting should start, then press Ctrl+V. The data spreads across cells for you. Up to 256 KB can be pasted at a time. Pasted data is plain text, and formulas are not calculated.
+- **Paste from Excel**: copy a range from Excel or Google Sheets, click the cell where pasting should start, then press Ctrl+V. The data spreads across cells for you. Up to 256 KB can be pasted at a time. Pasted data is plain text, and formulas are not calculated. When **Hide done** is on, pasted lines go into the rows you can see; hidden done tasks are skipped.
 - **Copy table** copies every cell without the column headers.
 - **Copy with headers** copies the whole table with the headers as the first row.
 - **Ctrl+C** copies only the selected cells. Shift+click to select several cells.

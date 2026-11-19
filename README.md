@@ -4,7 +4,7 @@
 
 A lightweight, Excel-like task table for Windows with due-date and advance reminders, built with Avalonia on .NET 10.
 
-Current version: **2.4.2** (12 November 2026). The interface is English by default; switch to Thai with the **EN/TH** button. English manual: [`docs/manual-en.md`](docs/manual-en.md).
+Current version: **2.5.0**. The interface is English by default; switch to Thai with the **EN/TH** button. English manual: [`docs/manual-en.md`](docs/manual-en.md).
 
 ## What is TableNote?
 
@@ -35,7 +35,7 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
   - An overdue task only shows the on-time reminder "ครบกำหนดแล้ว" (Due now). If it is more than 2 minutes late, the popup also says when it was missed. Missed advance reminders don't pop up.
   - If an advance reminder fires late (for example, TableNote was just started), the popup shows the real time left and "พลาดการเตือนเมื่อ …" (missed at …). An advance popup left open past the due time turns into the on-time reminder.
   - Changing the advance reminders keeps earlier acknowledgements. They are cleared only when you edit the due date, or switch a done task back to not done (reminders are then recalculated from that moment).
-- Reminders are checked about every 30 seconds. Several tasks are combined into one popup that doesn't steal keyboard focus, and plays the Windows system sound. A silent Windows toast notification is also shown.
+- Reminders are checked about every 30 seconds. Several tasks are combined into one popup that doesn't steal keyboard focus, and plays the Windows system sound.
   - Each task has **เลื่อน 10 นาที** (Snooze 10 min), **เสร็จแล้ว** (Done), and **รับทราบ** (Acknowledge).
   - Snooze applies only to that reminder time. If an advance reminder is snoozed past the due time, it merges into the on-time reminder.
   - **ปิด** (Close) acknowledges all remaining tasks.
@@ -135,7 +135,7 @@ From 2.4.0 the save file is format version 5 and adds `columnIds` (stable ids pa
 
 Alert boxes are an optional `alertBoxes` array of `{ "id", "title", "text" }` in display order. The file format version stays 5. A missing `alertBoxes`, or one that is not an array, loads as no boxes. A bad entry is skipped on its own and logged. Unknown properties on a box (reserved for a later per-box colour) are written back. A build that does not know this field keeps it and writes it back.
 
-Files from older versions open without data loss and get on-time reminders only. Before the first save in the 2.2 format, TableNote keeps a copy of the old file named after its version: `note.v2.bak` for 1.x/2.0 files and `note.v3.bak` for 2.1.0 files. Existing backups are never overwritten; if the name is taken, a timestamped name such as `note.v3.20261109141500.bak` is used. Invalid reminder values are dropped one by one without creating a backup. If the file is unreadable, TableNote starts a new table and keeps the old file as `note.json.bak`. If the file is larger than 8 MB or has more than 1,000 rows, TableNote first copies the full file to `note.overlimit-<time>.bak`, then opens the table within the limits (the first 1,000 rows when the row limit is exceeded). If a save would make `note.json` larger than 8 MB, the last saved file is left unchanged and the current table is copied to `note.overlimit-<time>.bak`. From 2.3.0, only the 5 newest `note.json*.bak` files are kept (version backups and `note.overlimit-*.bak` are never deleted automatically). The log is written in English only and is capped at 512 KB (2 files: `tablenote.log` and `tablenote.1.log`).
+Files from older versions open without data loss and get on-time reminders only. Before the first save in the 2.2 format, TableNote keeps a copy of the old file named after its version: `note.v2.bak` for 1.x/2.0 files and `note.v3.bak` for 2.1.0 files. Existing backups are never overwritten; if the name is taken, a timestamped name such as `note.v3.20261109141500.bak` is used. Invalid reminder values are dropped one by one without creating a backup. If the file is unreadable, TableNote starts a new table and keeps the old file as `note.json.bak`. If another program is using `note.json` at start-up (for example antivirus or a backup tool), TableNote shows an empty stand-in table, leaves `note.json` and the launch-at-sign-in setting alone, and keeps trying: it opens `note.json` as soon as it can be read. Anything typed into the stand-in table is saved to `note.unsaved.json` instead; the next start renames that file to `note.unsaved-<time>.json` (never overwritten or deleted) and says so. If the file is larger than 8 MB or has more than 1,000 rows, TableNote first copies the full file to `note.overlimit-<time>.bak`, then opens the table within the limits (the first 1,000 rows when the row limit is exceeded). If a save would make `note.json` larger than 8 MB, the last saved file is left unchanged and the current table is copied to `note.overlimit-<time>.bak`. From 2.3.0, only the 5 newest `note.json*.bak` files are kept (version backups and `note.overlimit-*.bak` are never deleted automatically). The log is written in English only and is capped at 512 KB (2 files: `tablenote.log` and `tablenote.1.log`).
 
 Limits: 1,000 rows, 30 user columns (system columns can bring the total to 32), 2,000 characters per cell, 256 KB per paste, 5 advance reminders per task, 30 alert boxes (title 200 characters, text 2,000), and `note.json` up to 8 MB.
 
@@ -150,7 +150,7 @@ dotnet restore
 dotnet build -c Release
 ```
 
-Publish for Windows (win-x64, self-contained, single file). With `-r win-x64` the project targets `net10.0-windows10.0.19041.0`, which enables Windows toast notifications.
+Publish for Windows (win-x64, self-contained, single file, trimmed; about 24 MB).
 
 ```bash
 dotnet publish -c Release -r win-x64 --self-contained true \
@@ -172,7 +172,7 @@ Source layout:
 
 - `Core/`: table model, JSON storage, Excel paste and copy, recurrence, reminder scheduling (`ReminderPlan.cs`), and undo.
 - `Platform/`: Windows desktop shell, hotkey, tray, and autostart.
-- `Services/`: reminder timer, popup, ⏰ dialog, sound, and toast.
+- `Services/`: reminder timer, popup, ⏰ dialog, and sound.
 - `MainWindow.axaml(.cs)`: main UI.
 - `Assets/`: Noto Sans Thai fonts and tray icon.
 

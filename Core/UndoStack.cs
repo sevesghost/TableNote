@@ -27,6 +27,13 @@ public sealed class UndoStack
         Trim();
     }
 
+    /// <summary>Forget every step (the document was replaced, e.g. note.json opened after a stand-in table).</summary>
+    public void Clear()
+    {
+        _undo.Clear();
+        _redo.Clear();
+    }
+
     public string? Undo(NoteDocument doc)
     {
         if (_undo.Count == 0) return null;
@@ -111,7 +118,8 @@ public sealed class RowDeleteAction(
     Dictionary<string, string> snoozes,
     string? recurrence,
     ReminderInfo? reminders,
-    int? rowHeight = null) : IUndoAction
+    int? rowHeight = null,
+    CellDetailOps.RowSlice? details = null) : IUndoAction
 {
     public string Label => Localizer.T("delete.undo_row");
 
@@ -125,7 +133,10 @@ public sealed class RowDeleteAction(
         doc.Reminders.TryGetValue(id, out var rem);
         if (doc.Acknowledged.TryGetValue(id, out var ack)) sn["\u0001ack"] = ack;
         int? height = doc.RowHeights != null && doc.RowHeights.TryGetValue(id, out var rh) ? rh : null;
-        return new RowDeleteAction(index, doc.Rows[index].ToList(), id, sn, rec, rem?.Clone(), height);
+        // RemoveRow drops the row's detail buttons and tables; before this, undo brought the row back without them
+        // (and the delete had already been saved, so they were gone for good).
+        return new RowDeleteAction(index, doc.Rows[index].ToList(), id, sn, rec, rem?.Clone(), height,
+            CellDetailOps.CaptureRow(doc, id));
     }
 
     public void Undo(NoteDocument doc)
@@ -144,6 +155,7 @@ public sealed class RowDeleteAction(
         if (recurrence != null) doc.Recurrence[rowId] = recurrence;
         if (reminders != null) doc.Reminders[rowId] = reminders.Clone();
         if (rowHeight is int h) (doc.RowHeights ??= new(StringComparer.Ordinal))[rowId] = h;
+        if (details != null) CellDetailOps.RestoreRow(doc, details);
     }
 
     public void Redo(NoteDocument doc)
@@ -153,7 +165,9 @@ public sealed class RowDeleteAction(
     }
 }
 
-public sealed class SnapshotAction(string label, NoteDocument before, NoteDocument after) : IUndoAction
+/// <param name="removed">Colours / reminder acknowledgements / snoozes that this step removed as a side effect
+/// (see <see cref="UndoSideState"/>): put back on undo, taken out again on redo. Null = nothing to put back.</param>
+public sealed class SnapshotAction(string label, NoteDocument before, NoteDocument after, UndoSideState? removed = null) : IUndoAction
 {
     // Safe for paste / recurrence spawn / structure changes. Stored gzip-compressed UTF-8
     // (1000 rows ≈ 300 KB JSON → tens of KB), so 100 steps stay far below UndoStack.MaxBytes.
@@ -161,8 +175,18 @@ public sealed class SnapshotAction(string label, NoteDocument before, NoteDocume
     private readonly byte[] _after = Snapshot.Pack(Snapshot.Serialize(after));
     public string Label => label;
     public long Bytes => _before.Length + _after.Length + 64;
-    public void Undo(NoteDocument doc) => Snapshot.Restore(doc, Snapshot.Unpack(_before));
-    public void Redo(NoteDocument doc) => Snapshot.Restore(doc, Snapshot.Unpack(_after));
+
+    public void Undo(NoteDocument doc)
+    {
+        Snapshot.Restore(doc, Snapshot.Unpack(_before));
+        removed?.PutBack(doc);
+    }
+
+    public void Redo(NoteDocument doc)
+    {
+        Snapshot.Restore(doc, Snapshot.Unpack(_after));
+        removed?.TakeOut(doc);
+    }
 }
 
 public static class Snapshot
@@ -191,8 +215,12 @@ public static class Snapshot
         WriteIndented = false
     };
 
+    /// <summary>Source-generated metadata bound to <see cref="Opt"/> (trimming-safe; same JSON as before).</summary>
+    private static readonly TableNoteJson Json = new(Opt);
+
     // Content only. Snoozes, acknowledgements, hide-done and mute are NOT part of undo (spec U-list).
-    private sealed class Dto
+    // internal (was private): the source-generated JSON metadata in TableNoteJson must be able to see it.
+    internal sealed class Dto
     {
         public List<string> Columns { get; set; } = [];
         public List<string> ColumnRoles { get; set; } = [];
@@ -237,7 +265,7 @@ public static class Snapshot
             StatusColumnOmitted = doc.StatusColumnOmitted,
             DueColumnOmitted = doc.DueColumnOmitted,
             CellDetails = CellDetailOps.IsEmpty(doc.CellDetails) ? null : CellDetailOps.ToJson(doc.CellDetails)
-        }, Opt);
+        }, Json.Dto);
 
     /// <summary>
     /// Restore content by row id. Rows that exist both now and in the snapshot keep their CURRENT
@@ -246,7 +274,7 @@ public static class Snapshot
     /// </summary>
     public static void Restore(NoteDocument doc, string json)
     {
-        var d = System.Text.Json.JsonSerializer.Deserialize<Dto>(json, Opt) ?? new Dto();
+        var d = System.Text.Json.JsonSerializer.Deserialize(json, Json.Dto) ?? new Dto();
         var snapRows = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         for (var i = 0; i < d.Rows.Count && i < d.RowIds.Count; i++) snapRows[d.RowIds[i]] = d.Rows[i];
         var snapSet = new HashSet<string>(snapRows.Keys, StringComparer.Ordinal);

@@ -57,6 +57,7 @@ sealed class WestDateExportTests
         TestPresentAndCsvTxt();
         TestXlsxIsoText();
         TestStorageUnchanged();
+        TestMonthNamesAndShortYears();
         TestLangJsonKeys();
         TestEnMessagesHaveNoThai();
     }
@@ -142,6 +143,44 @@ sealed class WestDateExportTests
             DueDates.FormatDate(new DateTime(2026, 11, 20)) == "2026-11-20");
         Ok("DueDates still parses d/M/yyyy input",
             DueDates.TryParse("5/1/2026 9:00", out var d) && d == new DateTime(2026, 1, 5, 9, 0, 0));
+    }
+
+    /// <summary>
+    /// Pasted dates with a month name or a 2-digit year used to go through th-TH's Buddhist calendar only:
+    /// "5 Jan 2026" became 5 Jan 1483 and "5-Jan-26" 5 Jan 1983 (overdue at once, a "missed" reminder,
+    /// a monthly repeat spawned in 1683). Buddhist Era input must still convert.
+    /// </summary>
+    void TestMonthNamesAndShortYears()
+    {
+        var prev = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            foreach (var culture in new[] { "th-TH", "en-US" })
+            {
+                System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+                DueDates.UseGregorianCalendar();
+                foreach (var (text, want) in new (string, DateTime)[]
+                {
+                    ("5 Jan 2026", new DateTime(2026, 1, 5)),
+                    ("05-Jan-2026", new DateTime(2026, 1, 5)),
+                    ("January 5, 2026 9:00", new DateTime(2026, 1, 5, 9, 0, 0)),
+                    ("5 ม.ค. 2026", new DateTime(2026, 1, 5)),
+                    ("5-Jan-26", new DateTime(2026, 1, 5)),
+                    ("5/1/26", new DateTime(2026, 1, 5)),
+                    ("5 ม.ค. 2569", new DateTime(2026, 1, 5)),
+                    ("5 มกราคม 2569 14:30", new DateTime(2026, 1, 5, 14, 30, 0)),
+                    ("5 ม.ค. 69", new DateTime(2026, 1, 5)),
+                    ("09/11/2569 09:00", new DateTime(2026, 11, 9, 9, 0, 0)),
+                    ("29 Feb 2028", new DateTime(2028, 2, 29)),
+                })
+                {
+                    var ok = DueDates.TryParse(text, out var got);
+                    Ok($"[{culture}] \"{text}\" reads as {want:yyyy-MM-dd HH:mm}", ok && got == want,
+                        ok ? got.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture) : "unreadable");
+                }
+            }
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = prev; }
     }
 
     void TestLangJsonKeys()

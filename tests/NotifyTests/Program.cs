@@ -1,7 +1,8 @@
 // v2.4.2 NotifyTests: run with `dotnet run -c Release --project tests/NotifyTests` (no display needed).
-// Reproduces "several rows due in the same minute → popup + sound + toast together" and the popup's
+// Reproduces "several rows due in the same minute → popup + sound together" and the popup's
 // re-entrant / failing callbacks with fakes, and checks nothing blocks the UI thread or escapes to the dispatcher.
 using System.Diagnostics;
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -30,22 +31,20 @@ List<DueTask> Make(int n, string p) => Enumerable.Range(0, n).Select(i => new Du
 List<Button> Buttons() => ReminderPopup.CurrentWindow?.GetLogicalDescendants().OfType<Button>().ToList() ?? [];
 void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
-int sounds = 0, toasts = 0;
+int sounds = 0;
 void Reset()
 {
     ReminderPopup.CloseSilently(); Pump(30);
-    ReminderPopup.ResetForTests(); WindowsToast.ResetForTests(); NotificationSound.ResetForTests();
+    ReminderPopup.ResetForTests(); NotificationSound.ResetForTests();
     ReminderPopup.WorkAreaHeight = _ => 900;
     NotificationSound.PlayOverride = () => Interlocked.Increment(ref sounds);
-    WindowsToast.ShowCoreOverride = _ => Interlocked.Increment(ref toasts);
-    WindowsToast.StuckAfter = TimeSpan.FromSeconds(20);
-    sounds = 0; toasts = 0; uiUnhandled.Clear(); ClearLog();
+    sounds = 0; uiUnhandled.Clear(); ClearLog();
 }
 var released = new HashSet<string>();
 void Show(IReadOnlyList<DueTask> tasks, Action<DueTask>? done = null, Action<DueTask>? snooze = null, Action<DueTask>? ack = null, Action<IReadOnlyList<DueTask>>? onX = null)
     => ReminderPopup.ShowBatch(tasks, snooze ?? (_ => { }), done ?? (_ => { }), ack ?? (_ => { }), onX ?? (_ => { }), () => { }, null, id => released.Add(id));
 
-// ── 1. 5 and 30 rows due in the same minute: ONE window, one sound, one toast ──
+// ── 1. 5 and 30 rows due in the same minute: ONE window, one sound ──
 foreach (var n in new[] { 5, 30 })
 {
     Reset();
@@ -55,7 +54,7 @@ foreach (var n in new[] { 5, 30 })
     Pump(150);
     Ok(ms < 2000, $"{n} rows: ShowBatch returned in {ms} ms");
     Ok(ReminderPopup.CurrentWindow is { IsVisible: true } && ReminderPopup.OpenRowCount == n, $"{n} rows: one visible window with {ReminderPopup.OpenRowCount} rows");
-    Ok(sounds == 1 && toasts == 1, $"{n} rows: sound={sounds} toast={toasts} (1 each)");
+    Ok(sounds == 1, $"{n} rows: sound={sounds} (once)");
     Ok(ReminderPopup.CurrentWindow!.Height <= 900, $"{n} rows: window height {ReminderPopup.CurrentWindow!.Height} fits the work area");
 }
 
@@ -65,31 +64,6 @@ for (int b = 0; b < 5; b++) Show(Make(1, $"seq{b}-"));
 Pump(150);
 Ok(ReminderPopup.OpenRowCount == 5, $"5 batches in one tick → one window, {ReminderPopup.OpenRowCount} rows");
 Ok(sounds == 1, $"5 batches in one tick → one sound (got {sounds})");
-Ok(toasts <= 5 && toasts >= 1, $"5 batches in one tick → toasts={toasts} (never in parallel, see 3)");
-
-// ── 3. toast never returns (COM / shell hang): UI never waits, no pile-up, turned off after StuckAfter ──
-Reset();
-var gate = new ManualResetEventSlim(false); int toastCalls = 0;
-WindowsToast.ShowCoreOverride = _ => { Interlocked.Increment(ref toastCalls); gate.Wait(); };
-WindowsToast.StuckAfter = TimeSpan.FromMilliseconds(300);
-var sw3 = Stopwatch.StartNew();
-for (int b = 0; b < 10; b++) Show(Make(5, $"hang{b}-"));
-Ok(sw3.ElapsedMilliseconds < 2000, $"blocking toast: 10 × ShowBatch(5 rows) returned in {sw3.ElapsedMilliseconds} ms");
-Pump(400);
-Show(Make(1, "hang-late-"));
-Pump(100);
-Ok(Volatile.Read(ref toastCalls) == 1, $"blocking toast: only one toast call in flight (got {toastCalls})");
-Ok(WindowsToast.IsDisabled && Log().Contains("toasts are off"), "blocking toast: turned off for the session and logged");
-Ok(ReminderPopup.CurrentWindow is { IsVisible: true } && ReminderPopup.OpenRowCount == 51, $"blocking toast: reminder window still shows all rows ({ReminderPopup.OpenRowCount})");
-gate.Set(); Pump(100);
-
-// ── 4. toast throws ──
-Reset();
-WindowsToast.ShowCoreOverride = _ => throw new InvalidOperationException("Failed initializing notifications");
-var sw4 = Stopwatch.StartNew(); Show(Make(5, "tthrow-")); Pump(200);
-Ok(sw4.ElapsedMilliseconds < 2000 && ReminderPopup.OpenRowCount == 5, "throwing toast: window shown, returned promptly");
-Ok(Log().Contains("toast: failed: InvalidOperationException"), "throwing toast: logged to tablenote.log");
-Ok(uiUnhandled.Count == 0, "throwing toast: nothing reached the dispatcher");
 
 // ── 5. sound throws / blocks ──
 Reset();
@@ -198,7 +172,7 @@ Ok(Log().Contains("crash: fatal (app ends): IOException: fatal one"), "CrashLog:
 foreach (var n in new[] { 5, 30 })
 {
     Reset();
-    WindowsToast.ShowCoreOverride = null; NotificationSound.PlayOverride = null; // real code paths (no toast on Linux)
+    NotificationSound.PlayOverride = null; // real code path
     var d = Path.Combine(dir, "app" + n); Directory.CreateDirectory(d);
     Environment.SetEnvironmentVariable("TABLENOTE_DATA", Path.Combine(d, "note.json"));
     var doc = NoteDocument.CreateDefault(); doc.Rows.Clear();
@@ -215,6 +189,91 @@ foreach (var n in new[] { 5, 30 })
     ReminderPopup.CurrentWindow?.Close(); Pump(300); // X on the rest
     Ok(uiUnhandled.Count == 0 && ReminderPopup.CurrentWindow == null, $"app {n} rows: clicked {clicks} buttons + X, no exception, popup closed");
     ReminderPopup.CloseSilently(); mw.Close(); Pump(50);
+}
+
+// ── 12. note.json locked at start-up (another program holds it): stand-in table, then the real note ──
+string Notice(Window w) => w.FindControl<TextBlock>("ModeNotice")?.Text ?? "";
+NoteDocument DueNote(int n, bool launchAtLogin)
+{
+    var doc = NoteDocument.CreateDefault(); doc.Rows.Clear();
+    for (int i = 0; i < n; i++) { var r = Enumerable.Repeat("", doc.Columns.Count).ToList(); r[0] = "Locked " + i; r[doc.DueColumnIndex()] = DueDates.Format(DateTime.Now.AddMinutes(-1)); doc.Rows.Add(r); }
+    doc.EnsureRowIds(); doc.Window.Layer = DesktopLayerKind.Window; doc.LaunchAtLogin = launchAtLogin; doc.TrayNoticeShown = true;
+    return doc;
+}
+var prevXdg = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+var xdg = Path.Combine(dir, "xdg");
+var autostart = Path.Combine(xdg, "autostart", "TableNote.desktop"); // Linux twin of the Windows Run entry
+Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", xdg);
+try
+{
+    foreach (var typeIntoStandIn in new[] { false, true })
+    {
+        Reset();
+        var tag = typeIntoStandIn ? "locked + typed" : "locked";
+        var d = Path.Combine(dir, typeIntoStandIn ? "locked-typed" : "locked"); Directory.CreateDirectory(d);
+        var notePath = Path.Combine(d, "note.json");
+        Environment.SetEnvironmentVariable("TABLENOTE_DATA", notePath);
+        NoteStore.Save(notePath, DueNote(3, launchAtLogin: true));
+        Directory.CreateDirectory(Path.GetDirectoryName(autostart)!);
+        File.WriteAllText(autostart, "[Desktop Entry]\nName=TableNote\n");
+        var hold = new FileStream(notePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var mw = new MainWindow(); mw.Show(); Pump(300);
+        Ok(File.Exists(autostart), $"{tag}: the stand-in table leaves the sign-in entry alone (it used to delete it)");
+        Ok(ReminderPopup.CurrentWindow == null && Notice(mw).Contains("note.json"), $"{tag}: empty stand-in, nothing to remind, notice: {Notice(mw)}");
+        if (typeIntoStandIn) { Click(mw.FindControl<Button>("AddRowButton")!); Pump(300); }
+        hold.Dispose(); // the other program lets go
+        var t0 = Stopwatch.StartNew();
+        while (ReminderPopup.CurrentWindow == null && t0.ElapsedMilliseconds < 8000) Pump(50);
+        if (!typeIntoStandIn)
+        {
+            Ok(ReminderPopup.OpenRowCount == 3, $"{tag}: note.json opens as soon as it can be read and its 3 due tasks remind ({ReminderPopup.OpenRowCount} after {t0.ElapsedMilliseconds / 1000.0:0.0} s)");
+            Ok(File.Exists(autostart) && !File.Exists(Path.Combine(d, "note.unsaved.json")) && Notice(mw).Contains("note.json"),
+                $"{tag}: sign-in entry kept, no side copy, notice: {Notice(mw)}");
+        }
+        else
+        {
+            Ok(ReminderPopup.CurrentWindow == null && Notice(mw).Contains("note.unsaved.json"), $"{tag}: the edited stand-in is not swapped; notice: {Notice(mw)}");
+            Ok(NoteStore.Load(Path.Combine(d, "note.unsaved.json")).Document.Rows.Count == 5 && NoteStore.Load(notePath).Document.Rows.Count == 3,
+                $"{tag}: the typed row is in note.unsaved.json, note.json untouched");
+        }
+        ReminderPopup.CloseSilently(); mw.Close(); Pump(50);
+        if (!typeIntoStandIn) continue;
+
+        // Next start: the earlier side copy is kept under its own name (never overwritten) and note.json opens.
+        Reset();
+        var mw2 = new MainWindow(); mw2.Show(); Pump(300);
+        var kept = Directory.GetFiles(d, "note.unsaved-*.json");
+        t0 = Stopwatch.StartNew();
+        while (ReminderPopup.CurrentWindow == null && t0.ElapsedMilliseconds < 8000) Pump(50);
+        Ok(kept.Length == 1 && !File.Exists(Path.Combine(d, "note.unsaved.json")) && Notice(mw2).Contains(Path.GetFileName(kept[0])) && ReminderPopup.OpenRowCount == 3,
+            $"{tag}, next start: edits kept as {string.Join(",", kept.Select(Path.GetFileName))}, note.json open ({ReminderPopup.OpenRowCount} reminders), notice: {Notice(mw2)}");
+        ReminderPopup.CloseSilently(); mw2.Close(); Pump(50);
+    }
+}
+finally { Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", prevXdg); }
+
+// ── 13. closing the window when there is no tray icon ends TableNote (it used to leave an invisible process) ──
+Reset();
+{
+    var d = Path.Combine(dir, "notray"); Directory.CreateDirectory(d);
+    var notePath = Path.Combine(d, "note.json");
+    Environment.SetEnvironmentVariable("TABLENOTE_DATA", notePath);
+    NoteStore.Save(notePath, DueNote(0, launchAtLogin: false));
+    var exits = 0;
+    MainWindow.ExitAfterCloseOverride = () => exits++;
+    try
+    {
+        var mw = new MainWindow(); mw.Show(); Pump(200);
+        var trayReady = typeof(MainWindow).GetField("_trayReady", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        trayReady.SetValue(mw, true);
+        mw.Close(); Pump(100);
+        Ok(!mw.IsVisible && exits == 0, $"with a tray icon: closing hides to the tray and TableNote keeps running ({exits} exits)");
+        mw.Show(); Pump(100);
+        trayReady.SetValue(mw, false); // after Show: OnOpened runs again on every Show and re-creates the tray
+        mw.Close(); Pump(100);
+        Ok(exits == 1, $"without a tray icon: closing the window ends TableNote ({exits} exits)");
+    }
+    finally { MainWindow.ExitAfterCloseOverride = null; }
 }
 
 Console.WriteLine(fail == 0 ? $"NotifyTests: all {pass} passed" : $"NotifyTests: {fail} failed, {pass} passed");

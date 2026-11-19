@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- Linux/dev build: net10.0. Windows publish (-r win-x64): Windows TFM so the toast API (WinRT) is available. -->
+    <!-- One target framework on every OS. Up to 2.5.0 the Windows publish used net10.0-windows10.0.19041.0 for a silent
+         WinRT toast, which put the 24 MB Windows SDK projection into the exe; the toast is gone (the reminder window and
+         its sound are unchanged). -->
     <TargetFramework>net10.0</TargetFramework>
-    <TargetFramework Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(TableNoteWindows)' == 'true'">net10.0-windows10.0.19041.0</TargetFramework>
-    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">10.0.17763.0</SupportedOSPlatformVersion>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- The Windows exe is trimmed (below) and a trimmed app can't use reflection-based JsonSerializer, so note.json and
+         undo snapshots use source-generated metadata (Core/TableNoteJson.cs). Reflection is off in EVERY build, not only
+         the trimmed one, so a missed call fails on Linux and in tests too; the analyzer flags trimming problems on build. -->
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
@@ -23,11 +27,14 @@
     <SatelliteResourceLanguages>en;th</SatelliteResourceLanguages>
   </PropertyGroup>
 
-  <!-- P9: the Windows publish is win-x64 only, single file, no other platforms' native files. Not trimmed
-       (Avalonia + the toast toolkit use reflection; trimming is not proven safe — see release notes). -->
+  <!-- P9: the Windows publish is win-x64 only, single file, no other platforms' native files.
+       Trimmed, partial mode: unused code of .NET and Avalonia is removed, TableNote.dll itself is kept whole
+       (about 24 MB instead of 56 MB with the toast stack). -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>none</DebugType>
@@ -42,9 +49,6 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.5" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.3" Condition="'$(RuntimeIdentifier)' != 'win-x64'" />
-    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
-    <!-- Notifications 7.1.3 asks for System.Drawing.Common 4.7.0 (GHSA-rxg9-xrhp-64gj, critical). 4.7.3 is the patched 4.7 release. -->
-    <PackageReference Include="System.Drawing.Common" Version="4.7.3" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" Condition="'$(RuntimeIdentifier)' != 'win-x64'" />
   </ItemGroup>
 
