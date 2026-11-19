@@ -52,7 +52,10 @@ public static class ExcelPaste
 				num = item.Count;
 			}
 		}
-		int num2 = startRow + grid.Count;
+		// Rows hidden by "Hide done" are skipped the same way as collapsed columns below. Before, line 2 of a 3-line
+		// paste could land in a hidden done row: it overwrote that task's text and vanished from view.
+		List<int> rowTargets = PasteRowTargets(doc, startRow, grid.Count);
+		int num2 = rowTargets[rowTargets.Count - 1] + 1;
 		if (num == 0)
 		{
 			return GridPasteResult.Applied(grid.Count, 0);
@@ -92,7 +95,7 @@ public static class ExcelPaste
 		}
 		for (int i = 0; i < grid.Count; i++)
 		{
-			List<string> list = doc.Rows[startRow + i];
+			List<string> list = doc.Rows[rowTargets[i]];
 			List<string> list2 = grid[i];
 			for (int j = 0; j < list2.Count; j++)
 			{
@@ -100,6 +103,21 @@ public static class ExcelPaste
 			}
 		}
 		return GridPasteResult.Applied(grid.Count, num);
+	}
+
+	/// <summary>Visible row indexes for a paste of <paramref name="count"/> lines starting at <paramref name="startRow"/>.
+	/// With "Hide done" on, done rows are not on screen and are skipped (decided before anything is written).
+	/// Indexes past the last row are new rows, which are always visible.</summary>
+	private static List<int> PasteRowTargets(NoteDocument doc, int startRow, int count)
+	{
+		var targets = new List<int>(count);
+		var statusCol = doc.HideDone ? doc.StatusColumnIndex() : -1;
+		for (var row = startRow; targets.Count < count; row++)
+		{
+			if (statusCol >= 0 && row < doc.Rows.Count && TaskStatuses.IsDone(doc.GetCell(row, statusCol))) continue;
+			targets.Add(row);
+		}
+		return targets;
 	}
 
 	/// <summary>Visible column indexes for a paste of <paramref name="width"/> cells starting at <paramref name="startCol"/>.</summary>
