@@ -95,9 +95,8 @@ public static class ReminderPopup
         }
         using var scope = UiActivity.Scope("reminder popup: show");
         // Thread pool, never block. Several batches in the same moment (e.g. 5 rows due in the same minute that
-        // arrive through several checks) play ONE sound and run at most one toast at a time (v2.4.2).
+        // arrive through several checks) play ONE sound (v2.4.2).
         Safe("sound", NotificationSound.Play);
-        Safe("toast", () => WindowsToast.TryShow(tasks));
 
         State? s = null;
         try
@@ -183,7 +182,7 @@ public static class ReminderPopup
             Safe("close", window.Close);
         };
 
-        // Live labels: an advance entry left open past its due turns into the on-time reminder (one sound, silent toast).
+        // Live labels: an advance entry left open past its due turns into the on-time reminder (one sound).
         // Lateness is NOT recomputed here — it was decided when the reminder was created.
         var refresh = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
         refresh.Tick += (_, _) =>
@@ -412,12 +411,7 @@ public static class ReminderPopup
                 PaintCard(r.Block, r.Label, cur); // keeps a custom card color across the 15 s refresh
             }
         }
-        if (becameDue.Count > 0)
-        {
-            NotificationSound.Play();
-            // v2.3.1: toast only the tasks that just became due (not every on-time task already shown).
-            _ = WindowsToast.TryShow(becameDue); // silent toast
-        }
+        if (becameDue.Count > 0) NotificationSound.Play();
     }
 
     private static void Watch(State s)

@@ -1,5 +1,5 @@
 // v2.4.2 NotifyTests: run with `dotnet run -c Release --project tests/NotifyTests` (no display needed).
-// Reproduces "several rows due in the same minute → popup + sound + toast together" and the popup's
+// Reproduces "several rows due in the same minute → popup + sound together" and the popup's
 // re-entrant / failing callbacks with fakes, and checks nothing blocks the UI thread or escapes to the dispatcher.
 using System.Diagnostics;
 using Avalonia;
@@ -30,22 +30,20 @@ List<DueTask> Make(int n, string p) => Enumerable.Range(0, n).Select(i => new Du
 List<Button> Buttons() => ReminderPopup.CurrentWindow?.GetLogicalDescendants().OfType<Button>().ToList() ?? [];
 void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
-int sounds = 0, toasts = 0;
+int sounds = 0;
 void Reset()
 {
     ReminderPopup.CloseSilently(); Pump(30);
-    ReminderPopup.ResetForTests(); WindowsToast.ResetForTests(); NotificationSound.ResetForTests();
+    ReminderPopup.ResetForTests(); NotificationSound.ResetForTests();
     ReminderPopup.WorkAreaHeight = _ => 900;
     NotificationSound.PlayOverride = () => Interlocked.Increment(ref sounds);
-    WindowsToast.ShowCoreOverride = _ => Interlocked.Increment(ref toasts);
-    WindowsToast.StuckAfter = TimeSpan.FromSeconds(20);
-    sounds = 0; toasts = 0; uiUnhandled.Clear(); ClearLog();
+    sounds = 0; uiUnhandled.Clear(); ClearLog();
 }
 var released = new HashSet<string>();
 void Show(IReadOnlyList<DueTask> tasks, Action<DueTask>? done = null, Action<DueTask>? snooze = null, Action<DueTask>? ack = null, Action<IReadOnlyList<DueTask>>? onX = null)
     => ReminderPopup.ShowBatch(tasks, snooze ?? (_ => { }), done ?? (_ => { }), ack ?? (_ => { }), onX ?? (_ => { }), () => { }, null, id => released.Add(id));
 
-// ── 1. 5 and 30 rows due in the same minute: ONE window, one sound, one toast ──
+// ── 1. 5 and 30 rows due in the same minute: ONE window, one sound ──
 foreach (var n in new[] { 5, 30 })
 {
     Reset();
@@ -55,7 +53,7 @@ foreach (var n in new[] { 5, 30 })
     Pump(150);
     Ok(ms < 2000, $"{n} rows: ShowBatch returned in {ms} ms");
     Ok(ReminderPopup.CurrentWindow is { IsVisible: true } && ReminderPopup.OpenRowCount == n, $"{n} rows: one visible window with {ReminderPopup.OpenRowCount} rows");
-    Ok(sounds == 1 && toasts == 1, $"{n} rows: sound={sounds} toast={toasts} (1 each)");
+    Ok(sounds == 1, $"{n} rows: sound={sounds} (once)");
     Ok(ReminderPopup.CurrentWindow!.Height <= 900, $"{n} rows: window height {ReminderPopup.CurrentWindow!.Height} fits the work area");
 }
 
@@ -65,31 +63,6 @@ for (int b = 0; b < 5; b++) Show(Make(1, $"seq{b}-"));
 Pump(150);
 Ok(ReminderPopup.OpenRowCount == 5, $"5 batches in one tick → one window, {ReminderPopup.OpenRowCount} rows");
 Ok(sounds == 1, $"5 batches in one tick → one sound (got {sounds})");
-Ok(toasts <= 5 && toasts >= 1, $"5 batches in one tick → toasts={toasts} (never in parallel, see 3)");
-
-// ── 3. toast never returns (COM / shell hang): UI never waits, no pile-up, turned off after StuckAfter ──
-Reset();
-var gate = new ManualResetEventSlim(false); int toastCalls = 0;
-WindowsToast.ShowCoreOverride = _ => { Interlocked.Increment(ref toastCalls); gate.Wait(); };
-WindowsToast.StuckAfter = TimeSpan.FromMilliseconds(300);
-var sw3 = Stopwatch.StartNew();
-for (int b = 0; b < 10; b++) Show(Make(5, $"hang{b}-"));
-Ok(sw3.ElapsedMilliseconds < 2000, $"blocking toast: 10 × ShowBatch(5 rows) returned in {sw3.ElapsedMilliseconds} ms");
-Pump(400);
-Show(Make(1, "hang-late-"));
-Pump(100);
-Ok(Volatile.Read(ref toastCalls) == 1, $"blocking toast: only one toast call in flight (got {toastCalls})");
-Ok(WindowsToast.IsDisabled && Log().Contains("toasts are off"), "blocking toast: turned off for the session and logged");
-Ok(ReminderPopup.CurrentWindow is { IsVisible: true } && ReminderPopup.OpenRowCount == 51, $"blocking toast: reminder window still shows all rows ({ReminderPopup.OpenRowCount})");
-gate.Set(); Pump(100);
-
-// ── 4. toast throws ──
-Reset();
-WindowsToast.ShowCoreOverride = _ => throw new InvalidOperationException("Failed initializing notifications");
-var sw4 = Stopwatch.StartNew(); Show(Make(5, "tthrow-")); Pump(200);
-Ok(sw4.ElapsedMilliseconds < 2000 && ReminderPopup.OpenRowCount == 5, "throwing toast: window shown, returned promptly");
-Ok(Log().Contains("toast: failed: InvalidOperationException"), "throwing toast: logged to tablenote.log");
-Ok(uiUnhandled.Count == 0, "throwing toast: nothing reached the dispatcher");
 
 // ── 5. sound throws / blocks ──
 Reset();
@@ -198,7 +171,7 @@ Ok(Log().Contains("crash: fatal (app ends): IOException: fatal one"), "CrashLog:
 foreach (var n in new[] { 5, 30 })
 {
     Reset();
-    WindowsToast.ShowCoreOverride = null; NotificationSound.PlayOverride = null; // real code paths (no toast on Linux)
+    NotificationSound.PlayOverride = null; // real code path
     var d = Path.Combine(dir, "app" + n); Directory.CreateDirectory(d);
     Environment.SetEnvironmentVariable("TABLENOTE_DATA", Path.Combine(d, "note.json"));
     var doc = NoteDocument.CreateDefault(); doc.Rows.Clear();
