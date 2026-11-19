@@ -296,7 +296,20 @@ public partial class MainWindow : Window
         _reloadTimer?.Stop();
         ReminderPopup.CloseSilently(); // v2.3.1: no popup left calling into a closed window
         base.OnClosing(e);
+        // Without a tray icon this close is the exit (README). The app runs with ShutdownMode.OnExplicitShutdown, so
+        // before, the closed window left an invisible process holding the single-instance lock: starting TableNote
+        // again did nothing until that process was ended in Task Manager.
+        if (!e.Cancel && !_quitting && !systemClose)
+        {
+            _quitting = true;
+            if (ExitAfterCloseOverride is { } exit) exit();
+            else if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime life)
+                Dispatcher.UIThread.Post(() => life.Shutdown());
+        }
     }
+
+    /// <summary>Test seam: replaces "shut TableNote down" after the window closed without a tray icon.</summary>
+    internal static Action? ExitAfterCloseOverride { get; set; }
 
     private void ShowSaveFailedOnQuit()
     {

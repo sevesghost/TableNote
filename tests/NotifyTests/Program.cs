@@ -2,6 +2,7 @@
 // Reproduces "several rows due in the same minute → popup + sound together" and the popup's
 // re-entrant / failing callbacks with fakes, and checks nothing blocks the UI thread or escapes to the dispatcher.
 using System.Diagnostics;
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -250,6 +251,30 @@ try
     }
 }
 finally { Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", prevXdg); }
+
+// ── 13. closing the window when there is no tray icon ends TableNote (it used to leave an invisible process) ──
+Reset();
+{
+    var d = Path.Combine(dir, "notray"); Directory.CreateDirectory(d);
+    var notePath = Path.Combine(d, "note.json");
+    Environment.SetEnvironmentVariable("TABLENOTE_DATA", notePath);
+    NoteStore.Save(notePath, DueNote(0, launchAtLogin: false));
+    var exits = 0;
+    MainWindow.ExitAfterCloseOverride = () => exits++;
+    try
+    {
+        var mw = new MainWindow(); mw.Show(); Pump(200);
+        var trayReady = typeof(MainWindow).GetField("_trayReady", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        trayReady.SetValue(mw, true);
+        mw.Close(); Pump(100);
+        Ok(!mw.IsVisible && exits == 0, $"with a tray icon: closing hides to the tray and TableNote keeps running ({exits} exits)");
+        mw.Show(); Pump(100);
+        trayReady.SetValue(mw, false); // after Show: OnOpened runs again on every Show and re-creates the tray
+        mw.Close(); Pump(100);
+        Ok(exits == 1, $"without a tray icon: closing the window ends TableNote ({exits} exits)");
+    }
+    finally { MainWindow.ExitAfterCloseOverride = null; }
+}
 
 Console.WriteLine(fail == 0 ? $"NotifyTests: all {pass} passed" : $"NotifyTests: {fail} failed, {pass} passed");
 Environment.Exit(fail == 0 ? 0 : 1);
