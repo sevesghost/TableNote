@@ -203,6 +203,41 @@ public static class CellDetailOps
         foreach (var k in doc.CellDetails.Tables.Keys.Where(Gone).ToList()) doc.CellDetails.Tables.Remove(k);
     }
 
+    /// <summary>Everything the detail store keeps for one row: per-cell buttons, per-cell hides and detail tables.</summary>
+    public sealed class RowSlice
+    {
+        public List<string> Cells { get; } = [];
+        public List<string> Hidden { get; } = [];
+        public Dictionary<string, CellDetail> Tables { get; } = new(StringComparer.Ordinal);
+        public bool IsEmpty => Cells.Count == 0 && Hidden.Count == 0 && Tables.Count == 0;
+    }
+
+    /// <summary>Copy of one row's detail entries, taken before the row is deleted so undo can put them back.
+    /// Null when the row has none.</summary>
+    public static RowSlice? CaptureRow(NoteDocument doc, string rowId)
+    {
+        if (string.IsNullOrEmpty(rowId) || doc.CellDetails == null) return null;
+        bool Mine(string key) => TrySplit(key, out var r, out _) && r == rowId;
+        var slice = new RowSlice();
+        slice.Cells.AddRange(doc.CellDetails.Cells.Where(Mine));
+        slice.Hidden.AddRange(doc.CellDetails.Hidden.Where(Mine));
+        foreach (var kv in doc.CellDetails.Tables.Where(kv => Mine(kv.Key)))
+            slice.Tables[kv.Key] = Clone(kv.Value);
+        return slice.IsEmpty ? null : slice;
+    }
+
+    /// <summary>Put a captured row's detail entries back (row delete undone). Entries that exist already are kept.</summary>
+    public static void RestoreRow(NoteDocument doc, RowSlice slice)
+    {
+        doc.CellDetails ??= new CellDetailStore();
+        foreach (var k in slice.Cells)
+            if (!Contains(doc.CellDetails.Cells, k)) doc.CellDetails.Cells.Add(k);
+        foreach (var k in slice.Hidden)
+            if (!Contains(doc.CellDetails.Hidden, k)) doc.CellDetails.Hidden.Add(k);
+        foreach (var kv in slice.Tables)
+            doc.CellDetails.Tables.TryAdd(kv.Key, Clone(kv.Value));
+    }
+
     public static void OnColumnRemoved(NoteDocument doc, string columnId)
     {
         if (string.IsNullOrEmpty(columnId)) return;

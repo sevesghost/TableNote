@@ -474,10 +474,13 @@ public partial class MainWindow : Window
     {
         var before = Snapshot.CloneLite(_session.Doc);
         var beforeJson = Snapshot.Serialize(before);
+        // Colours and reminder acks/snoozes are not in the snapshot; keep what this step removes so undo can put
+        // it back (deleting a column drops its colours, deleting the due column drops every acknowledgement).
+        var side = UndoSideState.Capture(_session.Doc);
         await action();
         var after = Snapshot.CloneLite(_session.Doc);
         if (Snapshot.Serialize(after) != beforeJson)
-            _undo.Push(new SnapshotAction(label, before, after));
+            _undo.Push(new SnapshotAction(label, before, after, side.RemovedBy(_session.Doc)));
     }
 
     private void DoUndo()
