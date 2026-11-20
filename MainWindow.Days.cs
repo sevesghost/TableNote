@@ -139,6 +139,14 @@ public partial class MainWindow
                     AppLog.Write("history", "progress note added");
                     return true;
                 },
+                EditNote = (e, text) =>
+                {
+                    if (!RowHistoryOps.EditNote(_session.Doc, rowId, e, text, DateTime.Now)) return false;
+                    ScheduleSave();
+                    StatusText.Text = Localizer.T("days.note_changed");
+                    AppLog.Write("history", "progress note edited");
+                    return true;
+                },
                 RemoveNote = e =>
                 {
                     if (!RowHistoryOps.Remove(_session.Doc, rowId, e)) return false;

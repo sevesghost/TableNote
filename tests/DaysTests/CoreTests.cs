@@ -140,6 +140,28 @@ static class CoreTests
         ok(bh.Count == RowHistoryOps.MaxPerRow && bh.Any(e => e.Text == "keep me") && bh[^1].To == "150",
             "per row: the oldest changes go first, notes stay", bh.Count.ToString());
         ok(RowHistoryOps.Clip(new string('x', 500)).Length == RowHistoryOps.MaxValueChars, "long values are clipped", "");
+        // ── editing a note ──
+        var sig0 = RowHistoryOps.Signature(d);
+        ok(RowHistoryOps.EditNote(d, id0, note!, "  called the client again  ", T0.AddDays(71).AddHours(9)) &&
+           note!.Text == "called the client again" && note.Time == RowHistoryOps.FormatTime(T0.AddDays(70)) &&
+           note.Edited == RowHistoryOps.FormatTime(T0.AddDays(71).AddHours(9)),
+            "a note gets new text, keeps its time and records when it was edited", $"{note!.Time} {note.Edited} {note.Text}");
+        ok(RowHistoryOps.Signature(d) != sig0, "an edited note changes the signature (a kept session saves it)", "");
+        var sig1 = RowHistoryOps.Signature(d);
+        ok(!RowHistoryOps.EditNote(d, id0, note, "called the client again", T0.AddDays(72)) && note.Edited == RowHistoryOps.FormatTime(T0.AddDays(71).AddHours(9)),
+            "the same text is no edit", note.Edited ?? "");
+        ok(!RowHistoryOps.EditNote(d, id0, note, "   ", T0.AddDays(72)) && note.Text == "called the client again", "blank text is no edit", note.Text ?? "");
+        ok(RowHistoryOps.EditNote(d, id0, note, "called the client agaim", T0.AddDays(72)) && RowHistoryOps.Signature(d) != sig1,
+            "a same-length edit changes the signature too", "");
+        RowHistoryOps.EditNote(d, id0, note, new string('ก', RowHistoryOps.MaxNoteChars + 50), T0.AddDays(72));
+        ok(note.Text!.Length == RowHistoryOps.MaxNoteChars, "an edited note is cut at the note limit", note.Text.Length.ToString());
+        var change = RowHistoryOps.Of(d, id0).First(e => e.Kind != RowEventKinds.Note);
+        ok(!RowHistoryOps.EditNote(d, id0, change, "x", T0.AddDays(72)) && change.Text == null, "only notes can be edited", "");
+        ok(!RowHistoryOps.EditNote(d, d.RowIdAt(1), note, "elsewhere", T0.AddDays(72)) &&
+           !RowHistoryOps.EditNote(d, id0, note.Clone(), "a copy", T0.AddDays(72)), "a note that is not in that row's history is not edited", "");
+        ok(note.Clone().Edited == note.Edited, "a copy keeps the edit time", "");
+        ok(RowHistoryOps.LastUpdate(d, id0) == T0.AddDays(70), "an edit does not move the last update (the note says when it was written)", "");
+        RowHistoryOps.EditNote(d, id0, note, "called the client", T0.AddDays(72));
         ok(RowHistoryOps.Remove(d, id0, note!) && !RowHistoryOps.Of(d, id0).Contains(note!), "a note can be removed", "");
 
         // ── the pop-up content ──
@@ -160,6 +182,12 @@ static class CoreTests
            && info.Timeline[0].Offset == "หลังรับงาน 141 วัน" && info.Timeline[0].When == "20/10/2026 14:30",
             "newest first: the note with date, time and day", $"{info.Timeline[0].When} | {info.Timeline[0].Offset} | {info.Timeline[0].Title}");
         ok(info.Timeline[1].Title == "สถานะ: ยังไม่เริ่ม → กำลังทำ", "status entry text", info.Timeline[1].Title);
+        ok(info.Timeline[0].Edited == null && info.Timeline[1].Edited == null, "a note that was not edited says nothing about it", "");
+        RowHistoryOps.EditNote(p, pid, info.Timeline[0].Event, "โทรตามแล้ว ลูกค้าจะส่งเอกสารวันจันทร์", new DateTime(2026, 10, 21, 8, 5, 0));
+        var editedItem = DaysCounter.Describe(p, 0, 4, now).Timeline[0];
+        ok(editedItem.Body == "โทรตามแล้ว ลูกค้าจะส่งเอกสารวันจันทร์" && editedItem.When == "20/10/2026 14:30" &&
+           editedItem.Offset == "หลังรับงาน 141 วัน" && editedItem.Edited == "แก้ไขเมื่อ 21/10/2026 08:05",
+            "an edited note: new text, same date and day, and when it was edited", $"{editedItem.When} | {editedItem.Edited} | {editedItem.Body}");
         p.SetCellRaw(0, 4, "2026-06-10");
         pt.Capture(p, new DateTime(2026, 10, 29, 9, 0, 0));
         var startEdit = DaysCounter.Describe(p, 0, 4, now).Timeline[0];
@@ -199,14 +227,18 @@ static class CoreTests
         st.Reset(s);
         s.SetCellRaw(0, 1, "changed");
         st.Capture(s, T0.AddDays(3));
-        RowHistoryOps.AddNote(s, s.RowIdAt(0), "ตามเอกสาร \"ด่วน\"", T0.AddDays(4));
+        var sn = RowHistoryOps.AddNote(s, s.RowIdAt(0), "ตามเอกสาร", T0.AddDays(4))!;
+        RowHistoryOps.EditNote(s, s.RowIdAt(0), sn, "ตามเอกสาร \"ด่วน\"", T0.AddDays(5));
         NoteStore.Save(path, s);
         var json = File.ReadAllText(path);
+        ok(json.Contains("\"edited\": \"" + RowHistoryOps.FormatTime(T0.AddDays(5)) + "\"") && json.Split("\"edited\"").Length == 2,
+            "the edit time is written for the edited note only", "");
         ok(json.Contains("\"rowHistory\"") && json.Contains("ตามเอกสาร") && json.Contains("\"kind\": \"note\"") && !json.Contains("\"text\": null"),
             "history is written readable, without empty fields", json.Length.ToString());
         var loaded = NoteStore.Load(path).Document;
         var lh = RowHistoryOps.Of(loaded, s.RowIdAt(0));
         ok(lh.Count == 2 && lh[0].To == "changed" && lh[1].Text == "ตามเอกสาร \"ด่วน\"", "history survives save and load", Dump(lh));
+        ok(lh[1].Edited == RowHistoryOps.FormatTime(T0.AddDays(5)) && lh[0].Edited == null, "the edit time survives save and load", lh[1].Edited ?? "null");
         ok(DaysCounter.IsDaysColumn(loaded, 4), "the column type survives", "");
         var gone = s.RowIdAt(0);
         s.RemoveRow(0);
@@ -219,7 +251,7 @@ static class CoreTests
         File.WriteAllText(path, """
             { "version": 6, "columns": ["A", "B"], "rowIds": ["r1"], "rows": [["x", "2026-06-01"]],
               "columnIds": ["a", "b"], "columnSettings": { "b": { "type": "days" } },
-              "rowHistory": { "r1": [ { "time": "2026-06-02 10:00", "kind": "note", "text": "ok" },
+              "rowHistory": { "r1": [ { "time": "2026-06-02 10:00", "kind": "note", "text": "ok", "edited": "last week" },
                                       { "time": "yesterday", "kind": "note", "text": "bad time" },
                                       5,
                                       { "time": "2026-06-03 10:00", "kind": "future-kind", "text": "kept" } ],
@@ -229,6 +261,7 @@ static class CoreTests
         var lenient = NoteStore.Load(path);
         var lr = RowHistoryOps.Of(lenient.Document, "r1");
         ok(lr.Count == 2 && lr[0].Text == "ok" && lr[1].Kind == "future-kind", "bad entries are skipped one by one, unknown kinds kept", Dump(lr));
+        ok(lr[0].Edited == null, "a bad edit time is dropped, the note is kept", lr[0].Edited ?? "null");
         ok(!lenient.Document.RowHistory.ContainsKey("zz") && lenient.Issues.Any(i => i.StartsWith("rowHistory", StringComparison.Ordinal)),
             "history of rows that do not exist is dropped and reported", string.Join(" / ", lenient.Issues));
         ok(lenient.Document.Version == NoteDocument.CurrentVersion, "the file version stays 6 (rowHistory is optional)", lenient.Document.Version.ToString());

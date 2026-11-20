@@ -17,6 +17,8 @@ public sealed class DaysTimelineItem
     public required string Offset { get; init; }
     public required string Title { get; init; }
     public string? Body { get; init; }
+    /// <summary>"Edited 20/11/2026 20:30" for a note whose text was changed, otherwise null.</summary>
+    public string? Edited { get; init; }
     public bool IsNote => Event.Kind == RowEventKinds.Note;
 }
 
@@ -179,7 +181,9 @@ public static class DaysCounter
                 Offset = hasTime && count.State is DaysState.Counting or DaysState.Future or DaysState.Done or DaysState.DoneUnknown
                     ? Offset(count.Start, t) : "",
                 Title = Title(doc, e),
-                Body = e.Kind == RowEventKinds.Note ? e.Text : null
+                Body = e.Kind == RowEventKinds.Note ? e.Text : null,
+                Edited = e.Kind == RowEventKinds.Note && RowHistoryOps.TryTime(e.Edited, out var edited)
+                    ? Localizer.T("days.note_edited", DateTimeText(edited)) : null
             });
         }
         return new DaysInfo

@@ -130,7 +130,7 @@ Click a days cell (or press Space) to open its pop-up:
 - how long the work has been open (or took), from which date to which;
 - **Start date**: pick another day, or **Today** (one Ctrl+Z step);
 - the status and since when, and the last update ("8 days ago");
-- the history, newest first: status changes, edits of the row and **progress notes**, each with its date, time and the day since the start. Type a note and press Enter (or **Add note**) to record a progress report; ✕ then **Delete?** removes one.
+- the history, newest first: status changes, edits of the row and **progress notes**, each with its date, time and the day since the start. Type a note and press Enter (or **Add note**) to record a progress report. **Edit** (or a double-click on the note) changes its text: Enter or **Save** keeps it, Esc or **Cancel** puts it back; the note keeps its date and time and shows when it was edited. ✕ then **Delete?** removes one.
 
 History starts on the day the table gets a days column and is saved in `note.json` (`rowHistory`, by row id, at most 100 entries per row). Changes to one cell within 10 minutes are one entry, and typing a new row's first values is not listed (its status changes are). Ctrl+Z of an edit is recorded as another change; notes are not part of Ctrl+Z. Exports and Copy give the start date (`yyyy-MM-dd`); image export, print and the wallpaper show the days.
 

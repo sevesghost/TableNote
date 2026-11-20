@@ -37,7 +37,8 @@ Days counter
   not done start today; a new row starts on the day it is added. A row set to Done stops counting (""42 days ✓"").
   Click a days cell (or Space) for its pop-up: how long it has been open, the start date (pick another or Today),
   the status and since when, the last update, and the history newest first — status changes, edits of the row and
-  progress notes, each with date, time and the day since the start. Type a progress note and press Enter to add it.
+  progress notes, each with date, time and the day since the start. Type a progress note and press Enter to add it;
+  Edit (or a double-click) changes a note (Enter keeps, Esc puts it back), ✕ then Delete? removes one.
   History is kept from the day the table got a days column; Ctrl+Z of an edit is recorded as another change.
   Exports keep the start date (yyyy-MM-dd); pictures, print and the wallpaper show the days.
 
@@ -163,6 +164,7 @@ Files
   คลิกช่องนับวัน (หรือกด Space) เปิดหน้าต่างรายละเอียด: ค้างมากี่วัน วันรับงาน (เลือกวันอื่นหรือกด วันนี้)
   สถานะและตั้งแต่เมื่อไร อัปเดตล่าสุด และประวัติจากใหม่ไปเก่า — เปลี่ยนสถานะ แก้ข้อมูลในแถว และบันทึกความคืบหน้า
   แต่ละรายการมีวันที่ เวลา และนับเป็นวันที่เท่าไรหลังรับงาน  พิมพ์บันทึกความคืบหน้าแล้วกด Enter เพื่อเพิ่ม
+  กด แก้ไข (หรือดับเบิลคลิก) เพื่อแก้บันทึก (Enter = เก็บ, Esc = คืนค่าเดิม)  กด ✕ แล้ว ลบ? เพื่อลบ
   ประวัติเริ่มเก็บตั้งแต่ตารางมีคอลัมน์นับวัน  Ctrl+Z การแก้ไขจะบันทึกเป็นการเปลี่ยนแปลงอีกรายการ
   ส่งออกไฟล์เก็บเป็นวันรับงาน (yyyy-MM-dd)  ภาพ งานพิมพ์ และวอลเปเปอร์แสดงเป็นจำนวนวัน
 
@@ -213,7 +215,7 @@ New: Excel-style cells: click selects (gold), drag selects a block, typing repla
 New: formula bar above the table (the cell's address and whole text, no calculation); Ctrl+F finds text in the table.
 New: View → System → Reminder sound…: pick the sound, set the volume (asks above 50 %), mute, test. The Table Note logo is the program's icon.
 New: a loading screen with the Table Note logo while TableNote opens. Starting TableNote while a copy from another folder is running (an older version in the tray) asks whether to close it and start this one.
-New: days counter column (Table → Add days counter column). Each row shows how many days since its start date; click the cell for status updates, edits and progress notes with their dates and times.
+New: days counter column (Table → Add days counter column). Each row shows how many days since its start date; click the cell for status updates, edits and progress notes (add, edit, delete) with their dates and times.
 Fixed: Thai text, digits, Latin letters and symbols now use one font (Noto Sans Thai with Noto Sans merged in); before, ""17/11/2569"" or ""A+"" switched to another font in the middle of a line.
 Fixed: after a sign-in start, opening the editor from the tray closed it again at once.
 
@@ -275,7 +277,7 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 ใหม่: แถบสูตรเหนือตาราง (ที่อยู่ช่องและข้อความทั้งหมด ไม่คำนวณ) และ Ctrl+F ค้นหาในตาราง
 ใหม่: มุมมอง → ตั้งค่าระบบ → เสียงแจ้งเตือน… เลือกเสียง ตั้งความดัง (เกิน 50% ถามก่อน) ปิดเสียง ทดลองฟัง และโลโก้ Table Note เป็นไอคอนโปรแกรม
 ใหม่: หน้าโหลดมีโลโก้ Table Note ตอนเปิดโปรแกรม ถ้าเปิดตารางโน้ตขณะที่อีกตัวจากโฟลเดอร์อื่นเปิดอยู่ (เช่น รุ่นเก่าที่ถาด) จะถามว่าจะปิดตัวนั้นแล้วเปิดตัวนี้แทนไหม
-ใหม่: คอลัมน์นับวัน (ตาราง → เพิ่มคอลัมน์นับวัน) แต่ละแถวแสดงว่ารับงานมากี่วันแล้ว คลิกที่ช่องเพื่อดูการอัปเดตสถานะ การแก้ไข และบันทึกความคืบหน้า พร้อมวันที่และเวลา
+ใหม่: คอลัมน์นับวัน (ตาราง → เพิ่มคอลัมน์นับวัน) แต่ละแถวแสดงว่ารับงานมากี่วันแล้ว คลิกที่ช่องเพื่อดูการอัปเดตสถานะ การแก้ไข และบันทึกความคืบหน้า (เพิ่ม แก้ไข ลบได้) พร้อมวันที่และเวลา
 แก้: ตัวอักษรไทย ตัวเลข อังกฤษ และสัญลักษณ์ ใช้ฟอนต์เดียวกันแล้ว (Noto Sans Thai รวมกับ Noto Sans) ก่อนหน้านี้ ""17/11/2569"" หรือ ""A+"" สลับไปใช้อีกฟอนต์กลางบรรทัด
 แก้: หลังเปิดเครื่องแบบเริ่มที่ถาด กดเปิดหน้าแก้ไขจากถาดแล้วหน้าต่างหายไปทันที
 

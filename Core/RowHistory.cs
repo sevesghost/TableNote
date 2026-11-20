@@ -25,8 +25,12 @@ public sealed class RowEvent
     /// <summary>Text of a progress note.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Text { get; set; }
+    /// <summary>2.6.0: when a progress note's text was last changed ("yyyy-MM-dd HH:mm"); null if never.
+    /// <see cref="Time"/> stays the time the note was written.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Edited { get; set; }
 
-    public RowEvent Clone() => new() { Time = Time, Kind = Kind, Column = Column, Name = Name, From = From, To = To, Text = Text };
+    public RowEvent Clone() => new() { Time = Time, Kind = Kind, Column = Column, Name = Name, From = From, To = To, Text = Text, Edited = Edited };
 }
 
 public static class RowEventKinds
@@ -103,6 +107,21 @@ public static class RowHistoryOps
         return e;
     }
 
+    /// <summary>A progress note gets new text. Its time stays (when it was written); <see cref="RowEvent.Edited"/> says
+    /// when it was changed. Blank text, the same text, or a note that is no longer in the row's history → false.</summary>
+    public static bool EditNote(NoteDocument doc, string rowId, RowEvent e, string? text, DateTime now)
+    {
+        if (e.Kind != RowEventKinds.Note || string.IsNullOrEmpty(rowId)) return false;
+        if (!doc.RowHistory.TryGetValue(rowId, out var list) || !list.Contains(e)) return false;
+        var t = (text ?? "").Trim();
+        if (t.Length == 0) return false;
+        if (t.Length > MaxNoteChars) t = t[..MaxNoteChars];
+        if (t == e.Text) return false;
+        e.Text = t;
+        e.Edited = FormatTime(now);
+        return true;
+    }
+
     public static bool Remove(NoteDocument doc, string rowId, RowEvent e)
     {
         if (!doc.RowHistory.TryGetValue(rowId, out var list) || !list.Remove(e)) return false;
@@ -138,18 +157,21 @@ public static class RowHistoryOps
         return best;
     }
 
-    /// <summary>Changes the pop-up needs to notice in a kept (side-copy) session: count and newest entry.</summary>
+    /// <summary>Changes the pop-up needs to notice in a kept (side-copy) session: count, newest entry, and the notes'
+    /// text (a hash, so an edited note counts too).</summary>
     public static string Signature(NoteDocument doc)
     {
-        var n = 0; var newest = ""; var notes = 0;
+        var n = 0; var newest = ""; var notes = 14695981039346656037UL; // FNV-1a, the same in every run
         foreach (var list in doc.RowHistory.Values)
             foreach (var e in list)
             {
                 n++;
                 if (string.CompareOrdinal(e.Time, newest) > 0) newest = e.Time;
-                if (e.Kind == RowEventKinds.Note) notes += (e.Text?.Length ?? 0) + 1;
+                if (e.Kind != RowEventKinds.Note) continue;
+                foreach (var ch in (e.Text ?? "") + "\u0001" + (e.Edited ?? "") + "\u0002")
+                    notes = (notes ^ ch) * 1099511628211UL;
             }
-        return n + "/" + notes + "/" + newest;
+        return n + "/" + notes.ToString("x16", CultureInfo.InvariantCulture) + "/" + newest;
     }
 
     /// <summary>Entries of rows that no longer exist are dropped (on load and when saving).</summary>
@@ -194,9 +216,11 @@ public static class RowHistoryOps
                     Name = Str(item, "name"),
                     From = Str(item, "from"),
                     To = Str(item, "to"),
-                    Text = Str(item, "text")
+                    Text = Str(item, "text"),
+                    Edited = Str(item, "edited")
                 };
                 if (!TryTime(e.Time, out _)) { issues.Add($"rowHistory.{row.Name}: entry without a valid time, skipped"); continue; }
+                if (e.Edited != null && !TryTime(e.Edited, out _)) e.Edited = null; // only shown, so a bad one is just dropped
                 list.Add(e);
             }
             if (list.Count > MaxPerRow) list.RemoveRange(0, list.Count - MaxPerRow);
