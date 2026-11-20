@@ -16,6 +16,7 @@ namespace TableNote;
 [JsonSerializable(typeof(Dictionary<string, ReminderInfo>))]
 [JsonSerializable(typeof(Dictionary<string, ColumnSetting>))]
 [JsonSerializable(typeof(Dictionary<string, RowStyle>))]
+[JsonSerializable(typeof(Dictionary<string, List<RowEvent>>))]
 [JsonSerializable(typeof(Snapshot.Dto))]
 [JsonSerializable(typeof(WallpaperRecord))]
 internal sealed partial class TableNoteJson : JsonSerializerContext;

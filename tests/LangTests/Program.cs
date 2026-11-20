@@ -40,7 +40,7 @@ var used = new SortedSet<string>(StringComparer.Ordinal);
 foreach (var f in Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories).Where(f => !f.Contains("/obj/") && !f.Contains("/bin/") && !f.Contains("/tests/")))
     foreach (Match m in Regex.Matches(File.ReadAllText(f), "(?:Localizer\\.)?\\bT\\(\"([a-z_][a-z_.0-9]*)\""))
         if (!m.Groups[1].Value.EndsWith(".")) used.Add(m.Groups[1].Value);
-foreach (var k in new[] { "text", "number", "choice", "check" }) used.Add("coltype." + k);
+foreach (var k in new[] { "text", "number", "choice", "check", "days" }) used.Add("coltype." + k);
 foreach (var p in RowStyleOps.Palette) used.Add("colour." + p.Key);
 var notInEn = used.Where(k => !en.ContainsKey(k)).ToList();
 Ok(used.Count > 100, "found the keys used in the code", used.Count.ToString());

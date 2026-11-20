@@ -80,6 +80,7 @@ public partial class MainWindow : Window
         _archivedUnsaved = NoteStore.ArchiveUnsaved(_path);
         var loaded = NoteStore.Load(_path);
         _session = new TableSession(loaded.Document);
+        _history.Reset(_session.Doc); // 2.6.0: days counter history starts from the loaded note
         _placeholder = loaded.Placeholder;
         _preserveExistingFile = loaded.PreserveExistingFile;
         if (_preserveExistingFile) _preserveBaseline = PreserveKey(_session.Doc);
@@ -773,6 +774,7 @@ public partial class MainWindow : Window
     private void ScheduleSave()
     {
         if (!_tracking) return;
+        CaptureHistory(); // 2.6.0: before anything redraws, so a row set to done stops counting at once
         StatusText.Text = Localizer.T("ui.saving");
         _saveTimer.Stop();
         _saveTimer.Start();
@@ -787,6 +789,7 @@ public partial class MainWindow : Window
 
     private bool DoSave()
     {
+        CaptureHistory(); // 2.6.0: paths that save without ScheduleSave (structure changes, undo, quit)
         if (_preserveExistingFile)
         {
             // v2.4.1: note.json stays untouched, but edits of this session go to note.unsaved.json
@@ -1771,6 +1774,7 @@ public partial class MainWindow : Window
     {
         // Wallpaper mode: redraw the wallpaper when a task turns overdue or due today (WallpaperKey).
         if (_view == ViewMode.Background) { ScheduleWallpaperRefresh(); return; }
+        var newDay = DaysDateChanged(); // 2.6.0: days counters move on after midnight
         if (!IsVisible) return; // hidden in the tray: nothing to paint (rows are rebuilt when shown again)
         try
         {
@@ -1780,7 +1784,7 @@ public partial class MainWindow : Window
                 if (c is ContentPresenter { Child: Grid { Tag: int r } g } && g.Children.FirstOrDefault() is Border b &&
                     !(focused != null && focused.GetVisualAncestors().Contains(g)) && // never under the caret; next minute
 
-                    r < _session.Doc.Rows.Count && !ReferenceEquals(b.Background, LabelBrushFor(r, RowNumberBackground(r))))
+                    r < _session.Doc.Rows.Count && (newDay || !ReferenceEquals(b.Background, LabelBrushFor(r, RowNumberBackground(r)))))
                     stale.Add(r);
             foreach (var r in stale) RefreshRow(r);
         }

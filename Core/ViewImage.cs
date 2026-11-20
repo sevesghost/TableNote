@@ -368,7 +368,7 @@ public static partial class ViewImage
             var c = columns[i];
             var raw = doc.GetCell(row, c);
             var type = TypeOf(doc, c);
-            var text = CellText(doc, row, c, raw, id, statusCol, dueCol, type);
+            var text = CellText(doc, row, c, raw, id, statusCol, dueCol, type, now);
             if (options.CellDetails != null && options.CellDetails.TryGetValue((row, c), out var lines) && lines != null)
             {
                 var extra = string.Join("\n", lines.Where(s => !string.IsNullOrEmpty(s)));
@@ -380,6 +380,7 @@ public static partial class ViewImage
             var fg = Text;
             if (done) fg = DoneText;
             else if (type == ColumnTypes.Number && raw.Trim().Length > 0 && !ColumnSettingsOps.IsNumber(raw)) fg = InvalidNumber;
+            else if (type == ColumnTypes.Days && raw.Trim().Length > 0 && !DueDates.TryParse(raw, out _)) fg = InvalidNumber;
             if (options.CellTextColors != null && options.CellTextColors.TryGetValue((row, c), out var textColor)
                 && RowStyleOps.HexFor(textColor) is { } textFill)
                 fg = textFill;
@@ -399,10 +400,11 @@ public static partial class ViewImage
         };
     }
 
-    private static string CellText(NoteDocument doc, int row, int column, string raw, string rowId, int statusCol, int dueCol, string type)
+    private static string CellText(NoteDocument doc, int row, int column, string raw, string rowId, int statusCol, int dueCol, string type, DateTime now)
     {
         if (column == statusCol) return TaskStatuses.Label(TaskStatuses.DisplayCode(raw));
         if (column == dueCol) return DueText(doc, raw, rowId);
+        if (type == ColumnTypes.Days) return DaysCounter.CellText(doc, row, column, now); // 2.6.0: "150 days", not the start date
         if (type == ColumnTypes.Check)
             return ColumnSettingsOps.IsChecked(raw) ? ColumnSettingsOps.CheckedValue : (string.IsNullOrWhiteSpace(raw) ? "" : raw);
         return raw;

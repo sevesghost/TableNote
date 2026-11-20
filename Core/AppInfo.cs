@@ -23,9 +23,18 @@ Shortcuts
   Ctrl+Shift+E   back to editing from wallpaper mode (Windows)
 
 Columns and rows
-  Right-click a header → Column settings…: name, width, type (text / number / choice / checkbox).
+  Right-click a header → Column settings…: name, width, type (text / number / choice / checkbox / days counter).
   Right-click a row number → Row color / Highlight row. A row color replaces the status color;
   a highlighted row gets an orange row number.
+
+Days counter
+  Table → Add days counter column: each row shows how many days since its start date (""150 days""). Rows that are
+  not done start today; a new row starts on the day it is added. A row set to Done stops counting (""42 days ✓"").
+  Click a days cell (or Space) for its pop-up: how long it has been open, the start date (pick another or Today),
+  the status and since when, the last update, and the history newest first — status changes, edits of the row and
+  progress notes, each with date, time and the day since the start. Type a progress note and press Enter to add it.
+  History is kept from the day the table got a days column; Ctrl+Z of an edit is recorded as another change.
+  Exports keep the start date (yyyy-MM-dd); pictures, print and the wallpaper show the days.
 
 Alert boxes
   Table → Add alert box adds the first box; the alert panel above the table appears with it, and its + Alert adds more.
@@ -131,7 +140,16 @@ Files
   เทาจาง + ขีดฆ่า   เสร็จแล้ว
   ปุ่ม ""เรียงตามกำหนด"" / ช่อง ""ซ่อนงานเสร็จ""
   สีแถวที่ตั้งเอง (คลิกขวาที่เลขแถว → สีแถว) ใช้แทนสีพื้นข้างบน  ไฮไลต์แถว = เลขแถวสีส้ม
-  คลิกขวาที่หัวคอลัมน์ → ตั้งค่าคอลัมน์… เปลี่ยนชื่อ ความกว้าง และชนิด (ข้อความ / ตัวเลข / ตัวเลือก / ช่องติ๊ก)
+  คลิกขวาที่หัวคอลัมน์ → ตั้งค่าคอลัมน์… เปลี่ยนชื่อ ความกว้าง และชนิด (ข้อความ / ตัวเลข / ตัวเลือก / ช่องติ๊ก / นับวัน)
+
+นับวัน
+  ตาราง → เพิ่มคอลัมน์นับวัน: แต่ละแถวแสดงว่ารับงานมากี่วันแล้ว (""150 วัน"")
+  งานที่ยังไม่เสร็จเริ่มนับจากวันนี้ แถวใหม่เริ่มนับตั้งแต่วันที่เพิ่ม  ตั้งสถานะเป็นเสร็จแล้วจะหยุดนับ (""42 วัน ✓"")
+  คลิกช่องนับวัน (หรือกด Space) เปิดหน้าต่างรายละเอียด: ค้างมากี่วัน วันรับงาน (เลือกวันอื่นหรือกด วันนี้)
+  สถานะและตั้งแต่เมื่อไร อัปเดตล่าสุด และประวัติจากใหม่ไปเก่า — เปลี่ยนสถานะ แก้ข้อมูลในแถว และบันทึกความคืบหน้า
+  แต่ละรายการมีวันที่ เวลา และนับเป็นวันที่เท่าไรหลังรับงาน  พิมพ์บันทึกความคืบหน้าแล้วกด Enter เพื่อเพิ่ม
+  ประวัติเริ่มเก็บตั้งแต่ตารางมีคอลัมน์นับวัน  Ctrl+Z การแก้ไขจะบันทึกเป็นการเปลี่ยนแปลงอีกรายการ
+  ส่งออกไฟล์เก็บเป็นวันรับงาน (yyyy-MM-dd)  ภาพ งานพิมพ์ และวอลเปเปอร์แสดงเป็นจำนวนวัน
 
 กล่องแจ้งเตือน
   เมนู ตาราง → เพิ่มกล่องแจ้งเตือน เพิ่มกล่องแรก (ช่องกล่องแจ้งเตือนเหนือตารางจะขึ้นมาด้วย)
@@ -176,6 +194,8 @@ Files
 20 Nov 2026 — 2.6.0
 New: Wallpaper (toolbar) puts the table on your desktop wallpaper, full screen, over your own picture and where the window was. The tray icon or Ctrl+Shift+E brings the editor back, and your own wallpaper with it. This replaces Pin to desktop.
 Changed: one toolbar row with the everyday buttons. Copy, image export, print, delete column, language and the system settings are in the menu bar. The alert panel shows only when there are alert boxes (Table → Add alert box). Zoom scales the table, not the menu and toolbar.
+New: days counter column (Table → Add days counter column). Each row shows how many days since its start date; click the cell for status updates, edits and progress notes with their dates and times.
+Fixed: Thai text, digits, Latin letters and symbols now use one font (Noto Sans Thai with Noto Sans merged in); before, ""17/11/2569"" or ""A+"" switched to another font in the middle of a line.
 Fixed: after a sign-in start, opening the editor from the tray closed it again at once.
 
 19 Nov 2026 — 2.5.1
@@ -232,6 +252,8 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 20 พ.ย. 2026 — 2.6.0
 ใหม่: ปุ่ม วอลเปเปอร์ ตั้งตารางเป็นวอลเปเปอร์เต็มจอ ทับภาพเดิมของคุณตรงตำแหน่งหน้าต่าง คลิกไอคอนที่ถาดหรือกด Ctrl+Shift+E เพื่อกลับมาแก้ไข แล้ววอลเปเปอร์เดิมจะกลับมา ใช้แทน วางแนบพื้นหลัง
 เปลี่ยน: แถบเครื่องมือเหลือแถวเดียวเฉพาะปุ่มที่ใช้บ่อย คัดลอก ส่งออกภาพ พิมพ์ ลบคอลัมน์ ภาษา และตั้งค่าระบบ อยู่ในแถบเมนู ช่องกล่องแจ้งเตือนขึ้นเมื่อมีกล่องเท่านั้น (ตาราง → เพิ่มกล่องแจ้งเตือน) ปุ่มขยาย/ย่อขยายเฉพาะตาราง ไม่ขยายเมนูและแถบเครื่องมือ
+ใหม่: คอลัมน์นับวัน (ตาราง → เพิ่มคอลัมน์นับวัน) แต่ละแถวแสดงว่ารับงานมากี่วันแล้ว คลิกที่ช่องเพื่อดูการอัปเดตสถานะ การแก้ไข และบันทึกความคืบหน้า พร้อมวันที่และเวลา
+แก้: ตัวอักษรไทย ตัวเลข อังกฤษ และสัญลักษณ์ ใช้ฟอนต์เดียวกันแล้ว (Noto Sans Thai รวมกับ Noto Sans) ก่อนหน้านี้ ""17/11/2569"" หรือ ""A+"" สลับไปใช้อีกฟอนต์กลางบรรทัด
 แก้: หลังเปิดเครื่องแบบเริ่มที่ถาด กดเปิดหน้าแก้ไขจากถาดแล้วหน้าต่างหายไปทันที
 
 19 พ.ย. 2026 — 2.5.1

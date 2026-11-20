@@ -29,7 +29,7 @@ public partial class MainWindow
     /// boxes and colours, which the undo snapshot leaves out (before, a new alert box there was never saved).</summary>
     private static string PreserveKey(NoteDocument doc) =>
         Snapshot.Serialize(doc) + "\n" + AlertBoxOps.ToElement(doc.AlertBoxes).GetRawText() + "\n" +
-        (PartColorOps.ToJson(doc.PartColors)?.ToJsonString() ?? "");
+        (PartColorOps.ToJson(doc.PartColors)?.ToJsonString() ?? "") + "\n" + RowHistoryOps.Signature(doc); // 2.6.0: progress notes
 
     private static string UnsavedKeptNotice((string FileName, DateTime Saved) kept) =>
         Localizer.T("load.unsaved_kept", DueDates.Format(kept.Saved), kept.FileName);
@@ -87,6 +87,7 @@ public partial class MainWindow
         CommitFocusedEdit();
         var doc = loaded.Document;
         _session = new TableSession(doc);
+        _history.Reset(doc); // 2.6.0: the loaded note is the starting point of the row history
         _undo.Clear(); // steps of the stand-in must never replay onto the real table
         _placeholder = loaded.Placeholder;
         _preserveExistingFile = loaded.PreserveExistingFile;

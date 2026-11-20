@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Logging;
+using Avalonia.Media;
 
 namespace TableNote;
 
@@ -43,9 +44,11 @@ internal static class Program
         GC.KeepAlive(_instance);
     }
 
+    // 2.6.0: the bundled font (Noto Sans Thai with Noto Sans Latin and symbols merged in, Assets/Fonts) is the
+    // default for every control, so Thai, digits and Latin share one design. It replaces the Inter package (about 1 MB).
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .WithInterFont()
+            .With(AppFonts.ManagerOptions)
             .LogToTrace(LogEventLevel.Warning);
 }

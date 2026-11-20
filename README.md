@@ -13,6 +13,7 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
 ## Features
 
 - **Wallpaper mode (2.6.0, Windows):** **Wallpaper** on the toolbar draws the table over your own wallpaper, full screen, where the window was. The editor goes to the tray. Click the tray icon or press Ctrl+Shift+E to edit again, and your own wallpaper comes back. See [Wallpaper mode](#wallpaper-mode).
+- **Days counter (2.6.0):** **Table → Add days counter column** shows in each row how many days the work has been open ("150 days"); a row set to Done stops counting ("42 days ✓"). Click the cell to see the start date, the status and since when, the last update and the row's history with dates and times (status changes, edits, and progress notes you type there). See [Days counter](#days-counter).
 - **One toolbar row (2.6.0):** + Row, − Row, + Column, Colors, Hide done, Sort by due, A− / 100% / A+, Export and Wallpaper. Copy, image export, print, delete column, language, help and the system settings (always on top, lock position, launch at sign-in, mute) are in the menu bar.
 - Editable table: add or remove rows and columns, rename column headers, paste from and copy to Excel.
 - **Move and delete columns (2.4.0):** drag the ⋮⋮ grip on a column header, use the header's right-click menu (Move left / right / to first / to last), or press Alt+Shift+←/→. The header menu also deletes a column after a confirmation (the Due column cannot be deleted). Undo with Ctrl+Z.
@@ -108,6 +109,19 @@ The in-app Help (**Help → Help** in the menu bar, or Help / วิธีใช
 | Ctrl+mouse wheel | Zoom in or out |
 | Ctrl+Home / Ctrl+End | Go to the first cell / the last cell of the last row |
 
+## Days counter
+
+**Table → Add days counter column** adds a column (just before the status column) that counts the days since each row's start date. Rows that are not done start today and a new row starts on the day it is added; you can also turn an empty column into one with **Column settings… → Type: Days counter**. The cell shows "Today", "1 day", "150 days"; a row set to **Done** stops counting and shows how long it took ("42 days ✓").
+
+Click a days cell (or press Space) to open its pop-up:
+
+- how long the work has been open (or took), from which date to which;
+- **Start date**: pick another day, or **Today** (one Ctrl+Z step);
+- the status and since when, and the last update ("8 days ago");
+- the history, newest first: status changes, edits of the row and **progress notes**, each with its date, time and the day since the start. Type a note and press Enter (or **Add note**) to record a progress report; ✕ then **Delete?** removes one.
+
+History starts on the day the table gets a days column and is saved in `note.json` (`rowHistory`, by row id, at most 100 entries per row). Changes to one cell within 10 minutes are one entry, and typing a new row's first values is not listed (its status changes are). Ctrl+Z of an edit is recorded as another change; notes are not part of Ctrl+Z. Exports and Copy give the start date (`yyyy-MM-dd`); image export, print and the wallpaper show the days.
+
 ## Wallpaper mode
 
 **Wallpaper** on the toolbar (or **File → Set as wallpaper**) puts the table on your desktop wallpaper (Windows):
@@ -191,7 +205,7 @@ Source layout:
 - `Platform/`: Windows wallpaper (IDesktopWallpaper), hotkey, taskbar, start-again signal, and autostart.
 - `Services/`: reminder timer, popup, ⏰ dialog, and sound.
 - `MainWindow.axaml(.cs)`: main UI.
-- `Assets/`: Noto Sans Thai fonts and tray icon.
+- `Assets/`: fonts (Noto Sans Thai with the Latin of Noto Sans and a few Noto symbols merged in, so Thai, digits and Latin share one design; rebuilt with `tools/fonts/merge_noto.py`) and tray icon.
 
 Want to fix a bug or add a language? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -201,4 +215,4 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-TableNote is released under the [MIT License](LICENSE). The bundled Noto Sans Thai fonts are under the [SIL Open Font License 1.1](Assets/Fonts/OFL.txt).
+TableNote is released under the [MIT License](LICENSE). The bundled fonts (Noto Sans Thai, Noto Sans, Noto Sans Symbols, Noto Sans Symbols 2 and Noto Sans Math, merged) are under the [SIL Open Font License 1.1](Assets/Fonts/OFL.txt).

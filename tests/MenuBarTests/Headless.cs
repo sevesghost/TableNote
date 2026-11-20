@@ -1,3 +1,4 @@
+using System.Text;
 using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
@@ -22,6 +23,7 @@ static class MenuBarHeadless
         AppBuilder.Configure<App>()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+            .With(AppFonts.ManagerOptions) // as Program.BuildAvaloniaApp
             .SetupWithoutStarting();
 
         var window = new MainWindow { Width = 980, Height = 640 };
@@ -46,6 +48,10 @@ static class MenuBarHeadless
             string.Join(",", middles.Select(y => y.ToString("0"))));
         ok("no toolbar group labels any more", window.FindControl<TextBlock>("GroupTableLabel") == null, "");
         ok("no empty alert panel", window.FindControl<Border>("AlertHost")?.IsVisible == false, "");
+        // 2.6.0: Thai, digits, Latin and symbols in one font (no fallback to Segoe UI / DejaVu for "17/11", "A+", "✓").
+        var foreign = ForeignRuns([window]);
+        ok("every text in the Thai window uses the bundled font", foreign.Count == 0 && TextRunCount([window]) > 20,
+            string.Join(" | ", foreign.Take(8)) + $" ({TextRunCount([window])} runs)");
 
         var table = Item(menu, "ตาราง");
         table.Open();
@@ -57,6 +63,9 @@ static class MenuBarHeadless
             spots[1].Header?.ToString() == "เพิ่มคอลัมน์สถานะ",
             string.Join(" | ", spots.Select(s => $"{s.Header} enabled={s.IsEnabled}")));
         Save(window, "menu-table-th");
+        var menuForeign = ForeignRuns(table.Items.OfType<MenuItem>());
+        ok("menu items use the bundled font too", menuForeign.Count == 0 && TextRunCount(table.Items.OfType<MenuItem>()) > 5,
+            string.Join(" | ", menuForeign.Take(8)));
         table.Close();
         Pump(window);
 
@@ -175,6 +184,39 @@ static class MenuBarHeadless
             string.Join(" | ", editSpots.Select(s => $"{s.Tag} enabled={s.IsEnabled}")));
         tableEn.Close();
     }
+
+    /// <summary>Text runs drawn with another font than the bundled one (colour emoji excepted).</summary>
+    static List<string> ForeignRuns(IEnumerable<Visual> roots)
+    {
+        var bad = new List<string>();
+        foreach (var (family, text, owner) in Runs(roots))
+            if (family != "Noto Sans Thai" && !EmojiOnly(text)) bad.Add($"{family}[{text}] in {owner}");
+        return bad;
+    }
+
+    static int TextRunCount(IEnumerable<Visual> roots) => Runs(roots).Count();
+
+    static IEnumerable<(string family, string text, string owner)> Runs(IEnumerable<Visual> roots)
+    {
+        foreach (var v in roots.SelectMany(r => r.GetVisualDescendants().Prepend(r)))
+        {
+            if (!v.IsEffectivelyVisible) continue;
+            var layout = v switch
+            {
+                TextBlock tb when !string.IsNullOrEmpty(tb.Text) => tb.TextLayout,
+                Avalonia.Controls.Presenters.TextPresenter tp when !string.IsNullOrEmpty(tp.Text) => tp.TextLayout,
+                _ => null
+            };
+            if (layout == null) continue;
+            foreach (var line in layout.TextLines)
+                foreach (var run in line.TextRuns)
+                    if (run is Avalonia.Media.TextFormatting.ShapedTextRun sr)
+                        yield return (sr.GlyphRun.GlyphTypeface.FamilyName, new string(sr.Text.Span), v.GetType().Name);
+        }
+    }
+
+    static bool EmojiOnly(string text) =>
+        text.EnumerateRunes().All(r => Rune.IsWhiteSpace(r) || r.Value >= 0x1F000 || r.Value is 0x23F0 or 0xFE0F or 0x200D);
 
     static MenuItem Item(Menu menu, string header) =>
         menu.Items.OfType<MenuItem>().First(i => i.Header?.ToString() == header);

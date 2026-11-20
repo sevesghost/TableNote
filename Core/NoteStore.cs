@@ -40,6 +40,9 @@ public static class NoteStore
         /// <summary>v2.6: row id → pixel height. Null when no row was given a height, so old files stay unchanged.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Dictionary<string, int>? RowHeights { get; set; }
+        /// <summary>2.6.0: row id → history (days counter pop-up). Null (omitted) when no row has any, so old files stay unchanged.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, List<RowEvent>>? RowHistory { get; set; }
         /// <summary>False (omitted) on older files, which still receive a status column if it is missing.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool StatusColumnOmitted { get; set; }
@@ -122,6 +125,7 @@ public static class NoteStore
         "cellDetails", // nested detail tables; document version is unchanged until the integrator bumps it
         "alertBoxes", // optional; missing or bad → no boxes
         "partColors", // v2.5, optional. An alert box color is alert:{id} in this map.
+        "rowHistory", // 2.6.0, optional: days counter history and progress notes
         "rowHeights", // v2.6; missing means every row is auto
         "statusColumnOmitted", "dueColumnOmitted" // false when absent: older files still gain both columns
     };
@@ -576,6 +580,7 @@ public static class NoteStore
                 AlertBoxes = AlertBoxOps.Parse(Prop(root, "alertBoxes"), LastLoadIssues.Add),
                 PartColors = ParsePartColors(Prop(root, "partColors")),
                 RowHeights = ParseRowHeights(Prop(root, "rowHeights")), // v2.6
+                RowHistory = RowHistoryOps.Parse(Prop(root, "rowHistory"), LastLoadIssues), // 2.6.0
                 StatusColumnOmitted = GetBool(root, "statusColumnOmitted", false),
                 DueColumnOmitted = GetBool(root, "dueColumnOmitted", false),
                 Window = new WindowMemory
@@ -642,6 +647,8 @@ public static class NoteStore
             if (overflowNotice != null) { clipped = false; }
             ReminderPlan.Sanitize(doc); // bad reminder values dropped individually, never .bak
             ColumnSettingsOps.PruneOrphans(doc); // v2.4.0: settings/styles of gone columns/rows
+            var goneHistory = RowHistoryOps.Prune(doc); // 2.6.0
+            if (goneHistory > 0) LastLoadIssues.Add($"rowHistory: dropped {goneHistory} (row no longer exists)");
             try
             {
                 var dropped = CellDetailOps.Prune(doc);
@@ -860,6 +867,7 @@ public static class NoteStore
             AlertBoxes = AlertBoxOps.ToElement(doc.AlertBoxes),
             PartColors = PartColorsElement(doc),
             RowHeights = doc.RowHeights is { Count: > 0 } ? new Dictionary<string, int>(doc.RowHeights) : null, // v2.6
+            RowHistory = RowHistoryOps.ForSave(doc), // 2.6.0
             StatusColumnOmitted = doc.StatusColumnOmitted,
             DueColumnOmitted = doc.DueColumnOmitted,
             Window = new WindowDto

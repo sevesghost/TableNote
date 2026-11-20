@@ -320,9 +320,17 @@ Click **Export** on the toolbar and choose a format:
 - Drag the **⋮⋮** grip on the left of a column header to move that column, or right-click the header and choose Move left / right / to first / to last, or press **Alt+Shift+←** / **Alt+Shift+→**.
 - Right-click the header and choose **Delete this column…** to remove it. TableNote always asks for confirmation. The Due column cannot be deleted.
 - Right-click the header and choose **Column settings…** to change the name, width, and type:
-  - **Text** (default), **Number**, **Choice** (a drop-down; type one option per line), or **Check** (✓).
-  - Changing the type does not change the text already in the cells.
+  - **Text** (default), **Number**, **Choice** (a drop-down; type one option per line), **Check** (✓), or **Days counter**.
+  - Changing the type does not change the text already in the cells. (An empty column that becomes a days counter starts counting today in the rows that are not done.)
   - Status and Due columns can only change name and width.
+
+**Days counter (2.6.0)**
+- **Table → Add days counter column** adds a "Days" column just before the status column. Each cell keeps the day the work came in and shows how many days ago that was: "Today", "1 day", "150 days". Rows that are not done start today; a row you add later starts on the day you add it.
+- A row set to **Done** stops counting and shows how long it took, for example "42 days ✓".
+- Click a days cell (or press **Space**) to open its pop-up. It shows how long the work has been open, from which date to which, the **Start date** (pick another day, or **Today**), the status and since when, and the last update.
+- Below that is the row's history, newest first: status changes, edits of the row, and progress notes, each with its date, time and the day since the start ("141 days after the start"). Type a note such as "called the client, documents come Friday" and press **Enter** (or **Add note**). To delete a note, click **✕**, then **Delete?**.
+- History starts on the day the table gets a days column. Changes to one cell within 10 minutes count as one entry, and typing a new row's first values is not listed (its status changes are). Undoing an edit with Ctrl+Z is listed as another change; notes are not part of Ctrl+Z.
+- Exports and Copy give the start date (`yyyy-MM-dd`). Image export, print and the wallpaper show the days.
 
 **Rows**
 - Drag the **row number** to move the row, or right-click it and choose Move up / down / to top / to bottom, or press **Alt+Shift+↑** / **Alt+Shift+↓**. When **Hide done** is on, these moves skip hidden rows.
