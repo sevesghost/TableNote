@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 
 namespace TableNote;
 
@@ -37,6 +38,8 @@ public partial class MainWindow
     private MenuItem _systemPinItem = null!; // View → System → Set as wallpaper
     private MenuItem _addAlertItem = null!;
     private MenuItem _addDaysItem = null!; // 2.6.0: Table → Add days counter column
+    private MenuItem _findItem = null!; // 2.6.0: Table → Find… (Ctrl+F)
+    private MenuItem _selectAllItem = null!; // 2.6.0: Table → Select all (Ctrl+A)
     private MenuItem _hideDoneItem = null!;
     private MenuItem _zoomOutItem = null!;
     private MenuItem _zoomResetItem = null!;
@@ -45,6 +48,7 @@ public partial class MainWindow
     private MenuItem _lockItem = null!;
     private MenuItem _launchItem = null!;
     private MenuItem _muteItem = null!;
+    private MenuItem _soundItem = null!; // 2.6.0: View → System → Reminder sound…
     private MenuItem _helpItem = null!;
     private MenuItem _logItem = null!;
 
@@ -101,6 +105,13 @@ public partial class MainWindow
         _spotAddStatusItem = new MenuItem { Tag = "spot:add-status" };
         _spotAddStatusItem.Click += async (_, _) =>
             await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), () => AddSystemColumnAsync(ColumnRoles.Status)));
+        _findItem = Act("menu.find", OpenFind);
+        _findItem.InputGesture = new KeyGesture(Key.F, KeyModifiers.Control);
+        _selectAllItem = Act("menu.select_all", SelectAll);
+        _selectAllItem.InputGesture = new KeyGesture(Key.A, KeyModifiers.Control);
+        _tableMenu.Items.Add(_findItem);
+        _tableMenu.Items.Add(_selectAllItem);
+        _tableMenu.Items.Add(new Separator());
         _tableMenu.Items.Add(_colorItem);
         _tableMenu.Items.Add(_addRowItem);
         _tableMenu.Items.Add(_deleteRowItem);
@@ -116,6 +127,8 @@ public partial class MainWindow
         {
             var edit = _view == ViewMode.Edit && !_busy;
             _colorItem.IsEnabled = _view == ViewMode.Edit;
+            _findItem.IsEnabled = _view == ViewMode.Edit;
+            _selectAllItem.IsEnabled = _view == ViewMode.Edit && _visibleRows.Count > 0;
             _addRowItem.IsEnabled = edit;
             _deleteRowItem.IsEnabled = edit;
             _addColumnItem.IsEnabled = edit;
@@ -145,16 +158,19 @@ public partial class MainWindow
         _lockItem = CheckItem("toolbar.lock", LockBox);
         _launchItem = CheckItem("toolbar.launch_at_login", LaunchBox);
         _muteItem = CheckItem("toolbar.mute", MuteSoundBox);
+        _soundItem = Act("menu.sound", () => _ = OpenSoundSettingsAsync());
         _systemPinItem = Act("menu.wallpaper", () => _ = OnWallpaperClickAsync());
         _systemMenu.Items.Add(_topmostItem);
         _systemMenu.Items.Add(_lockItem);
         _systemMenu.Items.Add(_launchItem);
         _systemMenu.Items.Add(_muteItem);
+        _systemMenu.Items.Add(_soundItem);
         _systemMenu.Items.Add(_systemPinItem);
         _systemMenu.SubmenuOpened += (_, _) =>
         {
             RefreshChecks();
             _systemPinItem.IsEnabled = _view == ViewMode.Edit;
+            _soundItem.IsEnabled = _view == ViewMode.Edit;
         };
 
         _viewMenu = new MenuItem();
@@ -291,6 +307,8 @@ public partial class MainWindow
         _sortItem.Header = Localizer.T("toolbar.sort_due");
         _addAlertItem.Header = Localizer.T("menu.add_alert");
         _addDaysItem.Header = Localizer.T("menu.add_days");
+        _findItem.Header = Localizer.T("menu.find");
+        _selectAllItem.Header = Localizer.T("menu.select_all");
         ToolTip.SetTip(_addDaysItem, Localizer.T("tip.add_days"));
         _viewSortItem.Header = Localizer.T("toolbar.sort_due");
         _systemPinItem.Header = Localizer.T("menu.wallpaper");
@@ -298,6 +316,7 @@ public partial class MainWindow
         ToolTip.SetTip(_topmostItem, Localizer.T("tip.topmost"));
         ToolTip.SetTip(_lockItem, Localizer.T("tip.lock"));
         ToolTip.SetTip(_muteItem, Localizer.T("tip.mute"));
+        _soundItem.Header = Localizer.T("menu.sound");
         _helpItem.Header = Localizer.T("tray.help");
         _logItem.Header = Localizer.T("tray.log");
         _zoomOutItem.Header = Localizer.T("tray.zoom_out");

@@ -30,6 +30,12 @@ TableNote is a spreadsheet-style task list, similar to Excel, that reminds you w
 | Add a column | `+ Column` | F7 |
 | Delete a column (asks first if it has text; the Due column can't be deleted) | **Table → − Column** | F8 |
 
+**Working with cells (like Excel, 2.6.0)**
+- A click **selects** a cell: it turns gold and the formula bar above the table shows its address (B3) and its whole text. Typing **replaces** what is in the cell. To change the text that is there, **double-click** the cell or press **F2**; the caret is at the end. **Esc** puts the text back, **Enter** keeps it and moves down, **Tab** moves right.
+- **Drag** across cells (or Shift+click, or Shift+arrows) to select a block. **Delete** clears it, **Ctrl+C** copies it, **Ctrl+X** cuts it, **Ctrl+V** pastes. **Ctrl+A** or a click on the top-left corner of the table selects every cell; a click on an empty spot clears the selection. Right-click a cell for the same commands.
+- The **formula bar** is for reading and editing long text: click it, change the text, press Enter (Esc puts it back, Alt+Enter adds a line). It does not calculate.
+- **Ctrl+F** (or **Table → Find…**) finds text: every cell that has it turns yellow, the current one is selected; Enter / Shift+Enter (or F3 / Shift+F3) go to the next / previous one; Esc closes the find bar.
+
 Steps
 1. Click **+ Row** or press F5.
 2. Enter a **Title**, which is the name shown in the reminder window, and add **Details** if you like.
@@ -127,6 +133,8 @@ To turn off the sound, choose **View → System → Mute reminders**. The remind
 
 The yellow reminder window appears even when Windows notifications are turned off (for example, in Focus mode).
 
+**Reminder sound** (2.6.0): **View → System → Reminder sound…** sets the sound and how loud it is. Pick the Windows warning sound (as before), another Windows sound (calendar, alarm 1–10, ring 1–6, chimes…) or your own .wav file with **Choose .wav…**, move the volume slider (50 % unless you change it) and press **▶ Test** to hear it. Above 50 % TableNote asks whether you are sure, because a loud reminder can startle people nearby; **No** puts it back to 50 %. **Mute reminder sounds** turns the sound off; the reminder window still opens.
+
 ## 5. What the colors mean
 
 | Row color | Meaning |
@@ -145,7 +153,8 @@ Tick **Hide done** to hide rows that are done, and untick it to show them again.
 - **Paste from Excel**: copy a range from Excel or Google Sheets, click the cell where pasting should start, then press Ctrl+V. The data spreads across cells for you. Up to 256 KB can be pasted at a time. Pasted data is plain text, and formulas are not calculated. When **Hide done** is on, pasted lines go into the rows you can see; hidden done tasks are skipped.
 - **Copy table** copies every cell without the column headers.
 - **Copy with headers** copies the whole table with the headers as the first row.
-- **Ctrl+C** copies only the selected cells. Shift+click to select several cells.
+- **Ctrl+C** copies only the selected cells (drag or Shift+click to select several, Ctrl+A for all). A status is copied as its label, as you see it.
+- **Ctrl+V** with one cell selected pastes from that cell; a single value copied from anywhere fills every selected cell.
 - Copied data is plain text, ready to paste into Excel.
 
 ## 7. Undo
@@ -199,10 +208,18 @@ The tray menu has **Edit table**, **Help**, **Log**, **Export…**, **Language**
 | F8 | Delete a column |
 | Alt+Shift+← / → | Move the active column left / right |
 | Alt+Shift+↑ / ↓ | Move the active row up / down (skips hidden rows when Hide done is on) |
-| Enter | Move to the cell below |
+| Click / drag | Select a cell / a block |
+| Typing | Replace the selected cell's text |
+| Double-click / F2 | Edit the cell's text (Esc puts it back) |
+| Arrows / Tab / Shift+Tab | Move to the next cell (Shift+arrows grow the block) |
+| Enter | Keep the edit and move to the cell below |
 | Shift+Enter | Move to the cell above |
+| Delete | Clear the selected cells |
+| Ctrl+A | Select every cell (also: the top-left corner) |
 | Ctrl+C | Copy the selected cells, without headers |
+| Ctrl+X | Cut the selected cells |
 | Ctrl+V | Paste text or a table from Excel |
+| Ctrl+F / F3 / Shift+F3 | Find / next / previous |
 | Ctrl+Z | Undo (see section 7) |
 | Ctrl+Y or Ctrl+Shift+Z | Redo |
 | Shift+click | Select several cells |

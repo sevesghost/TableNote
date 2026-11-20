@@ -34,6 +34,25 @@
       <Setter Property="Margin" Value="3,0,7,0"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <!-- 2.6.0: a selected text cell is filled (behind its text), also while it has the focus or the mouse. -->
+    <Style Selector="TextBox.cell.selected /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F4D98C"/>
+    </Style>
+    <Style Selector="TextBox.cell.selected:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F4D98C"/>
+    </Style>
+    <Style Selector="TextBox.cell.selected:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F1D27C"/>
+    </Style>
+    <Style Selector="TextBox.cell.match /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#FFE98A"/>
+    </Style>
+    <Style Selector="TextBox.cell.match:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#FFE27A"/>
+    </Style>
+    <Style Selector="TextBox.cell:focus /template/ Border#PART_BorderElement">
+      <Setter Property="BorderBrush" Value="#C08A1E"/>
+    </Style>
     <Style Selector="Menu.note">
       <Setter Property="Background" Value="#F6E7A4"/>
       <Setter Property="Foreground" Value="#3B3222"/>
@@ -79,6 +98,31 @@
         <Button x:Name="WallpaperButton" Classes="tool" Content="Wallpaper"/>
       </WrapPanel>
     </ScrollViewer>
+
+    <!-- 2.6.0: find (Ctrl+F), shown while it is used. -->
+    <Border x:Name="FindBar" DockPanel.Dock="Top" IsVisible="False" Margin="0,0,0,4" Padding="8,3"
+            Background="#FFF8E0" BorderBrush="#E4D08A" BorderThickness="1" CornerRadius="6">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock x:Name="FindLabel" VerticalAlignment="Center" FontSize="12" Foreground="#3B3222"/>
+        <TextBox x:Name="FindBox" Width="260" FontSize="13" MinHeight="28" Padding="6,3" VerticalContentAlignment="Center"/>
+        <TextBlock x:Name="FindCount" VerticalAlignment="Center" FontSize="12" Foreground="#6B5E48" MinWidth="64"/>
+        <Button x:Name="FindPrevButton" Classes="tool" Content="▲"/>
+        <Button x:Name="FindNextButton" Classes="tool" Content="▼"/>
+        <Button x:Name="FindCloseButton" Classes="tool" Content="✕"/>
+      </StackPanel>
+    </Border>
+
+    <!-- 2.6.0: formula bar: the selected cell's address and its whole text (edit here or in the cell; no calculation). -->
+    <Grid x:Name="FormulaBar" DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,*" Margin="0,0,0,4">
+      <Border Grid.Column="0" MinWidth="74" Padding="8,0" Background="#FFFDF6"
+              BorderBrush="#E4D08A" BorderThickness="1" CornerRadius="4">
+        <TextBlock x:Name="NameBox" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="12" Foreground="#3B3222"/>
+      </Border>
+      <TextBlock Grid.Column="1" Text="fx" FontStyle="Italic" FontSize="13" Foreground="#8A7A55"
+                 VerticalAlignment="Center" Margin="8,0"/>
+      <TextBox Grid.Column="2" x:Name="FormulaBox" MinHeight="28" MaxHeight="84" FontSize="13" Padding="6,3"
+               TextWrapping="Wrap" AcceptsReturn="False" VerticalContentAlignment="Center"/>
+    </Grid>
 
     <!-- Settings that live in View → System only. These check boxes keep their state; the menu items toggle them. -->
     <StackPanel x:Name="MenuOnlyToggles" DockPanel.Dock="Top" IsVisible="False">

@@ -76,6 +76,7 @@ public partial class MainWindow : Window
         // UI language + zoom live in settings.json (never note.json). Missing/bad → English, 100 %.
         _settings = AppSettings.Load(_path);
         Localizer.SetLanguage(_settings.Language);
+        ApplySoundSettings(); // 2.6.0: reminder sound and volume
         // Before anything can write a new side copy: keep an earlier run's note.unsaved.json under its own name.
         _archivedUnsaved = NoteStore.ArchiveUnsaved(_path);
         var loaded = NoteStore.Load(_path);
@@ -144,6 +145,9 @@ public partial class MainWindow : Window
         ToolTip.SetTip(StatusText, Localizer.T("ui.saved_path", _path));
 
         InitColors();
+        InitExcelSelection(); // 2.6.0
+        InitFormulaBar();
+        InitFind();
         ApplyZoom();
         InitMenuBar();
         ApplyLanguageTexts();
@@ -220,6 +224,12 @@ public partial class MainWindow : Window
         else if (_archivedUnsaved is { } kept)
             ShowNotice(JoinNotice(ModeNotice.Text, UnsavedKeptNotice(kept)));
 
+        // 2.6.0: like Excel, the editor opens with the first cell selected (not the formula bar).
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_view == ViewMode.Edit && IsVisible && !_session.HasSelection && _visibleRows.Count > 0)
+                FocusCell(_visibleRows[0], FirstVisibleColumn());
+        }, DispatcherPriority.Background);
         _reminders.Start();
         StartColourClock();
         // Quick first check shortly after open so test due-in-1-min fires soon
@@ -442,14 +452,18 @@ public partial class MainWindow : Window
         if (_view == ViewMode.Background) return; // v2.3.1: _busy now only blocks the F5–F8 structure keys
         if (e.Key is Key.Home or Key.End && e.KeyModifiers.HasFlag(KeyModifiers.Control)) { OnGridKeyTunnel(sender, e); return; }
         if (HandleZoomKey(e)) return;
+        if (HandleFindKey(e)) return; // 2.6.0: Ctrl+F, F3, Esc closes the find bar
         if (HandleRowMoveKey(e)) return; // v2.4.0: Alt+Shift+↑/↓ moves the selected row
         if (e.Key == Key.C && e.KeyModifiers.HasFlag(KeyModifiers.Control) && !e.KeyModifiers.HasFlag(KeyModifiers.Alt))
         {
             // v2.3.1 fix: text selected inside a cell → normal TextBox copy of that text (was: always the whole cell range).
             if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is TextBox { } tb && tb.SelectionStart != tb.SelectionEnd)
                 return;
+            // 2.6.0: the formula bar / find box copy their own text; elsewhere the selected cells go (as Excel takes them).
+            if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is TextBox { IsReadOnly: false } other && !IsDataCell(other))
+                return;
             e.Handled = true;
-            _ = CopyAsync(false, false);
+            _ = CopySelectionAsync();
             return;
         }
         if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Z && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
@@ -473,6 +487,7 @@ public partial class MainWindow : Window
             return;
         }
         if (HandleColumnMoveKeys(e)) return; // v2.4.0: Alt+Shift+←/→
+        if (HandleSelectionKey(e)) { e.Handled = true; return; } // 2.6.0: arrows, Tab, F2, Delete, Ctrl+A/X/V on cells
         if (_busy && e.Key is Key.F5 or Key.F6 or Key.F7 or Key.F8) { e.Handled = true; return; }
         switch (e.Key)
         {
@@ -895,6 +910,8 @@ public partial class MainWindow : Window
     {
         string T(string k) => Localizer.T(k);
         Title = T("app.title");
+        ApplyFormulaBarTexts(); // 2.6.0
+        ApplyFindTexts();
         AddRowButton.Content = T("toolbar.add_row"); ToolTip.SetTip(AddRowButton, T("tip.add_row"));
         DeleteRowButton.Content = T("toolbar.delete_row"); ToolTip.SetTip(DeleteRowButton, T("tip.delete_row"));
         AddColumnButton.Content = T("toolbar.add_column"); ToolTip.SetTip(AddColumnButton, T("tip.add_column"));
@@ -1061,11 +1078,14 @@ public partial class MainWindow : Window
         ApplyColumnDefinitions(TableGrid);
         TableGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
 
-        TableGrid.Children.Add(new Border
+        var corner = new Border
         {
             Background = RowNumBg, BorderBrush = GridLine, BorderThickness = new Thickness(1),
-            MinHeight = 32
-        });
+            MinHeight = 32, Cursor = new Cursor(StandardCursorType.Hand)
+        };
+        ToolTip.SetTip(corner, Localizer.T("cell.select_all_tip"));
+        corner.PointerPressed += (_, e) => { e.Handled = true; SelectAll(); }; // 2.6.0: like the corner in Excel
+        TableGrid.Children.Add(corner);
         for (var k = 0; k < _session.Doc.Columns.Count; k++)
         {
             var control = MakeHeader(k);
@@ -1093,6 +1113,7 @@ public partial class MainWindow : Window
         // New list instance = re-realize only the rows currently on screen (cheap), scroll offset is kept.
         RowsList.ItemsSource = visibleRows.ToList();
 
+        if (FindOpen) RefreshFindMatches(); // 2.6.0: marks follow the changed table (the selection stays)
         Highlight();
         FitColumns();
     }
@@ -1190,6 +1211,7 @@ public partial class MainWindow : Window
             grid.Children.Add(cell);
         }
         ApplySavedRowHeight(grid, rowIndex); // v2.6: a set height clips; auto rows are unchanged
+        ApplyOverlays(grid, rowIndex); // 2.6.0: selection and find marks
     }
 
     private (IBrush label, IBrush cell) RowBackground(int row) => WithRowStyle(row, StatusRowBackground(row)); // v2.4.0
@@ -1263,6 +1285,7 @@ public partial class MainWindow : Window
                       MakeTextBox(_session.Doc.GetCell(row, column), false, row, column, bg);
 
         PaintDataCell(control, row, column);
+        if (control is not TextBox && control.Tag as string != "days") AttachTypedCell(control, row, column); // 2.6.0
 
         var statusCol = _session.Doc.StatusColumnIndex();
         if (statusCol >= 0 && TaskStatuses.IsDone(_session.Doc.GetCell(row, statusCol)))
@@ -1611,6 +1634,7 @@ public partial class MainWindow : Window
         box.GotFocus += (_, e) =>
         {
             if (_view == ViewMode.Background) return;
+            if (!header && row >= 0) { OnCellFocused(row, column, e.KeyModifiers); return; } // 2.6.0: Excel-style cells
             if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift)) _session.ChooseCell(row, column);
             Highlight();
             UpdateStatus();
@@ -1642,6 +1666,7 @@ public partial class MainWindow : Window
             if (!ok) StatusText.Text = TableLimits.CellTooLongMessage;
             else
             {
+                if (!header) SyncFormulaBarText(row, column, value); // 2.6.0: the formula bar follows the typing
                 ScheduleSave();
                 if (!header && column == _session.Doc.DueColumnIndex())
                     _reminders.CheckNow();
@@ -1692,6 +1717,7 @@ public partial class MainWindow : Window
             {
                 if (header) return;
                 e.Handled = true;
+                if (box.IsReadOnly) EnterEditMode(box, null); // 2.6.0: Alt+Enter on a selected cell edits it with a new line
                 var t = box.Text ?? "";
                 var a = Math.Clamp(Math.Min(box.SelectionStart, box.SelectionEnd), 0, t.Length);
                 var b = Math.Clamp(Math.Max(box.SelectionStart, box.SelectionEnd), a, t.Length);
@@ -1706,11 +1732,12 @@ public partial class MainWindow : Window
             if (header) { if (!up && _visibleRows.Count > 0) FocusCell(_visibleRows[0], column); }
             else MoveVertical(row, column, up);
         }, RoutingStrategies.Tunnel);
+        if (!header && row >= 0) AttachExcelCell(box, row, column); // 2.6.0: click selects, typing replaces, F2 edits
         return box;
     }
 
     /// <summary>value is the clipboard text only (never box.Text), so the box text is untouched on failure.</summary>
-    private void ApplyPastedGrid(TextBox box, bool header, int row, int column, string value)
+    private void ApplyPastedGrid(TextBox? box, bool header, int row, int column, string value)
     {
         if (value.Length > TableLimits.MaxPasteChars)
         {
@@ -1799,9 +1826,8 @@ public partial class MainWindow : Window
 
     // v2.3.1: Highlight() was empty, so nothing showed which row Ctrl+C / − row / + row would use.
     // Now the row-number label of the active row is drawn in ActiveBg (cells keep their due/status colours).
-    private int _highlightedRow = -1;
     private IBrush LabelBrushFor(int row, IBrush normal) =>
-        _session.HasSelection && row == _session.ActiveRow && _view == ViewMode.Edit ? ActiveBg : normal;
+        _view == ViewMode.Edit && IsRowSelected(row) ? ActiveBg : normal; // 2.6.0: every row of the selected block
 
     /// <summary>Enter / Shift+Enter: next / previous VISIBLE row (hidden done rows are skipped).</summary>
     private void MoveVertical(int row, int column, bool up)
@@ -1824,16 +1850,7 @@ public partial class MainWindow : Window
         }, RoutingStrategies.Tunnel);
     }
 
-    private void Highlight()
-    {
-        var active = _session.HasSelection && _view == ViewMode.Edit ? _session.ActiveRow : -1;
-        if (active == _highlightedRow) return;
-        foreach (var c in RowsList.GetRealizedContainers())
-            if (c is ContentPresenter { Child: Grid { Tag: int r } g } && (r == active || r == _highlightedRow) &&
-                g.Children.FirstOrDefault() is Border b && r < _session.Doc.Rows.Count)
-                b.Background = LabelBrushFor(r, RowNumberBackground(r));
-        _highlightedRow = active;
-    }
+    private void Highlight() => RefreshSelectionVisuals(); // 2.6.0: the selected block, not only the active row
 
     private void FocusActiveCell()
     {
@@ -1842,12 +1859,18 @@ public partial class MainWindow : Window
         FocusCell(r, c);
     }
 
-    private void FocusCell(int row, int column)
+    /// <param name="keepRange">2.6.0: focus the active cell of a selected block without shrinking the block.</param>
+    private void FocusCell(int row, int column, bool keepRange = false)
     {
         row = Math.Clamp(row, 0, Math.Max(0, _session.Doc.Rows.Count - 1));
         column = Math.Clamp(column, 0, Math.Max(0, _session.Doc.Columns.Count - 1));
         column = NearestVisibleGroupColumn(column);
-        _session.ChooseCell(row, column);
+        if (keepRange)
+        {
+            _keepRange = true;
+            Dispatcher.UIThread.Post(() => _keepRange = false, DispatcherPriority.Background); // no focus change came
+        }
+        else _session.ChooseCell(row, column);
         var vi = _visibleRows.IndexOf(row);
         if (vi < 0) return;
         RowsList.ScrollIntoView(vi);
@@ -1993,6 +2016,8 @@ public partial class MainWindow : Window
         var edit = _view == ViewMode.Edit;
         EditTools.IsVisible = edit;
         ToolScroll.IsVisible = edit;
+        FormulaBar.IsVisible = edit; // 2.6.0
+        if (!edit) CloseFind();
         IsHitTestVisible = edit;
         CanResize = edit && !_session.Doc.Window.Locked;
         Rebuild();

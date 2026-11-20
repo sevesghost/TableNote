@@ -10,6 +10,7 @@
   <Application.Styles>
     <FluentTheme />
     <Style Selector="Window">
+      <Setter Property="Icon" Value="/Assets/Brand/TableNote.ico" />
       <Setter Property="FontFamily" Value="avares://TableNote/Assets/Fonts#Noto Sans Thai" />
       <Setter Property="FontSize" Value="14" />
     </Style>

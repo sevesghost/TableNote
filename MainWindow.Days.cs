@@ -73,13 +73,7 @@ public partial class MainWindow
             Highlight();
             UpdateStatus();
         }, RoutingStrategies.Tunnel);
-        cell.GotFocus += (_, e) =>
-        {
-            if (_view != ViewMode.Edit || e.KeyModifiers.HasFlag(KeyModifiers.Shift)) return;
-            _session.ChooseCell(row, column);
-            Highlight();
-            UpdateStatus();
-        };
+        cell.GotFocus += (_, e) => { if (_view == ViewMode.Edit) OnCellFocused(row, column, e.KeyModifiers); };
         var rowId = doc.RowIdAt(row);
         var columnId = doc.ColumnIdAt(column);
         cell.Click += (_, _) =>

@@ -14,8 +14,13 @@ public static class AppInfo
 Shortcuts
   F5 / F6        add / delete row        F7 / F8   add / delete column
   Alt+Shift+←/→  move column left/right  Alt+Shift+↑/↓  move row up/down
-  Enter          next cell down          Shift+Enter  cell above
-  Ctrl+C / Ctrl+V  copy cells / paste from Excel (plain text, formulas are not calculated)
+  Click / drag   select a cell / a block  Shift+click, Shift+arrows  grow the block
+  Typing         replaces the selected cell; double-click or F2 edits its text, Esc puts it back
+  Arrows / Tab   next cell                Enter / Shift+Enter  keep the edit, cell below / above
+  Delete         clear the selected cells Ctrl+A or the top-left corner  select all
+  Ctrl+C / Ctrl+X / Ctrl+V  copy / cut / paste cells (to and from Excel; one value fills every selected cell)
+  Ctrl+F         find in the table (Enter / Shift+Enter or F3 / Shift+F3 next / previous, Esc closes)
+  Formula bar    above the table: the cell's address and whole text (no calculation); Enter keeps, Esc puts back
   Ctrl+Z         undo (up to 100 steps)  Ctrl+Y / Ctrl+Shift+Z  redo
   Ctrl+Home      first cell              Ctrl+End  last row
   Ctrl + / Ctrl − / Ctrl 0   larger / smaller / 100% (80–200%); Ctrl+mouse wheel too; A− 100% A+ buttons
@@ -61,6 +66,8 @@ Reminders
   ⏰ advance reminders: 15 min / 1 hour / 1 day or custom, up to 5 per task. The on-time reminder always fires.
   Reminders gather in ONE window: Snooze 10 min / Done / Acknowledge; Close = acknowledge all; X = snooze.
   Reminders work while the program runs (closing the window keeps it in the tray; quit from the tray menu).
+  View → System → Reminder sound…: mute, the sound (Windows' sounds or your own .wav), the volume (50 % unless
+  set; above 50 % it asks first) and a test button.
 
 Export (Export… button or tray menu)
   .xlsx / .csv (UTF-8 with BOM) / .txt (tab-separated; tabs and line breaks inside a cell become a space).
@@ -89,10 +96,16 @@ Files
   F8             ลบคอลัมน์
   Alt+Shift+←/→  ย้ายคอลัมน์ซ้าย/ขวา
   Alt+Shift+↑/↓  ย้ายแถวขึ้น/ลง (ข้ามแถวที่ซ่อนเมื่อติ๊กซ่อนงานเสร็จ)
-  Enter          ไปช่องถัดลงไป
-  Shift+Enter    ไปช่องข้างบน
-  Ctrl+C         คัดลอกช่องที่เลือก (ไม่มีหัวคอลัมน์)
-  Ctrl+V         วางจาก Excel (ข้อความล้วน ไม่คำนวณสูตร)
+  คลิก / ลาก     เลือกช่อง / คลุมหลายช่อง   Shift+คลิก, Shift+ลูกศร  ขยายการคลุม
+  พิมพ์           เขียนทับช่องที่เลือก   ดับเบิลคลิก หรือ F2  แก้ข้อความเดิม   Esc  คืนค่าเดิม
+  ลูกศร / Tab    ไปช่องถัดไป
+  Enter          บันทึกแล้วไปช่องถัดลงไป   Shift+Enter  ไปช่องข้างบน
+  Delete         ล้างข้อมูลในช่องที่เลือก   Ctrl+A หรือคลิกมุมซ้ายบน  เลือกทั้งหมด
+  Ctrl+C         คัดลอกช่องที่เลือก (ไม่มีหัวคอลัมน์ วางใน Excel ได้)
+  Ctrl+X         ตัดช่องที่เลือก
+  Ctrl+V         วาง (ชุดข้อมูลจาก Excel เริ่มที่ช่องที่เลือก ค่าเดียวเติมทุกช่องที่เลือก)
+  Ctrl+F         ค้นหาในตาราง (Enter / Shift+Enter หรือ F3 / Shift+F3 ถัดไป / ก่อนหน้า Esc ปิด)
+  แถบสูตร        เหนือตาราง แสดงที่อยู่ช่องและข้อความทั้งหมด (ไม่คำนวณ) Enter = บันทึก Esc = คืนค่าเดิม
   Ctrl+Z         ย้อนการแก้ตาราง (สูงสุด 100 ขั้น)
                  ระหว่างพิมพ์ในช่อง Ctrl+Z ย้อนตัวอักษรในช่องก่อน
   Ctrl+Y / Ctrl+Shift+Z  ทำซ้ำ
@@ -128,6 +141,8 @@ Files
     ปิด             รับทราบทุกงานที่ยังค้างในหน้าต่าง (แก้กำหนดส่งแล้วจะเตือนใหม่ได้)
     X (ปิดหน้าต่าง) เลื่อน 10 นาที สำหรับงานที่ยังค้าง
   มุมมอง → ตั้งค่าระบบ → ""ปิดเสียงเตือน"" ถ้าไม่ต้องการเสียง (ป๊อปอัปยังขึ้น)
+  มุมมอง → ตั้งค่าระบบ → ""เสียงแจ้งเตือน…"" เลือกเสียง (ของ Windows หรือไฟล์ .wav ของเอง) ความดัง
+    (เริ่มต้น 50% ถ้าเกิน 50% จะถามยืนยัน) ปิดเสียง และปุ่มทดลองฟัง
   สำคัญ: การเตือนทำงานเมื่อโปรแกรมทำงานอยู่
     ปิดหน้าต่าง (X) = ย่อไปอยู่ที่ถาดไอคอน การเตือนยังทำงาน  ออกจริง: คลิกขวาไอคอนถาด → ออก
     ""เปิดเมื่อเข้าสู่ระบบ"" จะเริ่มแบบซ่อนอยู่ในถาด (--startup)
@@ -194,6 +209,9 @@ Files
 20 Nov 2026 — 2.6.0
 New: Wallpaper (toolbar) puts the table on your desktop wallpaper, full screen, over your own picture and where the window was. The tray icon or Ctrl+Shift+E brings the editor back, and your own wallpaper with it. This replaces Pin to desktop.
 Changed: one toolbar row with the everyday buttons. Copy, image export, print, delete column, language and the system settings are in the menu bar. The alert panel shows only when there are alert boxes (Table → Add alert box). Zoom scales the table, not the menu and toolbar.
+New: Excel-style cells: click selects (gold), drag selects a block, typing replaces, double-click or F2 edits, Delete clears, Ctrl+C / X / V copy, cut and paste blocks to and from Excel, Ctrl+A selects everything.
+New: formula bar above the table (the cell's address and whole text, no calculation); Ctrl+F finds text in the table.
+New: View → System → Reminder sound…: pick the sound, set the volume (asks above 50 %), mute, test. The Table Note logo is the program's icon.
 New: a loading screen with the Table Note logo while TableNote opens. Starting TableNote while a copy from another folder is running (an older version in the tray) asks whether to close it and start this one.
 New: days counter column (Table → Add days counter column). Each row shows how many days since its start date; click the cell for status updates, edits and progress notes with their dates and times.
 Fixed: Thai text, digits, Latin letters and symbols now use one font (Noto Sans Thai with Noto Sans merged in); before, ""17/11/2569"" or ""A+"" switched to another font in the middle of a line.
@@ -253,6 +271,9 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 20 พ.ย. 2026 — 2.6.0
 ใหม่: ปุ่ม วอลเปเปอร์ ตั้งตารางเป็นวอลเปเปอร์เต็มจอ ทับภาพเดิมของคุณตรงตำแหน่งหน้าต่าง คลิกไอคอนที่ถาดหรือกด Ctrl+Shift+E เพื่อกลับมาแก้ไข แล้ววอลเปเปอร์เดิมจะกลับมา ใช้แทน วางแนบพื้นหลัง
 เปลี่ยน: แถบเครื่องมือเหลือแถวเดียวเฉพาะปุ่มที่ใช้บ่อย คัดลอก ส่งออกภาพ พิมพ์ ลบคอลัมน์ ภาษา และตั้งค่าระบบ อยู่ในแถบเมนู ช่องกล่องแจ้งเตือนขึ้นเมื่อมีกล่องเท่านั้น (ตาราง → เพิ่มกล่องแจ้งเตือน) ปุ่มขยาย/ย่อขยายเฉพาะตาราง ไม่ขยายเมนูและแถบเครื่องมือ
+ใหม่: ช่องแบบ Excel: คลิก = เลือก (สีทอง) ลากคลุมหลายช่อง พิมพ์ = เขียนทับ ดับเบิลคลิก/F2 = แก้ Delete = ล้าง Ctrl+C / X / V คัดลอก ตัด วาง ไป-มากับ Excel Ctrl+A = เลือกทั้งหมด
+ใหม่: แถบสูตรเหนือตาราง (ที่อยู่ช่องและข้อความทั้งหมด ไม่คำนวณ) และ Ctrl+F ค้นหาในตาราง
+ใหม่: มุมมอง → ตั้งค่าระบบ → เสียงแจ้งเตือน… เลือกเสียง ตั้งความดัง (เกิน 50% ถามก่อน) ปิดเสียง ทดลองฟัง และโลโก้ Table Note เป็นไอคอนโปรแกรม
 ใหม่: หน้าโหลดมีโลโก้ Table Note ตอนเปิดโปรแกรม ถ้าเปิดตารางโน้ตขณะที่อีกตัวจากโฟลเดอร์อื่นเปิดอยู่ (เช่น รุ่นเก่าที่ถาด) จะถามว่าจะปิดตัวนั้นแล้วเปิดตัวนี้แทนไหม
 ใหม่: คอลัมน์นับวัน (ตาราง → เพิ่มคอลัมน์นับวัน) แต่ละแถวแสดงว่ารับงานมากี่วันแล้ว คลิกที่ช่องเพื่อดูการอัปเดตสถานะ การแก้ไข และบันทึกความคืบหน้า พร้อมวันที่และเวลา
 แก้: ตัวอักษรไทย ตัวเลข อังกฤษ และสัญลักษณ์ ใช้ฟอนต์เดียวกันแล้ว (Noto Sans Thai รวมกับ Noto Sans) ก่อนหน้านี้ ""17/11/2569"" หรือ ""A+"" สลับไปใช้อีกฟอนต์กลางบรรทัด

@@ -13,6 +13,10 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
 ## Features
 
 - **Wallpaper mode (2.6.0, Windows):** **Wallpaper** on the toolbar draws the table over your own wallpaper, full screen, where the window was. The editor goes to the tray. Click the tray icon or press Ctrl+Shift+E to edit again, and your own wallpaper comes back. See [Wallpaper mode](#wallpaper-mode).
+- **Excel-style cells (2.6.0):** a click selects a cell (filled gold), dragging or Shift selects a block, typing replaces the cell, double-click or F2 edits it, Delete clears, Ctrl+C / Ctrl+X / Ctrl+V copy, cut and paste blocks to and from Excel, Ctrl+A or the top-left corner selects everything, a click on an empty spot clears the selection. No fill handle.
+- **Formula bar (2.6.0):** above the table: the selected cell's address (B3) and its whole text, to read or edit long text (no calculation).
+- **Find (2.6.0):** Ctrl+F (or **Table → Find…**) finds text in the table: every match is marked, Enter / Shift+Enter go to the next / previous one.
+- **Reminder sound (2.6.0):** **View → System → Reminder sound…**: mute, pick a Windows sound or your own .wav, set the volume (above 50 % it asks first), test it.
 - **Days counter (2.6.0):** **Table → Add days counter column** shows in each row how many days the work has been open ("150 days"); a row set to Done stops counting ("42 days ✓"). Click the cell to see the start date, the status and since when, the last update and the row's history with dates and times (status changes, edits, and progress notes you type there). See [Days counter](#days-counter).
 - **One toolbar row (2.6.0):** + Row, − Row, + Column, Colors, Hide done, Sort by due, A− / 100% / A+, Export and Wallpaper. Copy, image export, print, delete column, language, help and the system settings (always on top, lock position, launch at sign-in, mute) are in the menu bar.
 - Editable table: add or remove rows and columns, rename column headers, paste from and copy to Excel.
@@ -98,10 +102,18 @@ The in-app Help (**Help → Help** in the menu bar, or Help / วิธีใช
 | F8 | Delete column |
 | Alt+Shift+← / → | Move the active column left / right |
 | Alt+Shift+↑ / ↓ | Move the active row up / down (skips hidden rows when Hide done is on) |
-| Enter | Move to the cell below |
+| Click / drag | Select a cell / a block of cells (filled gold) |
+| Typing on a selected cell | Replaces its text (like Excel) |
+| Double-click / F2 | Edit the text that is in the cell (caret at the end); Esc puts it back |
+| ← → ↑ ↓ / Tab / Shift+Tab | Move to the next cell; with Shift, the arrows grow the block |
+| Enter | Keep the edit and move to the cell below |
 | Shift+Enter | Move to the cell above |
-| Ctrl+C | Copy selected cells (without headers) |
-| Ctrl+V | Paste from Excel (plain text, formulas not evaluated) |
+| Delete | Clear the selected cells (Ctrl+Z brings them back) |
+| Ctrl+A / the top-left corner | Select every cell |
+| Ctrl+C | Copy the selected cells (tab-separated, pastes into Excel as it looks) |
+| Ctrl+X | Cut the selected cells |
+| Ctrl+V | Paste: a block from Excel starts at the selected cell; one value fills every selected cell |
+| Ctrl+F / F3 / Shift+F3 | Find in the table / next / previous (Esc closes) |
 | Ctrl+Z | Undo (up to 100 steps) |
 | Ctrl+Y / Ctrl+Shift+Z | Redo |
 | Ctrl+Shift+E | Back to the editor from wallpaper mode (Windows) |

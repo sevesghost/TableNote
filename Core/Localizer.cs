@@ -158,6 +158,11 @@ public sealed class AppSettings
     public int Scale { get; set; } = 100;
     /// <summary>The "table is on the wallpaper" tip was shown once (written only when true).</summary>
     public bool WallpaperTipShown { get; set; }
+    /// <summary>2.6.0: reminder sound — "" = the Windows warning sound, a file name in Windows\Media, or a .wav path
+    /// (<see cref="ReminderSounds"/>). Written only when not the default.</summary>
+    public string ReminderSound { get; set; } = ReminderSounds.Default;
+    /// <summary>2.6.0: reminder volume 0–100 (50 unless set; above 50 the sound dialog asks first).</summary>
+    public int ReminderVolume { get; set; } = ReminderSounds.DefaultVolume;
     public const int MinScale = 80, MaxScale = 200, ScaleStep = 10;
     public static int ClampScale(int s) => s < MinScale || s > MaxScale ? 100 : (int)Math.Round(s / (double)ScaleStep) * ScaleStep;
 
@@ -185,6 +190,10 @@ public sealed class AppSettings
                     s.Scale = ClampScale(sc); // out of range / not a number → 100 (Z7)
                 else if (prop.NameEquals("wallpaperTipShown") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.True)
                     s.WallpaperTipShown = true;
+                else if (prop.NameEquals("reminderSound") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                    s.ReminderSound = (prop.Value.GetString() ?? "").Trim();
+                else if (prop.NameEquals("reminderVolume") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number && prop.Value.TryGetInt32(out var vol))
+                    s.ReminderVolume = ReminderSounds.ClampVolume(vol);
             }
         }
         catch (Exception ex)
@@ -205,7 +214,12 @@ public sealed class AppSettings
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             var tmp = p + ".tmp";
             var tip = WallpaperTipShown ? ",\n  \"wallpaperTipShown\": true" : "";
-            File.WriteAllText(tmp, $"{{\n  \"language\": \"{Language}\",\n  \"uiScale\": {Scale}{tip}\n}}\n");
+            // 2.6.0: the sound only when chosen (a path is JSON-escaped), the volume only when not the default.
+            var sound = ReminderSound.Length > 0
+                ? ",\n  \"reminderSound\": \"" + System.Text.Json.JsonEncodedText.Encode(ReminderSound, System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping) + "\""
+                : "";
+            var volume = ReminderVolume != ReminderSounds.DefaultVolume ? $",\n  \"reminderVolume\": {ReminderSounds.ClampVolume(ReminderVolume)}" : "";
+            File.WriteAllText(tmp, $"{{\n  \"language\": \"{Language}\",\n  \"uiScale\": {Scale}{tip}{sound}{volume}\n}}\n");
             File.Move(tmp, p, overwrite: true);
         }
         catch (Exception ex) { AppLog.Write("settings", "save failed: " + ex.Message); }
