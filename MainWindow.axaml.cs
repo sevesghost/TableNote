@@ -50,8 +50,6 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _saveTimer;
     private readonly IStartupRegistration _startup;
     private string? _loadWarning;
-    private readonly IDesktopShell _shell = DesktopShell.Create();
-    private readonly ReattachScheduler _reattach = new();
     private readonly ReminderService _reminders;
     private readonly UndoStack _undo = new();
     private readonly List<Control> _headerBoxes = [];
@@ -63,8 +61,7 @@ public partial class MainWindow : Window
     private string? _preserveBaseline; // v2.4.1: document as loaded, to know whether the session has edits
     private string? _saveFailureMessage;
     private bool _applyingPlacement;
-    private bool _claimsDesktop;
-    private DispatcherTimer? _retryTimer;
+    /// <summary>Edit = the editor window; Background = wallpaper mode (the table is the desktop wallpaper, the editor is hidden).</summary>
     private ViewMode _view;
     private bool _trayReady;
     private bool _hotkeyReady;
@@ -76,7 +73,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         _path = NoteStore.DefaultPath();
         UiWatchdog.Start(); // logs to tablenote.log when the UI thread stalls > 2 s
-        _ = _shell.PrepareAsync(); // Windows: Progman 0x052C + window scan on the thread pool, ready before background mode
         // UI language + zoom live in settings.json (never note.json). Missing/bad → English, 100 %.
         _settings = AppSettings.Load(_path);
         Localizer.SetLanguage(_settings.Language);
@@ -121,19 +117,14 @@ public partial class MainWindow : Window
         _reminders = new ReminderService(() => _session.Doc, OnDueBatch);
         NotificationSound.Muted = _session.Doc.MuteSound;
 
-        HelpButton.Click += (_, _) => ShowHelp();
-        LogButton.Click += (_, _) => ShowLog();
-        BackgroundButton.Click += (_, _) => OnBackgroundClick();
-        CopyAllButton.Click += async (_, _) => await CopyAsync(true, false);
-        CopyHeadersButton.Click += async (_, _) => await CopyAsync(true, true);
+        // The toolbar keeps the everyday commands; copy, image export, print, delete column, language, help,
+        // and the system settings are in the menu bar (MainWindow.MenuBar.cs).
         AddRowButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_row"), AddRowAsync));
         DeleteRowButton.Click += async (_, _) => await RunStructureAsync(DeleteRowAsync);
         InitColumnToggle();
-        DeleteColumnButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("delete.undo_column"), DeleteColumnAsync));
         SortDueButton.Click += (_, _) => SortByDue();
         ExportButton.Click += async (_, _) => await ExportAsync();
-        InitImageExport();
-        LanguageButton.Click += (_, _) => SwitchLanguage(Localizer.Next(Localizer.Current));
+        InitWallpaper();
         ZoomOutButton.Click += (_, _) => SetZoom(_settings.Scale - AppSettings.ScaleStep);
         ZoomInButton.Click += (_, _) => SetZoom(_settings.Scale + AppSettings.ScaleStep);
         ZoomResetButton.Click += (_, _) => SetZoom(100);
@@ -168,41 +159,50 @@ public partial class MainWindow : Window
                 Path.Combine(Path.GetDirectoryName(_path) ?? ".", "tablenote.log")));
     }
 
+    private bool _startedUp;
+
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
         ClampIfPlaced();
         _tracking = true;
         FitColumns();
+        // Avalonia raises Opened on EVERY Show(), also when the editor comes back from the tray. Up to 2.5.1 the
+        // start-up below ran again then: after a sign-in start (--startup) it hid the editor again at once, and each
+        // return added another window hook and Screens handler. Start-up runs once.
+        if (_startedUp) return;
+        _startedUp = true;
         if (Screens != null)
             Screens.Changed += (_, _) => OnDisplayChanged();
 
         InstallShellHook();
-        // v2.4.2: the taskbar button now follows the mode (EnterEdit / EnterBackground set it).
+        // v2.4.2: the taskbar button now follows the mode (EnterEdit / EnterWallpaperView set it).
         _trayReady = TryCreateTray();
         _hotkeyReady = TryRegisterHotkey();
 
         var routes = CurrentRoutes();
         var notice = RecoveryGate.StartupNotice(_session.Doc.View, Program.ForceEdit, routes);
         var mode = RecoveryGate.ResolveStartup(_session.Doc.View, Program.ForceEdit, routes);
-        if (mode == ViewMode.Background && SavedPositionNeedsCenter())
-            mode = ViewMode.Edit;
+        if (!_hotkeyReady && OperatingSystem.IsWindows()) // the wallpaper tip leaves the shortcut out then
+            AppLog.Write("hotkey", _hotkeyCollided ? "Ctrl+Shift+E is used by another program" : "Ctrl+Shift+E could not be registered");
 
         if (mode == ViewMode.Background)
         {
-            if (!EnterBackground())
-                EnterEdit(Localizer.T("ui.bg_failed"));
+            // Wallpaper mode was on: draw the table again (dates may have moved on). wallpaper.json still has the
+            // user's own wallpaper, so it is not mistaken for the table picture that is up now.
+            var outcome = ApplyWallpaper(confirmed: false);
+            if (outcome.Ok) EnterWallpaperView();
+            else EnterEdit(outcome.NeedsConfirm ? Localizer.T("wallpaper.spotlight_start") : outcome.Message);
         }
         else if (Program.StartHidden && _trayReady)
         {
             // Login start: stay hidden in the tray; reminders still run.
             // The editor gets its taskbar button when it is shown (tray / hotkey / second start → EnterEdit).
+            RestorePendingWallpaper(); // a table picture left by a crash: put the user's wallpaper back
             Dispatcher.UIThread.Post(Hide);
         }
         else EnterEdit(notice);
 
-        if (!_hotkeyReady)
-            ShowNotice(JoinNotice(ModeNotice.Text, RecoveryHotkey.FailureNotice(false, _hotkeyCollided)));
         // After the mode is set: entering the editor's "normal window" layer clears the banner.
         if (_placeholder)
         {
@@ -227,6 +227,9 @@ public partial class MainWindow : Window
     private void QuitApp()
     {
         _quitting = true;
+        // Wallpaper mode stays on in note.json (the next start draws the table again), but the user's own wallpaper
+        // goes back now, so an exited TableNote never leaves an out-of-date table on the desktop.
+        if (_view == ViewMode.Background) RestoreWallpaperOnExit();
         Close();
         if (!_quitting) return; // OnClosing cancelled because save failed
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d) d.Shutdown();
@@ -287,10 +290,15 @@ public partial class MainWindow : Window
         {
             e.Cancel = true;
             _quitting = false;
-            if (!IsVisible) Show();
+            if (_view == ViewMode.Background) EnterEdit(null); // the table picture goes, the editor opens
+            else if (!IsVisible) Show();
             ShowSaveFailedOnQuit();
             return;
         }
+        // Signing out / shutting down in wallpaper mode: with "launch at sign-in" TableNote redraws the table at the
+        // next sign-in, so the picture stays; otherwise the user's wallpaper goes back now.
+        if (systemClose && _view == ViewMode.Background && !_session.Doc.LaunchAtLogin) RestoreWallpaperOnExit();
+        _wallpaperTimer?.Stop();
         WindowsHotkey.Unregister(WindowHandle());
         _reminders.Dispose();
         _reloadTimer?.Stop();
@@ -646,8 +654,6 @@ public partial class MainWindow : Window
     {
         if (!_tracking || e.Property != ToggleButton.IsCheckedProperty) return;
         _session.Doc.Window.Layer = TopmostBox.IsChecked == true ? DesktopLayerKind.Floating : DesktopLayerKind.Desktop;
-        _reattach.Stop();
-        _retryTimer?.Stop();
         ApplyRequestedLayer();
         ScheduleSave();
     }
@@ -687,7 +693,7 @@ public partial class MainWindow : Window
     private void InstallShellHook()
     {
         if (!OperatingSystem.IsWindows()) return;
-        var taskbarCreated = WindowsDesktopShell.TaskbarCreatedMessage();
+        var taskbarCreated = WindowsTaskbar.TaskbarCreatedMessage();
         Win32Properties.AddWndProcHookCallback(this, (nint hwnd, uint msg, nint wParam, nint lParam, ref bool handled) =>
         {
             if (msg == taskbarCreated) OnExplorerRestart();
@@ -700,151 +706,31 @@ public partial class MainWindow : Window
     private void OnExplorerRestart()
     {
         AppLog.Write("desktop", $"TaskbarCreated (Explorer restarted), view = {_view}");
-        _ = _shell.PrepareAsync(); // new Progman/WorkerW: re-scan off the UI thread
         if (_view == ViewMode.Edit) ApplyTaskbarPresence(); // v2.4.2: new taskbar → re-add the editor's button
         if (_view == ViewMode.Background)
         {
+            // The wallpaper survives an Explorer restart; the tray icon is the way back, so it must come back too.
             _trayReady = TryCreateTray();
             if (RecoveryGate.AfterShellRestart(_view, CurrentRoutes()) == ViewMode.Edit)
-            {
                 EnterEdit(Localizer.T("ui.tray_lost"));
-                return;
-            }
-        }
-        if (_session.Doc.Window.Layer == DesktopLayerKind.Desktop || _view == ViewMode.Background)
-        {
-            _claimsDesktop = false;
-            _reattach.Start();
-            if (_view == ViewMode.Background)
-            {
-                // v2.3.1 fix: a failed re-entry used to leave _view = Background (read-only, hit-test off).
-                if (!EnterBackground() && _view != ViewMode.Edit)
-                    EnterEdit(RecoveryGate.PartialRollback);
-            }
-            else ApplyRequestedLayer();
         }
     }
 
     private void OnDisplayChanged()
     {
-        if (_view == ViewMode.Background && SavedPositionNeedsCenter())
-        {
-            EnterEdit(Localizer.T("ui.screens_changed"));
-            return;
-        }
         EnsureVisible();
-        // (v2.3.1) edit mode no longer attaches to the desktop, so nothing to re-attach here.
+        // Another resolution, scale or set of monitors: draw the wallpaper for the new layout.
+        if (_view == ViewMode.Background) ScheduleWallpaperRefresh();
     }
 
-    private bool SavedPositionNeedsCenter()
-    {
-        var w = _session.Doc.Window;
-        if (w.X is int x && w.Y is int y)
-        {
-            var areas = WorkAreas();
-            return WindowPlacement.Restore(x, y, w.Width, w.Height, areas, PrimaryWorkArea(areas)).Recentered;
-        }
-        return false;
-    }
-
+    /// <summary>The editor's layer: "floating" keeps it above other windows; otherwise it is a normal window.
+    /// (The desktop layer used to attach the window to the desktop; wallpaper mode replaced that in 2.6.0.)</summary>
     private void ApplyRequestedLayer()
     {
-        switch (_session.Doc.Window.Layer)
-        {
-            case DesktopLayerKind.Floating:
-                _shell.Detach(WindowHandle());
-                _claimsDesktop = false;
-                _reattach.Stop();
-                _retryTimer?.Stop();
-                Topmost = true;
-                _session.Doc.Window.Topmost = true;
-                ShowNotice(Localizer.T("ui.floating_notice"));
-                UpdateStatus();
-                return;
-            case DesktopLayerKind.Window:
-                _shell.Detach(WindowHandle());
-                _claimsDesktop = false;
-                _reattach.Stop();
-                _retryTimer?.Stop();
-                Topmost = false;
-                _session.Doc.Window.Topmost = false;
-                ShowNotice(null);
-                UpdateStatus();
-                return;
-        }
-
-        Topmost = false;
-        _session.Doc.Window.Topmost = false;
-        if (_view != ViewMode.Background)
-        {
-            // v2.3.1 fix: in EDIT mode the "desktop" layer is a normal (not topmost) window. SetParent into
-            // Explorer's WorkerW/Progman put the editor BEHIND the desktop-icon layer (SHELLDLL_DefView), which
-            // takes every click, and a WS_CHILD of another process never gets keyboard focus → cells could not be
-            // clicked or typed into ~2 s after opening (bounded retry). Desktop attach is for background mode only.
-            _shell.Detach(WindowHandle());
-            _claimsDesktop = false;
-            _reattach.Stop();
-            _retryTimer?.Stop();
-            UpdateStatus();
-            return;
-        }
-        var result = _shell.TryAttach(WindowHandle());
-        var decision = DesktopPlacement.Decide(result);
-        _claimsDesktop = decision.ClaimsDesktop;
-        Topmost = decision.Topmost;
-        ShowNotice(decision.Notice);
-        if (decision.ClaimsDesktop || !ReattachScheduler.AllowsRetry(result.Host))
-        {
-            _reattach.Stop();
-            _retryTimer?.Stop();
-        }
-        else
-        {
-            _reattach.Start();
-            if (_reattach.OnAttempt(false)) BeginBoundedRetries();
-        }
+        var floating = _session.Doc.Window.Layer == DesktopLayerKind.Floating;
+        Topmost = floating;
+        _session.Doc.Window.Topmost = floating;
         UpdateStatus();
-    }
-
-    private void BeginBoundedRetries()
-    {
-        _retryTimer ??= new DispatcherTimer { Interval = ReattachScheduler.Interval };
-        _retryTimer.Tick -= OnRetryTick;
-        _retryTimer.Tick += OnRetryTick;
-        _retryTimer.Start();
-    }
-
-    private void OnRetryTick(object? sender, EventArgs e)
-    {
-        _retryTimer?.Stop();
-        var restart = false;
-        try { restart = RetryTick(); }
-        catch (Exception ex) { AppLog.Write("desktop", "retry tick failed: " + ex.Message); }
-        if (restart) _retryTimer?.Start();
-    }
-
-    /// <returns>true = keep retrying</returns>
-    private bool RetryTick()
-    {
-        if (_session.Doc.Window.Layer != DesktopLayerKind.Desktop || _view != ViewMode.Background)
-        {
-            _reattach.Stop(); // never attach the editor itself (see ApplyRequestedLayer)
-            return false;
-        }
-        var result = _shell.TryAttach(WindowHandle());
-        var keep = _reattach.OnAttempt(result.Attached);
-        var decision = DesktopPlacement.Decide(result);
-        _claimsDesktop = decision.ClaimsDesktop;
-        Topmost = false;
-        _session.Doc.Window.Topmost = false;
-        if (_view == ViewMode.Background && !ShowDesktopBehavior.SurvivesShowDesktop(decision.ClaimsDesktop, false) && !keep)
-        {
-            EnterEdit(RecoveryGate.NotAttachedStaysEditor);
-            return false;
-        }
-        ShowNotice(decision.ClaimsDesktop ? decision.Notice : RecoveryGate.NotAttachedStaysEditor);
-        UpdateStatus();
-        return keep;
     }
 
     private void ShowNotice(string? text)
@@ -857,7 +743,7 @@ public partial class MainWindow : Window
 
     private void OnPositionChanged(object? sender, PixelPointEventArgs e)
     {
-        if (!_tracking || _applyingPlacement || _claimsDesktop) return;
+        if (!_tracking || _applyingPlacement || _view != ViewMode.Edit) return;
         if (_session.Doc.Window.Locked && _session.Doc.Window.X is int lx && _session.Doc.Window.Y is int ly)
         {
             if (e.Point.X != lx || e.Point.Y != ly)
@@ -916,6 +802,7 @@ public partial class MainWindow : Window
                 var side = NoteStore.SaveSideCopy(_path, _session.Doc);
                 _sideCopyName = Path.GetFileName(side);
                 _saveFailureMessage = null;
+                ScheduleWallpaperRefresh();
                 StatusText.Text = Localizer.T("ui.saved_side", _loadWarning ?? TableLimits.FileTooBigKeptMessage, Path.GetFileName(side));
                 return true;
             }
@@ -941,6 +828,7 @@ public partial class MainWindow : Window
                 Dispatcher.UIThread.Post(Rebuild);
             _saveFailureMessage = null;
             UpdateStatus();
+            ScheduleWallpaperRefresh(); // wallpaper mode: a reminder marked done etc. shows on the desktop too
             if (size > TableLimits.MaxSaveFileBytes * 3L / 4) // P5: warn from 75 % of the cap
                 StatusText.Text = Localizer.T("save.near_limit", (size / 1048576.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
             return true;
@@ -964,7 +852,7 @@ public partial class MainWindow : Window
     {
         if (Width > 1) _session.Doc.Window.Width = (int)Math.Round(Width);
         if (Height > 1) _session.Doc.Window.Height = (int)Math.Round(Height);
-        if (_tracking && !_claimsDesktop) // attached = parent-client coordinates; keep last real screen position
+        if (_tracking && _view == ViewMode.Edit) // hidden in wallpaper mode: keep the last position the user saw
         {
             _session.Doc.Window.X = Position.X;
             _session.Doc.Window.Y = Position.Y;
@@ -991,6 +879,7 @@ public partial class MainWindow : Window
         if (_trayReady) _trayReady = TryCreateTray();
         UpdateStatus();
         StatusText.Text = Localizer.T("status.language");
+        ScheduleWallpaperRefresh(); // status names and "+ N more rows" on the wallpaper
     }
 
     private void ApplyLanguageTexts()
@@ -1000,26 +889,15 @@ public partial class MainWindow : Window
         AddRowButton.Content = T("toolbar.add_row"); ToolTip.SetTip(AddRowButton, T("tip.add_row"));
         DeleteRowButton.Content = T("toolbar.delete_row"); ToolTip.SetTip(DeleteRowButton, T("tip.delete_row"));
         AddColumnButton.Content = T("toolbar.add_column"); ToolTip.SetTip(AddColumnButton, T("tip.add_column"));
-        DeleteColumnButton.Content = T("toolbar.delete_column"); ToolTip.SetTip(DeleteColumnButton, T("tip.delete_column"));
-        TopmostBox.Content = T("toolbar.topmost"); ToolTip.SetTip(TopmostBox, T("tip.topmost"));
-        LockBox.Content = T("toolbar.lock"); ToolTip.SetTip(LockBox, T("tip.lock"));
-        ToolTip.SetTip(HelpButton, T("tip.help"));
-        LogButton.Content = T("toolbar.log"); ToolTip.SetTip(LogButton, T("tip.log"));
-        BackgroundButton.Content = T("toolbar.background"); ToolTip.SetTip(BackgroundButton, T("tip.background"));
-        CopyAllButton.Content = T("toolbar.copy_all");
-        CopyHeadersButton.Content = T("toolbar.copy_headers");
         ExportButton.Content = T("toolbar.export"); ToolTip.SetTip(ExportButton, T("tip.export"));
-        LaunchBox.Content = T("toolbar.launch_at_login");
         HideDoneBox.Content = T("toolbar.hide_done");
-        MuteSoundBox.Content = T("toolbar.mute"); ToolTip.SetTip(MuteSoundBox, T("tip.mute"));
         SortDueButton.Content = T("toolbar.sort_due"); ToolTip.SetTip(SortDueButton, T("tip.sort_due"));
-        LanguageButton.Content = T("toolbar.language"); ToolTip.SetTip(LanguageButton, T("tip.language"));
         ToolTip.SetTip(ZoomOutButton, T("tip.zoom_out"));
         ToolTip.SetTip(ZoomResetButton, T("tip.zoom_reset"));
         ToolTip.SetTip(ZoomInButton, T("tip.zoom_in"));
+        ApplyWallpaperTexts();
         RenderAlertBoxes();
         ApplyColorButtonText();
-        ApplyImageExportTexts();
         ApplyMenuBarTexts();
     }
 
@@ -1891,6 +1769,8 @@ public partial class MainWindow : Window
 
     private void OnColourClock(object? sender, EventArgs e)
     {
+        // Wallpaper mode: redraw the wallpaper when a task turns overdue or due today (WallpaperKey).
+        if (_view == ViewMode.Background) { ScheduleWallpaperRefresh(); return; }
         if (!IsVisible) return; // hidden in the tray: nothing to paint (rows are rebuilt when shown again)
         try
         {
@@ -2005,181 +1885,32 @@ public partial class MainWindow : Window
             StatusText.Tag = "shown";
             return;
         }
-        var layer = Localizer.T(_claimsDesktop ? "status.layer_desktop" : (Topmost ? "status.layer_topmost" : "status.layer_normal"));
-        var mode = Localizer.T(_view == ViewMode.Background ? "status.mode_background" : "status.mode_edit");
-        var hotkey = _hotkeyReady ? " · Ctrl+Shift+E" : "";
-        StatusText.Text = Localizer.T("status.summary", _session.Doc.Rows.Count, _session.Doc.Columns.Count, mode, layer, hotkey);
+        var onTop = Topmost ? Localizer.T("status.on_top") : "";
+        StatusText.Text = Localizer.T("status.summary", _session.Doc.Rows.Count, _session.Doc.Columns.Count, onTop);
     }
 
     private RecoveryRoutes CurrentRoutes() => new(_trayReady, Program.SignalReady);
     private void ShowHelp() => InfoWindow.Show(Localizer.T("tip.help"), AppInfo.HelpText);
     private void ShowLog() => InfoWindow.Show(Localizer.T("tray.log"), AppInfo.LogText); // v2.4.2: same key as the tray Log item
 
-    private void OnBackgroundClick()
-    {
-        if (_view == ViewMode.Background) return;
-        var block = RecoveryGate.BlockReason(CurrentRoutes());
-        if (block != null) { ShowNotice(block); return; }
-        FlushSave();
-        if (!EnterBackground() && _view != ViewMode.Edit)
-            EnterEdit(Localizer.T("ui.bg_failed"));
-    }
-
-    private bool EnterBackground()
-    {
-        try
-        {
-            if (!HideFromTaskbar())
-            {
-                // v2.4.2: still in edit mode → keep the taskbar button.
-                ApplyTaskbarPresence();
-                ShowNotice(RecoveryGate.TaskbarHideFailed);
-                return false;
-            }
-            Topmost = false;
-            _view = ViewMode.Background;
-            ApplyChrome();
-            if (!ClickThrough.Enable(WindowHandle()))
-            {
-                ClickThrough.Disable(WindowHandle());
-                RevertToEdit(RecoveryGate.ClickThroughFailed);
-                return false;
-            }
-            var attach = _shell.TryAttach(WindowHandle());
-            if (!attach.Attached && _shell.EnterBottomFallback(WindowHandle()))
-            {
-                // Real desktop host refused us (or Explorer not ready yet, e.g. --startup): Win+D-proof fallback,
-                // and keep trying to upgrade to the real desktop layer in the background.
-                AppLog.Write("desktop", $"background: attach failed ({attach.Detail}) → bottom fallback");
-                attach = new DesktopAttachResult(true, DesktopHostKind.BottomFallback, attach.Detail);
-            }
-            var decision = DesktopPlacement.Decide(attach);
-            if (!ShowDesktopBehavior.SurvivesShowDesktop(decision.ClaimsDesktop, decision.Topmost))
-            {
-                AppLog.Write("desktop", $"background: not entered ({attach.Detail})");
-                ClickThrough.Disable(WindowHandle());
-                _shell.Detach(WindowHandle());
-                _claimsDesktop = false;
-                RevertToEdit(RecoveryGate.NotAttachedStaysEditor);
-                return false;
-            }
-            _claimsDesktop = true;
-            Topmost = false;
-            _session.Doc.View = ViewMode.Background;
-            StartBackgroundWatch();
-            var text = decision.Notice + " " + Localizer.T(attach.Host == DesktopHostKind.BottomFallback
-                ? "ui.bg_return_bottom" : "ui.bg_return_desktop", Localizer.T("tray.edit"));
-            if (_hotkeyReady) text += " " + Localizer.T("ui.bg_return_hotkey");
-            ShowNotice(text);
-            FlushSave();
-            UpdateStatus();
-            return true;
-        }
-        catch
-        {
-            EnterEdit(RecoveryGate.PartialRollback);
-            return false;
-        }
-    }
-
-    /// <summary>v2.3.1 fix: EnterBackground failed after switching the view → back to a fully editable window.
-    /// Before, _view stayed Background (all cells read-only, window not hit-testable) without click-through.</summary>
-    private void RevertToEdit(string notice)
-    {
-        _view = ViewMode.Edit;
-        _session.Doc.View = ViewMode.Edit;
-        Topmost = DesktopPlacement.EffectiveTopmost(_session.Doc.Window.Layer);
-        ApplyTaskbarPresence(); // v2.4.2: failed background entry → button comes back
-        ApplyChrome();
-        ShowNotice(notice);
-        UpdateStatus();
-    }
-
-    // ---- background watchdog: Win+D restore (fallback), upgrade fallback → real desktop, re-attach on host loss ----
-    private DispatcherTimer? _bgWatch;
-    private int _bgTicks;
-    private int _bgUpgradeTries;
-    public const int MaxUpgradeTries = 12;   // ~2 minutes after start / Explorer restart
-    public const int UpgradeEveryTicks = 10; // every 10 s (each try is a cross-process SetParent; don't hammer Explorer)
-
-    private void StartBackgroundWatch()
-    {
-        _bgTicks = 0;
-        _bgUpgradeTries = 0;
-        _bgWatch ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _bgWatch.Interval = TimeSpan.FromSeconds(1);
-        _bgWatch.Tick -= OnBackgroundWatch;
-        _bgWatch.Tick += OnBackgroundWatch;
-        _bgWatch.Start();
-    }
-
-    private void StopBackgroundWatch() => _bgWatch?.Stop();
-
-    private void OnBackgroundWatch(object? sender, EventArgs e)
-    {
-        if (_view != ViewMode.Background) { StopBackgroundWatch(); return; }
-        _bgWatch?.Stop(); // no re-entry while Win32 calls run
-        try { BackgroundWatchTick(); }
-        catch (Exception ex) { AppLog.Write("desktop", "watch tick failed: " + ex.Message); }
-        finally
-        {
-            if (_view == ViewMode.Background && _bgWatch != null)
-            {
-                // v2.3.1: 1 s only while the Win+D fallback needs it; when attached, a host check every 3 s is enough.
-                var want = _shell.InBottomFallback ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(3);
-                if (_bgWatch.Interval != want) _bgWatch.Interval = want;
-                _bgWatch.Start();
-            }
-        }
-    }
-
-    private void BackgroundWatchTick()
-    {
-        var h = WindowHandle();
-        _bgTicks++;
-        if (_shell.InBottomFallback)
-        {
-            _shell.KeepBottomFallbackAlive(h);
-            if (_bgTicks % UpgradeEveryTicks == 0 && _bgUpgradeTries < MaxUpgradeTries)
-            {
-                _bgUpgradeTries++;
-                if (_bgUpgradeTries == 1 || _bgTicks % (UpgradeEveryTicks * 3) == 0) _ = _shell.PrepareAsync();
-                var r = _shell.TryAttach(h);
-                if (r.Attached)
-                {
-                    AppLog.Write("desktop", $"background: upgraded from fallback to {r.Host} (try {_bgUpgradeTries})");
-                    ShowNotice(DesktopPlacement.Decide(r).Notice);
-                }
-                else _shell.EnterBottomFallback(h);
-            }
-        }
-        else if (!_shell.HostAlive())
-        {
-            AppLog.Write("desktop", "background: desktop host is gone (Explorer restart?) → re-attach");
-            var r = _shell.TryAttach(h);
-            if (!r.Attached && _shell.EnterBottomFallback(h))
-            {
-                _bgUpgradeTries = 0;
-                ShowNotice(DesktopPlacement.BottomFallbackNotice);
-            }
-        }
-    }
-
+    /// <summary>
+    /// The editor window. Coming back from wallpaper mode puts the user's own wallpaper back first (also after a
+    /// crash: wallpaper.json says what to put back).
+    /// </summary>
     private void EnterEdit(string? notice)
     {
-        StopBackgroundWatch();
+        _wallpaperTimer?.Stop();
+        notice = JoinNotice(notice, RestorePendingWallpaper());
         _view = ViewMode.Edit;
         _session.Doc.View = ViewMode.Edit;
-        ClickThrough.Disable(WindowHandle());
-        _shell.Detach(WindowHandle());
-        _claimsDesktop = false;
         Topmost = false;
-        ApplyTaskbarPresence(); // v2.4.2: edit mode has a taskbar button (after Detach restored the style)
+        ApplyTaskbarPresence(); // v2.4.2: edit mode has a taskbar button
         ApplyChrome();
         Show();
         ApplyRequestedLayer();
         EnsureVisible();
         Activate(); // v2.3.1: after the layer/position is final (was before ApplyRequestedLayer)
+        UpdateTrayTip();
         if (!string.IsNullOrEmpty(notice)) ShowNotice(notice);
         FlushSave();
         UpdateStatus();
@@ -2307,8 +2038,8 @@ public partial class MainWindow : Window
             var menu = new NativeMenu();
             foreach (var item in new NativeMenuItemBase[] { edit, help, log, export, new NativeMenuItemSeparator(), lang, zin, zout, zreset, new NativeMenuItemSeparator(), center, quit })
                 menu.Items.Add(item);
-            if (_tray != null) { _tray.Menu = menu; _tray.ToolTipText = Localizer.T("app.title"); return true; }
-            _tray = new TrayIcon { ToolTipText = Localizer.T("app.title"), Menu = menu, IsVisible = true };
+            if (_tray != null) { _tray.Menu = menu; _tray.ToolTipText = TrayTip(); return true; }
+            _tray = new TrayIcon { ToolTipText = TrayTip(), Menu = menu, IsVisible = true };
             _tray.Clicked += (_, _) => ShowEditor();
             using var stream = AssetLoader.Open(new Uri("avares://TableNote/Assets/tray.png"));
             _tray.Icon = new WindowIcon(stream);

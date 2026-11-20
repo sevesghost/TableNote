@@ -307,6 +307,12 @@ public static partial class ViewImage
         var px = new PixelSize(pxW, pxH);
         using var bitmap = new RenderTargetBitmap(px, new Vector(dpi, dpi));
         bitmap.Render(visual);
+        return EncodeBitmap(bitmap, format);
+    }
+
+    /// <summary>PNG or JPEG bytes of a rendered bitmap (also used for the wallpaper picture).</summary>
+    internal static byte[] EncodeBitmap(RenderTargetBitmap bitmap, ViewImageFormat format)
+    {
         using var ms = new MemoryStream();
         if (format == ViewImageFormat.Jpeg)
             bitmap.Save(ms, new JpegBitmapEncoderOptions { Quality = 92 });

@@ -4,20 +4,22 @@
 
 A lightweight, Excel-like task table for Windows with due-date and advance reminders, built with Avalonia on .NET 10.
 
-Current version: **2.5.1** (19 November 2026). The interface is English by default; switch to Thai with the **EN/TH** button. English manual: [`docs/manual-en.md`](docs/manual-en.md).
+Current version: **2.6.0** (20 November 2026). The interface is English by default; switch to Thai in **View → Language**. English manual: [`docs/manual-en.md`](docs/manual-en.md).
 
 ## What is TableNote?
 
-TableNote is a small editable table for keeping track of tasks. Each row is a task. A new note gets the columns Title, Detail, Status, and Due in the current interface language (a new note created in Thai gets หัวข้อ, รายละเอียด, สถานะ, กำหนดส่ง). Notes you already have keep their column names. TableNote shows a reminder popup with a sound when a task is due, and it can also remind you ahead of time. It can sit attached to your desktop background, and it keeps running in the system tray so reminders keep working.
+TableNote is a small editable table for keeping track of tasks. Each row is a task. A new note gets the columns Title, Detail, Status, and Due in the current interface language (a new note created in Thai gets หัวข้อ, รายละเอียด, สถานะ, กำหนดส่ง). Notes you already have keep their column names. TableNote shows a reminder popup with a sound when a task is due, and it can also remind you ahead of time. It can put the table on your desktop wallpaper, and it keeps running in the system tray so reminders keep working.
 
 ## Features
 
+- **Wallpaper mode (2.6.0, Windows):** **Wallpaper** on the toolbar draws the table over your own wallpaper, full screen, where the window was. The editor goes to the tray. Click the tray icon or press Ctrl+Shift+E to edit again, and your own wallpaper comes back. See [Wallpaper mode](#wallpaper-mode).
+- **One toolbar row (2.6.0):** + Row, − Row, + Column, Colors, Hide done, Sort by due, A− / 100% / A+, Export and Wallpaper. Copy, image export, print, delete column, language, help and the system settings (always on top, lock position, launch at sign-in, mute) are in the menu bar.
 - Editable table: add or remove rows and columns, rename column headers, paste from and copy to Excel.
 - **Move and delete columns (2.4.0):** drag the ⋮⋮ grip on a column header, use the header's right-click menu (Move left / right / to first / to last), or press Alt+Shift+←/→. The header menu also deletes a column after a confirmation (the Due column cannot be deleted). Undo with Ctrl+Z.
 - **Move rows (2.4.0):** drag the row number, use the row-number menu (Move up / down / to top / to bottom), or press Alt+Shift+↑/↓. When **Hide done** is on, moves skip hidden rows. Undo with Ctrl+Z.
 - **Column settings (2.4.0):** right-click a header and choose **Column settings…** to set the name, width, and type (text, number, choice dropdown, or check ✓). Choice options are entered one per line. Changing the type does not alter the cell data. Status and Due columns can only change name and width.
 - **Row colour and highlight (2.4.0):** right-click the row number to set one of 8 colours (or none), toggle highlight, or clear the style. The style follows the row when it is moved or sorted, is undoable with Ctrl+Z, and is saved immediately.
-- **Alert boxes:** **+ Alert** above the table adds a box with a title and text you can edit. **Delete** asks for confirmation first (the same dialog as deleting a row or column); this can't be undone. Drag the ⋮⋮ grip to reorder, or use **Up** / **Down** (keyboard reachable, no drag required). The boxes and their order are saved in `note.json`. Each box has a stable id. This is separate from due-date reminders, and Ctrl+Z does not undo alert-box changes.
+- **Alert boxes:** **Table → Add alert box** adds a box with a title and text you can edit. The alert panel above the table shows only while there are boxes; its **+ Alert** adds more. **Delete** asks for confirmation first (the same dialog as deleting a row or column); this can't be undone. Drag the ⋮⋮ grip to reorder, or use **Up** / **Down** (keyboard reachable, no drag required). The boxes and their order are saved in `note.json`. Each box has a stable id. This is separate from due-date reminders, and Ctrl+Z does not undo alert-box changes.
 - Status dropdown with three values: ยังไม่เริ่ม (Not started), กำลังทำ (In progress), and เสร็จแล้ว (Done).
   - Only these exact words count as done: `เสร็จ`, `เสร็จแล้ว`, `done`, `complete`, `completed`, `✓`, `✔`.
   - `ยังไม่เสร็จ` (not yet done) and `ไม่เสร็จ` (not done) are **not** done.
@@ -56,24 +58,24 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
 
   While you are typing in a cell, Ctrl+Z first undoes the text in that cell. Snooze, acknowledgement, hide-done, and mute are not part of undo.
 - The due column can't be deleted, because reminders depend on it. You can rename it.
-- Background mode attached to the desktop (Windows), a system tray menu, launch at sign-in, and an `--edit` startup flag.
+- Wallpaper mode (Windows), a system tray menu, launch at sign-in, and an `--edit` startup flag.
 - Autosave about 1.5 seconds after you stop typing.
-- The interface is English by default; switch to Thai with the **EN/TH** button (saved in `settings.json`).
-- Zoom 80–200% (A− / 100% / A+, Ctrl +/−/0, Ctrl+wheel).
+- The interface is English by default; switch to Thai in **View → Language** (saved in `settings.json`).
+- Zoom 80–200% (A− / 100% / A+, Ctrl +/−/0, Ctrl+wheel). From 2.6.0 zoom scales the alert boxes and the table; the menu and toolbar keep their size.
 - Export the table to .xlsx, .csv, or .txt (see [Exporting](#exporting)).
 
 ### Reminders keep running
 
-- Closing the main window hides TableNote to the system tray; reminders keep working. To quit, right-click the tray icon and choose **Exit** (**ออก** in Thai). A one-time notice explains this. If the tray icon can't be created, closing the window quits TableNote.
-- Taskbar and tray: while you edit the table, TableNote has an icon on the taskbar and in the tray. When it is attached to the desktop background, only the tray icon remains. **Edit table** in the tray menu, Ctrl+Shift+E, or detaching brings the taskbar icon back, and the mode is kept after a restart.
-- With **Launch at sign-in** turned on (the startup entry is named `TableNote`), TableNote starts hidden in the tray (`--startup`). If it was last in background mode, it starts in background mode instead.
+- Closing the main window hides TableNote to the system tray; reminders keep working. To quit, right-click the tray icon and choose **Quit** (**ออก** in Thai). A one-time notice explains this. If the tray icon can't be created, closing the window quits TableNote.
+- Taskbar and tray: while you edit the table, TableNote has an icon on the taskbar and in the tray. In wallpaper mode only the tray icon remains. **Edit table** in the tray menu, clicking the tray icon, or Ctrl+Shift+E brings the editor (and its taskbar icon) back, and the mode is kept after a restart.
+- With **Launch at sign-in** turned on (the startup entry is named `TableNote`), TableNote starts hidden in the tray (`--startup`). If it was last in wallpaper mode, it draws the table on the wallpaper again instead.
 
 ## Download and install
 
 - Download: [latest release](https://github.com/sevesghost/TableNote/releases/latest) (`TableNote.exe`)
 - Requirements: Windows 10 or 11, 64-bit
 - The Windows build is a single self-contained `TableNote.exe` (.NET single-file host with the app bundled), so you don't need to install .NET separately. Run it directly.
-- To keep reminders working, tick **Launch at sign-in** in the toolbar.
+- To keep reminders working, turn on **View → System → Launch at sign-in**.
 
 ## Getting started
 
@@ -83,7 +85,7 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
 4. Choose a status. If needed, choose a repeat option and press ⏰ for advance reminders.
 5. When a reminder pops up, choose Snooze 10 min, Done, Acknowledge, or Close.
 
-The in-app Help (the **?** button on the toolbar, or Help / วิธีใช้ in the tray menu) shows the guide in the current language. The first line shows the version. The Thai manual is in [`docs/manual-th.md`](docs/manual-th.md).
+The in-app Help (**Help → Help** in the menu bar, or Help / วิธีใช้ in the tray menu) shows the guide in the current language. The first line shows the version. The Thai manual is in [`docs/manual-th.md`](docs/manual-th.md).
 
 ## Keyboard shortcuts
 
@@ -101,10 +103,24 @@ The in-app Help (the **?** button on the toolbar, or Help / วิธีใช�
 | Ctrl+V | Paste from Excel (plain text, formulas not evaluated) |
 | Ctrl+Z | Undo (up to 100 steps) |
 | Ctrl+Y / Ctrl+Shift+Z | Redo |
-| Ctrl+Shift+E | Return to edit mode from background mode (Windows) |
+| Ctrl+Shift+E | Back to the editor from wallpaper mode (Windows) |
 | Ctrl++ / Ctrl+− / Ctrl+0 | Zoom in / zoom out / back to 100% |
 | Ctrl+mouse wheel | Zoom in or out |
 | Ctrl+Home / Ctrl+End | Go to the first cell / the last cell of the last row |
+
+## Wallpaper mode
+
+**Wallpaper** on the toolbar (or **File → Set as wallpaper**) puts the table on your desktop wallpaper (Windows):
+
+- The picture is full screen. Your own wallpaper stays, and a card with the alert boxes and the table sits on it where the editor window was, at the window's size at most and at its zoom. Rows that don't fit are counted as **+ N more rows**.
+- Only the monitor the window is on changes. With **Span** (one picture across all monitors) the table is drawn across all of them.
+- The editor goes to the tray. The picture follows the table: a task marked done from a reminder, a task that turns overdue or due today, and a new day redraw it.
+- Back to editing: click the tray icon, choose **Edit table** in the tray menu, press Ctrl+Shift+E, or start TableNote again. Your own wallpaper comes back at once. **Quit** in the tray menu puts it back too; the next start draws the table again.
+- At sign-out with **Launch at sign-in** on, the table stays on the wallpaper and is redrawn at the next sign-in; with it off, your wallpaper is put back.
+- A slideshow is started again when you leave. **Windows spotlight** can't be turned back on by a program: TableNote asks first, and when you leave, today's spotlight picture stays as a fixed picture (turn spotlight on again in Settings › Personalization › Background).
+- If you pick another wallpaper while the table is on it, TableNote keeps yours and draws the table on it from then on.
+- A wallpaper fixed by your organization (Group Policy) is not changed.
+- Before it changes anything, TableNote keeps a copy of your wallpaper and what to put back in `%LOCALAPPDATA%\TableNote\wallpaper\` (`wallpaper.json`, `original-*`, and the table pictures `table-1.png` / `table-2.png`). After a crash, the next start uses it; `TableNote.exe --edit` puts your wallpaper back and opens the editor.
 
 ## Exporting
 
@@ -114,7 +130,7 @@ The in-app Help (the **?** button on the toolbar, or Help / วิธีใช�
 - `.txt`: tab-separated, UTF-8 with BOM.
 - `.xlsx`: an Excel workbook.
 
-**Exports follow the interface language.** Status labels (Not started / In progress / Done), the extra **Repeat** column and its values, and the default file name (`TableNote-yyyy-MM-dd`) are written in the language selected with **EN/TH** at the time you export. Exporting the same note in English and in Thai therefore gives different labels. Your own column names and cell text are exported as typed, and `note.json` is never changed by the language setting. If another tool reads the exported file, export in the same language every time.
+**Exports follow the interface language.** Status labels (Not started / In progress / Done), the extra **Repeat** column and its values, and the default file name (`TableNote-yyyy-MM-dd`) are written in the language selected in **View → Language** at the time you export. Exporting the same note in English and in Thai therefore gives different labels. Your own column names and cell text are exported as typed, and `note.json` is never changed by the language setting. If another tool reads the exported file, export in the same language every time.
 
 Due dates are exported as `yyyy-MM-dd`, or `yyyy-MM-dd HH:mm` when a time is set, using the Gregorian calendar (never a Buddhist Era year) in every language. The date is written as text, not as an Excel date serial. Numbers always use `.` as the decimal point, whatever the PC's region settings.
 
@@ -128,6 +144,7 @@ Due dates are exported as `yyyy-MM-dd`, or `yyyy-MM-dd HH:mm` when a time is set
 - Windows: `%APPDATA%\TableNote\note.json`
 - Linux: `~/.local/share/TableNote/note.json`
 - Or set the `TABLENOTE_DATA` environment variable to a full file path.
+- Wallpaper mode (Windows): `%LOCALAPPDATA%\TableNote\wallpaper\`, or a `wallpaper` folder next to `note.json` when `TABLENOTE_DATA` is set.
 
 Advance reminders are stored in a top-level `reminders` field keyed by row id, for example `{"<rowId>": {"offsets": [60, 15], "acked": [...]}}` (offsets are saved largest first). A wrongly typed value (for example `"offsets": ["15"]`) is dropped on its own and logged to `tablenote.log` next to `note.json`; the rest of the table is kept.
 
@@ -171,7 +188,7 @@ dotnet ./publish/linux-x64/TableNote.dll
 Source layout:
 
 - `Core/`: table model, JSON storage, Excel paste and copy, recurrence, reminder scheduling (`ReminderPlan.cs`), and undo.
-- `Platform/`: Windows desktop shell, hotkey, tray, and autostart.
+- `Platform/`: Windows wallpaper (IDesktopWallpaper), hotkey, taskbar, start-again signal, and autostart.
 - `Services/`: reminder timer, popup, ⏰ dialog, and sound.
 - `MainWindow.axaml(.cs)`: main UI.
 - `Assets/`: Noto Sans Thai fonts and tray icon.

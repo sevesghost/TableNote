@@ -54,10 +54,8 @@ public partial class MainWindow
         AddAlertButton.Content = Localizer.T("alert.add");
         ToolTip.SetTip(AddAlertButton, Localizer.T("alert.add_tip"));
         AddAlertButton.IsVisible = edit;
-        AlertEmpty.Text = Localizer.T("alert.empty");
-        AlertEmpty.IsVisible = edit && boxes.Count == 0;
-        AlertScroll.IsVisible = boxes.Count > 0;
-        AlertHost.IsVisible = edit || boxes.Count > 0;
+        // 2.6.0: no empty panel any more; the first box comes from Table → Add alert box.
+        AlertHost.IsVisible = boxes.Count > 0;
 
         _alertRendering = true;
         try

@@ -26,7 +26,7 @@ public partial class MainWindow
     private MenuItem _exportItem = null!;
     private MenuItem _exportImageItem = null!;
     private MenuItem _printItem = null!;
-    private MenuItem _pinItem = null!;
+    private MenuItem _pinItem = null!; // File → Set as wallpaper
     private MenuItem _colorItem = null!;
     private MenuItem _addRowItem = null!;
     private MenuItem _deleteRowItem = null!;
@@ -34,7 +34,8 @@ public partial class MainWindow
     private MenuItem _deleteColumnItem = null!;
     private MenuItem _sortItem = null!;
     private MenuItem _viewSortItem = null!;
-    private MenuItem _systemPinItem = null!;
+    private MenuItem _systemPinItem = null!; // View → System → Set as wallpaper
+    private MenuItem _addAlertItem = null!;
     private MenuItem _hideDoneItem = null!;
     private MenuItem _zoomOutItem = null!;
     private MenuItem _zoomResetItem = null!;
@@ -65,7 +66,7 @@ public partial class MainWindow
         _exportItem = Act("toolbar.export", () => _ = ExportAsync());
         _exportImageItem = Act("toolbar.export_image", () => _ = ExportImageAsync());
         _printItem = Act("toolbar.print", () => _ = PrintViewAsync());
-        _pinItem = Act("toolbar.background", OnBackgroundClick);
+        _pinItem = Act("menu.wallpaper", () => _ = OnWallpaperClickAsync());
         _fileMenu.Items.Add(_copyAllItem);
         _fileMenu.Items.Add(_copyHeadersItem);
         _fileMenu.Items.Add(_exportItem);
@@ -91,6 +92,7 @@ public partial class MainWindow
         _addColumnItem = Act("toolbar.add_column", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), AddColumnAsync)));
         _deleteColumnItem = Act("toolbar.delete_column", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("delete.undo_column"), DeleteColumnAsync)));
         _sortItem = Act("toolbar.sort_due", SortByDue);
+        _addAlertItem = Act("menu.add_alert", AddAlert);
         _spotAddDueItem = new MenuItem { Tag = "spot:add-alert-date" };
         _spotAddDueItem.Click += async (_, _) =>
             await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), () => AddSystemColumnAsync(ColumnRoles.Due)));
@@ -103,6 +105,7 @@ public partial class MainWindow
         _tableMenu.Items.Add(_addColumnItem);
         _tableMenu.Items.Add(_deleteColumnItem);
         _tableMenu.Items.Add(_sortItem);
+        _tableMenu.Items.Add(_addAlertItem);
         _tableMenu.Items.Add(new Separator());
         _tableMenu.Items.Add(_spotAddDueItem);
         _tableMenu.Items.Add(_spotAddStatusItem);
@@ -115,6 +118,7 @@ public partial class MainWindow
             _addColumnItem.IsEnabled = edit;
             _deleteColumnItem.IsEnabled = edit;
             _sortItem.IsEnabled = _view == ViewMode.Edit;
+            _addAlertItem.IsEnabled = _view == ViewMode.Edit && (_session.Doc.AlertBoxes?.Count ?? 0) < AlertBoxOps.MaxBoxes;
             ApplySpecialColumnSpots();
         };
 
@@ -137,7 +141,7 @@ public partial class MainWindow
         _lockItem = CheckItem("toolbar.lock", LockBox);
         _launchItem = CheckItem("toolbar.launch_at_login", LaunchBox);
         _muteItem = CheckItem("toolbar.mute", MuteSoundBox);
-        _systemPinItem = Act("toolbar.background", OnBackgroundClick);
+        _systemPinItem = Act("menu.wallpaper", () => _ = OnWallpaperClickAsync());
         _systemMenu.Items.Add(_topmostItem);
         _systemMenu.Items.Add(_lockItem);
         _systemMenu.Items.Add(_launchItem);
@@ -266,26 +270,28 @@ public partial class MainWindow
         _systemMenu.Header = Localizer.T("menu.system");
         _languageMenu.Header = Localizer.T("menu.language");
 
-        GroupTableLabel.Text = Localizer.T("menu.group.table");
-        GroupCopyLabel.Text = Localizer.T("menu.group.copy");
-        GroupViewLabel.Text = Localizer.T("menu.group.view");
-        GroupSystemLabel.Text = Localizer.T("menu.group.system");
-        GroupHelpLabel.Text = Localizer.T("menu.group.help");
-
         _copyAllItem.Header = Localizer.T("toolbar.copy_all");
         _copyHeadersItem.Header = Localizer.T("toolbar.copy_headers");
         _exportItem.Header = Localizer.T("toolbar.export");
         _exportImageItem.Header = Localizer.T("toolbar.export_image");
+        ToolTip.SetTip(_exportImageItem, Localizer.T("tip.export_image"));
         _printItem.Header = Localizer.T("toolbar.print");
-        _pinItem.Header = Localizer.T("toolbar.background");
+        ToolTip.SetTip(_printItem, Localizer.T("tip.print"));
+        _pinItem.Header = Localizer.T("menu.wallpaper");
+        ToolTip.SetTip(_pinItem, Localizer.T("tip.wallpaper"));
         _colorItem.Header = Localizer.T("color.button");
         _addRowItem.Header = Localizer.T("toolbar.add_row");
         _deleteRowItem.Header = Localizer.T("toolbar.delete_row");
         _addColumnItem.Header = Localizer.T("toolbar.add_column");
         _deleteColumnItem.Header = Localizer.T("toolbar.delete_column");
         _sortItem.Header = Localizer.T("toolbar.sort_due");
+        _addAlertItem.Header = Localizer.T("menu.add_alert");
         _viewSortItem.Header = Localizer.T("toolbar.sort_due");
-        _systemPinItem.Header = Localizer.T("toolbar.background");
+        _systemPinItem.Header = Localizer.T("menu.wallpaper");
+        ToolTip.SetTip(_systemPinItem, Localizer.T("tip.wallpaper"));
+        ToolTip.SetTip(_topmostItem, Localizer.T("tip.topmost"));
+        ToolTip.SetTip(_lockItem, Localizer.T("tip.lock"));
+        ToolTip.SetTip(_muteItem, Localizer.T("tip.mute"));
         _helpItem.Header = Localizer.T("tray.help");
         _logItem.Header = Localizer.T("tray.log");
         _zoomOutItem.Header = Localizer.T("tray.zoom_out");

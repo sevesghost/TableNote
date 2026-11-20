@@ -112,12 +112,12 @@ public partial class MainWindow
         ApplyChromeColors();
 
         var mode = RecoveryGate.ResolveStartup(doc.View, Program.ForceEdit, CurrentRoutes());
-        if (mode == ViewMode.Background && SavedPositionNeedsCenter()) mode = ViewMode.Edit;
         if (mode == ViewMode.Background && !IsVisible)
         {
             // Still hidden in the tray after a sign-in start: go where the user left it, as a normal start would.
-            Show();
-            if (!EnterBackground()) EnterEdit(Localizer.T("ui.bg_failed"));
+            var outcome = ApplyWallpaper(confirmed: false);
+            if (outcome.Ok) EnterWallpaperView();
+            else EnterEdit(outcome.NeedsConfirm ? Localizer.T("wallpaper.spotlight_start") : outcome.Message);
         }
         else
         {

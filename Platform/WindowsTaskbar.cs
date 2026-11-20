@@ -39,6 +39,12 @@ public static class WindowsTaskbar
 		return (now & 0x80) == 0 && (now & 0x40000) != 0;
 	}
 
+	/// <summary>Message Explorer broadcasts when it (and the taskbar) starts again.</summary>
+	public static uint TaskbarCreatedMessage() => RegisterWindowMessage("TaskbarCreated");
+
+	[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+	private static extern uint RegisterWindowMessage(string name);
+
 	[DllImport("user32.dll")]
 	private static extern bool IsWindowVisible(nint hwnd);
 

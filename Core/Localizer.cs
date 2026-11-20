@@ -156,6 +156,8 @@ public sealed class AppSettings
 {
     public string Language { get; set; } = "en";
     public int Scale { get; set; } = 100;
+    /// <summary>The "table is on the wallpaper" tip was shown once (written only when true).</summary>
+    public bool WallpaperTipShown { get; set; }
     public const int MinScale = 80, MaxScale = 200, ScaleStep = 10;
     public static int ClampScale(int s) => s < MinScale || s > MaxScale ? 100 : (int)Math.Round(s / (double)ScaleStep) * ScaleStep;
 
@@ -181,6 +183,8 @@ public sealed class AppSettings
                 }
                 else if ((prop.NameEquals("uiScale") || prop.NameEquals("scale")) && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number && prop.Value.TryGetInt32(out var sc))
                     s.Scale = ClampScale(sc); // out of range / not a number → 100 (Z7)
+                else if (prop.NameEquals("wallpaperTipShown") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.True)
+                    s.WallpaperTipShown = true;
             }
         }
         catch (Exception ex)
@@ -200,7 +204,8 @@ public sealed class AppSettings
             var dir = Path.GetDirectoryName(p);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             var tmp = p + ".tmp";
-            File.WriteAllText(tmp, $"{{\n  \"language\": \"{Language}\",\n  \"uiScale\": {Scale}\n}}\n");
+            var tip = WallpaperTipShown ? ",\n  \"wallpaperTipShown\": true" : "";
+            File.WriteAllText(tmp, $"{{\n  \"language\": \"{Language}\",\n  \"uiScale\": {Scale}{tip}\n}}\n");
             File.Move(tmp, p, overwrite: true);
         }
         catch (Exception ex) { AppLog.Write("settings", "save failed: " + ex.Message); }

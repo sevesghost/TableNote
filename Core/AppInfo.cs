@@ -2,9 +2,9 @@ namespace TableNote;
 
 public static class AppInfo
 {
-    public const string Version = "2.5.1";
+    public const string Version = "2.6.0";
     public const string ConfirmedCommit = "rewrite-" + Version;
-    public const string BuildNote = "วันบิลด์: 19 พฤศจิกายน 2026 (เวลาไทย UTC+7) — แก้บั๊ก 7 ข้อ เอา toast ออก และไฟล์ exe เล็กลงเหลือราว 24 MB";
+    public const string BuildNote = "วันบิลด์: 20 พฤศจิกายน 2026 (เวลาไทย UTC+7) — โหมดวอลเปเปอร์ และแถบเครื่องมือแถวเดียว";
 
     public static string HelpText => Localizer.Current == "th" ? HelpTextTh : HelpTextEn;
     public static string LogText => Localizer.Current == "th" ? LogTextTh : LogTextEn;
@@ -19,8 +19,8 @@ Shortcuts
   Ctrl+Z         undo (up to 100 steps)  Ctrl+Y / Ctrl+Shift+Z  redo
   Ctrl+Home      first cell              Ctrl+End  last row
   Ctrl + / Ctrl − / Ctrl 0   larger / smaller / 100% (80–200%); Ctrl+mouse wheel too; A− 100% A+ buttons
-  EN/TH button    switch language (saved in settings.json; note.json is not touched)
-  Ctrl+Shift+E   back to editing when pinned to desktop (Windows)
+  View → Language  switch language (saved in settings.json; note.json is not touched)
+  Ctrl+Shift+E   back to editing from wallpaper mode (Windows)
 
 Columns and rows
   Right-click a header → Column settings…: name, width, type (text / number / choice / checkbox).
@@ -28,15 +28,20 @@ Columns and rows
   a highlighted row gets an orange row number.
 
 Alert boxes
-  + Alert (above the table) adds a box. Edit its title and text. Drag the ⋮⋮ grip to change the order,
+  Table → Add alert box adds the first box; the alert panel above the table appears with it, and its + Alert adds more.
+  Edit a box's title and text. Drag the ⋮⋮ grip to change the order,
   or use Up and Down (they work without dragging, and with the keyboard). Delete asks first, then removes that box.
   This can't be undone with Ctrl+Z.
   The boxes and their order are saved in note.json. Each box keeps a stable id. Ctrl+Z does not undo
   alert-box changes. These boxes are separate from due-date reminders.
 
-Taskbar and tray
-  Editing: icon on the taskbar and in the tray. Pinned to desktop: tray icon only.
-  Tray → Edit table, Ctrl+Shift+E or unpinning brings the taskbar icon back; the mode is kept after restart.
+Wallpaper mode (Windows)
+  Wallpaper (toolbar) or File → Set as wallpaper: the table is drawn over your own wallpaper, full screen, where the
+  window was, at the window's size at most; the editor goes to the tray. The picture follows the table: a task marked
+  done, a task turning overdue, a new day.
+  Back to editing: click the tray icon, Tray → Edit table, Ctrl+Shift+E, or start TableNote again. Your own wallpaper
+  comes back then, and also on Tray → Quit. Wallpaper mode is kept after a restart (it is redrawn at sign-in).
+  Taskbar: editing = icon on the taskbar and in the tray; wallpaper mode = tray icon only.
 
 Reminders
   Set the Due column with the calendar + HH:mm (24-hour). Dates are always CE (e.g. 2026).
@@ -82,11 +87,11 @@ Files
   Ctrl+Z         ย้อนการแก้ตาราง (สูงสุด 100 ขั้น)
                  ระหว่างพิมพ์ในช่อง Ctrl+Z ย้อนตัวอักษรในช่องก่อน
   Ctrl+Y / Ctrl+Shift+Z  ทำซ้ำ
-  Ctrl+Shift+E   กลับมาหน้าแก้ไขจากโหมดวางแนบพื้นหลัง (Windows)
+  Ctrl+Shift+E   กลับมาหน้าแก้ไขจากโหมดวอลเปเปอร์ (Windows)
   Ctrl+Home      ไปช่องแรกของตาราง   Ctrl+End  ไปแถวสุดท้าย
   Ctrl + / Ctrl − / Ctrl 0   ขยาย / ย่อ / กลับ 100% (80–200%)
   Ctrl+ล้อเมาส์   ขยาย/ย่อ   ปุ่ม A− 100% A+ บนแถบเครื่องมือ
-  ปุ่ม EN/TH      สลับภาษา (จำไว้ใน settings.json ไม่แตะ note.json)
+  มุมมอง → ภาษา  สลับภาษา (จำไว้ใน settings.json ไม่แตะ note.json)
 
 ตั้งเตือนงาน
   1. พิมพ์งานในคอลัมน์ ""หัวข้อ"" และ ""รายละเอียด""
@@ -113,7 +118,7 @@ Files
     รับทราบ         ไม่เตือนซ้ำสำหรับเวลานี้ เฉพาะงานนั้น (รวมเวลาเตือนก่อนหน้า)
     ปิด             รับทราบทุกงานที่ยังค้างในหน้าต่าง (แก้กำหนดส่งแล้วจะเตือนใหม่ได้)
     X (ปิดหน้าต่าง) เลื่อน 10 นาที สำหรับงานที่ยังค้าง
-  ติ๊ก ""ปิดเสียงเตือน"" ถ้าไม่ต้องการเสียง (ป๊อปอัปยังขึ้น)
+  มุมมอง → ตั้งค่าระบบ → ""ปิดเสียงเตือน"" ถ้าไม่ต้องการเสียง (ป๊อปอัปยังขึ้น)
   สำคัญ: การเตือนทำงานเมื่อโปรแกรมทำงานอยู่
     ปิดหน้าต่าง (X) = ย่อไปอยู่ที่ถาดไอคอน การเตือนยังทำงาน  ออกจริง: คลิกขวาไอคอนถาด → ออก
     ""เปิดเมื่อเข้าสู่ระบบ"" จะเริ่มแบบซ่อนอยู่ในถาด (--startup)
@@ -129,15 +134,20 @@ Files
   คลิกขวาที่หัวคอลัมน์ → ตั้งค่าคอลัมน์… เปลี่ยนชื่อ ความกว้าง และชนิด (ข้อความ / ตัวเลข / ตัวเลือก / ช่องติ๊ก)
 
 กล่องแจ้งเตือน
-  ปุ่ม + กล่องแจ้งเตือน (เหนือตาราง) เพิ่มกล่อง แก้หัวข้อและข้อความได้
+  เมนู ตาราง → เพิ่มกล่องแจ้งเตือน เพิ่มกล่องแรก (ช่องกล่องแจ้งเตือนเหนือตารางจะขึ้นมาด้วย)
+  ปุ่ม + กล่องแจ้งเตือน ในช่องนั้นเพิ่มกล่องต่อไป แก้หัวข้อและข้อความได้
   ลากที่จับ ⋮⋮ เพื่อเรียงลำดับ หรือใช้ปุ่ม ขึ้น / ลง (ใช้ได้โดยไม่ต้องลาก และใช้คีย์บอร์ดได้)
   ปุ่ม ลบ จะถามก่อน แล้วจึงเอาออก การลบนี้กู้คืนด้วย Ctrl+Z ไม่ได้
   กล่องและลำดับถูกบันทึกใน note.json แต่ละกล่องมีรหัสคงที่
   Ctrl+Z ไม่ย้อนการแก้กล่องแจ้งเตือน กล่องนี้คนละอย่างกับเตือนตามกำหนดส่ง
 
-ไอคอนแถบงานและถาด
-  โหมดแก้ไข: มีไอคอนทั้งที่แถบงานและถาด   โหมดวางแนบพื้นหลัง: มีไอคอนที่ถาดอย่างเดียว
-  ถาด → แก้ไขตาราง, Ctrl+Shift+E หรือเลิกแนบพื้นหลัง ไอคอนกลับมาที่แถบงาน  ปิดแล้วเปิดใหม่ได้โหมดเดิม
+โหมดวอลเปเปอร์ (Windows)
+  ปุ่ม วอลเปเปอร์ บนแถบเครื่องมือ หรือ ไฟล์ → ตั้งเป็นวอลเปเปอร์: วาดตารางทับวอลเปเปอร์เดิมของคุณแบบเต็มจอ
+  ตรงตำแหน่งที่หน้าต่างอยู่ ขนาดไม่เกินหน้าต่าง แล้วหน้าแก้ไขไปอยู่ที่ถาด
+  ภาพอัปเดตตามตาราง: งานที่กดเสร็จ งานที่เลยกำหนด หรือขึ้นวันใหม่
+  กลับมาแก้ไข: คลิกไอคอนที่ถาด, ถาด → แก้ไขตาราง, Ctrl+Shift+E หรือเปิดโปรแกรมอีกครั้ง
+  วอลเปเปอร์เดิมจะกลับมาเอง และกลับมาเมื่อเลือก ถาด → ออก ด้วย  ปิดแล้วเปิดใหม่ยังอยู่ในโหมดวอลเปเปอร์ (วาดใหม่ตอนเข้าระบบ)
+  ไอคอน: ตอนแก้ไขมีทั้งที่แถบงานและถาด  โหมดวอลเปเปอร์มีที่ถาดอย่างเดียว
 
 ที่เก็บไฟล์
   Windows: %APPDATA%\TableNote\note.json
@@ -161,7 +171,12 @@ Files
 ").Replace("{VERSION}", Version);
 
     public static string LogTextEn { get; } =
-@"TableNote " + Version + @" — built 19 Nov 2026 (Bangkok time, UTC+7)
+@"TableNote " + Version + @" — built 20 Nov 2026 (Bangkok time, UTC+7)
+
+20 Nov 2026 — 2.6.0
+New: Wallpaper (toolbar) puts the table on your desktop wallpaper, full screen, over your own picture and where the window was. The tray icon or Ctrl+Shift+E brings the editor back, and your own wallpaper with it. This replaces Pin to desktop.
+Changed: one toolbar row with the everyday buttons. Copy, image export, print, delete column, language and the system settings are in the menu bar. The alert panel shows only when there are alert boxes (Table → Add alert box). Zoom scales the table, not the menu and toolbar.
+Fixed: after a sign-in start, opening the editor from the tray closed it again at once.
 
 19 Nov 2026 — 2.5.1
 Fixed: a due date with a month name or a two-digit year (5 Jan 2026, 5-Jan-26, 5/1/26), e.g. pasted from Excel, was read as 1483 or 1983 and reminded at once as missed.
@@ -213,6 +228,11 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 @"ตารางโน้ต
 รุ่นที่แสดง: " + Version + @"
 " + BuildNote + @"
+
+20 พ.ย. 2026 — 2.6.0
+ใหม่: ปุ่ม วอลเปเปอร์ ตั้งตารางเป็นวอลเปเปอร์เต็มจอ ทับภาพเดิมของคุณตรงตำแหน่งหน้าต่าง คลิกไอคอนที่ถาดหรือกด Ctrl+Shift+E เพื่อกลับมาแก้ไข แล้ววอลเปเปอร์เดิมจะกลับมา ใช้แทน วางแนบพื้นหลัง
+เปลี่ยน: แถบเครื่องมือเหลือแถวเดียวเฉพาะปุ่มที่ใช้บ่อย คัดลอก ส่งออกภาพ พิมพ์ ลบคอลัมน์ ภาษา และตั้งค่าระบบ อยู่ในแถบเมนู ช่องกล่องแจ้งเตือนขึ้นเมื่อมีกล่องเท่านั้น (ตาราง → เพิ่มกล่องแจ้งเตือน) ปุ่มขยาย/ย่อขยายเฉพาะตาราง ไม่ขยายเมนูและแถบเครื่องมือ
+แก้: หลังเปิดเครื่องแบบเริ่มที่ถาด กดเปิดหน้าแก้ไขจากถาดแล้วหน้าต่างหายไปทันที
 
 19 พ.ย. 2026 — 2.5.1
 แก้: กำหนดส่งที่มีชื่อเดือนหรือปีสองหลัก (5 Jan 2026, 5-Jan-26, 5/1/26) เช่น วางจาก Excel ถูกอ่านเป็นปี 1483 หรือ 1983 และเด้งเตือนว่าพลาดทันที

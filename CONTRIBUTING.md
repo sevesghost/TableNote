@@ -20,9 +20,12 @@ dotnet build -c Release
 dotnet run -c Release --project tests/PersistenceTests
 dotnet run -c Release --project tests/LangTests
 dotnet run -c Release --project tests/AlertUiTests
+dotnet run -c Release --project tests/WallpaperTests
 ```
 
-The Windows build is `dotnet publish -c Release -r win-x64` (see [Building from source](README.md#building-from-source)). The app also runs on Linux for UI testing, but background mode only works on Windows.
+Every folder under `tests/` is a console program; run them all before a pull request (`tests/ViewImageTests` needs a display, for example `xvfb-run`).
+
+The Windows build is `dotnet publish -c Release -r win-x64` (see [Building from source](README.md#building-from-source)). The app also runs on Linux for UI testing, but wallpaper mode only works on Windows (`tests/WallpaperTests` covers it with a fake desktop).
 
 ## Pull requests
 

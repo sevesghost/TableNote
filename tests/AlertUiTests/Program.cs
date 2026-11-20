@@ -34,11 +34,21 @@ try
     window.Show();
     Pump(window);
 
-    var add = window.FindControl<Button>("AddAlertButton") ?? throw new Exception("Add button missing");
-    Ok(add.IsVisible, "add button is visible in edit mode");
-
-    Click(window, add);
+    // 2.6.0: no alert panel while there are no boxes; the first one comes from Table → Add alert box.
+    var host = window.FindControl<Border>("AlertHost") ?? throw new Exception("alert panel missing");
+    Ok(!host.IsVisible, "no alert panel while there are no alert boxes");
+    var tableMenu = window.FindControl<Menu>("MainMenu")!.Items.OfType<MenuItem>().First(i => i.Header?.ToString() == "Table");
+    tableMenu.Open();
     Pump(window);
+    var addItem = tableMenu.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header?.ToString() == "Add alert box");
+    Ok(addItem is { IsEnabled: true }, "Table menu has an enabled Add alert box item");
+    addItem?.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(MenuItem.ClickEvent));
+    tableMenu.Close();
+    Pump(window);
+    Ok(host.IsVisible && Cards(window).Count == 1, "the menu item adds the first box and shows the panel", Cards(window).Count.ToString());
+    var add = window.FindControl<Button>("AddAlertButton") ?? throw new Exception("Add button missing");
+    Ok(add.IsVisible, "add button is visible in the panel once there is a box");
+
     TypeInto(window, TitleBox(Card(window, 0)), "Alpha");
     TypeInto(window, BodyBox(Card(window, 0)), "one");
     Click(window, add);

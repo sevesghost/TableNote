@@ -12,19 +12,7 @@ public partial class MainWindow
 {
     private bool _imageBusy;
 
-    private void InitImageExport()
-    {
-        ExportImageButton.Click += async (_, _) => await ExportImageAsync();
-        PrintButton.Click += async (_, _) => await PrintViewAsync();
-    }
-
-    private void ApplyImageExportTexts()
-    {
-        ExportImageButton.Content = Localizer.T("toolbar.export_image");
-        ToolTip.SetTip(ExportImageButton, Localizer.T("tip.export_image"));
-        PrintButton.Content = Localizer.T("toolbar.print");
-        ToolTip.SetTip(PrintButton, Localizer.T("tip.print"));
-    }
+    // Image export and print are in the File menu (2.6.0: no toolbar buttons). _imageBusy keeps them single.
 
     /// <summary>
     /// What the open table shows. <see cref="ViewImageOptions.IsHidden"/> is the one hook for collapsed
@@ -86,7 +74,6 @@ public partial class MainWindow
                 try
                 {
                     _imageBusy = true;
-                    ExportImageButton.IsEnabled = false;
                     StatusText.Text = Localizer.T("export.image_running");
                     await using var stream = await file.OpenWriteAsync();
                     var bytes = CaptureTable(ViewImageFormat.Png);
@@ -102,7 +89,6 @@ public partial class MainWindow
                 finally
                 {
                     _imageBusy = false;
-                    ExportImageButton.IsEnabled = true;
                 }
                 return;
             }
@@ -115,7 +101,6 @@ public partial class MainWindow
         }
 
         _imageBusy = true;
-        ExportImageButton.IsEnabled = false;
         StatusText.Text = Localizer.T("export.image_running");
         try
         {
@@ -131,7 +116,6 @@ public partial class MainWindow
         finally
         {
             _imageBusy = false;
-            ExportImageButton.IsEnabled = true;
         }
     }
 
@@ -140,7 +124,6 @@ public partial class MainWindow
         if (_view != ViewMode.Edit || _imageBusy) return;
         CommitFocusedEdit();
         _imageBusy = true;
-        PrintButton.IsEnabled = false;
         StatusText.Text = Localizer.T("print.running");
         try
         {
@@ -170,7 +153,6 @@ public partial class MainWindow
         finally
         {
             _imageBusy = false;
-            PrintButton.IsEnabled = true;
         }
     }
 }

@@ -1,34 +1,12 @@
 namespace TableNote;
 
+/// <summary>
+/// The editor window's layer as saved in note.json ("desktop", "floating", "window"). Up to 2.5.1 "desktop" could
+/// attach the window to the desktop in background mode; since 2.6.0 the table goes on the wallpaper instead, and
+/// "desktop" and "window" are both a normal window. The saved values are unchanged so old files read the same.
+/// </summary>
 public static class DesktopPlacement
 {
-	// v2.4.2: notices are resolved in the UI language when shown (were Thai consts).
-	public static string FallbackNotice => Localizer.T("desktop.fallback");
-
-	public static string DesktopWorkerNotice => Localizer.T("desktop.worker");
-
-	public static string DesktopProgmanNotice => Localizer.T("desktop.progman");
-
-	public static string BottomFallbackNotice => Localizer.T("desktop.bottom_fallback");
-
-	public static string FloatingNotice => Localizer.T("desktop.floating");
-
-	public static DesktopDecision Decide(DesktopAttachResult result)
-	{
-		if (!result.Attached)
-		{
-			return new DesktopDecision(ClaimsDesktop: false, Topmost: false, FallbackNotice);
-		}
-		return result.Host switch
-		{
-			DesktopHostKind.WorkerWBehindIcons => new DesktopDecision(ClaimsDesktop: true, Topmost: false, DesktopWorkerNotice), 
-			DesktopHostKind.BottomFallback => new DesktopDecision(ClaimsDesktop: true, Topmost: false, BottomFallbackNotice),
-			DesktopHostKind.IconHost => new DesktopDecision(ClaimsDesktop: true, Topmost: false, Localizer.T("desktop.icon_host")),
-			DesktopHostKind.Progman => new DesktopDecision(ClaimsDesktop: true, Topmost: false, DesktopProgmanNotice), 
-			_ => new DesktopDecision(ClaimsDesktop: false, Topmost: false, FallbackNotice), 
-		};
-	}
-
 	public static bool EffectiveTopmost(DesktopLayerKind layer)
 	{
 		return layer == DesktopLayerKind.Floating;
@@ -36,7 +14,7 @@ public static class DesktopPlacement
 
 	public static DesktopLayerKind ParseLayer(string? value)
 	{
-		string text = value?.Trim().ToLowerInvariant();
+		string? text = value?.Trim().ToLowerInvariant();
 		if (!(text == "window"))
 		{
 			if (text == "floating")
@@ -52,9 +30,9 @@ public static class DesktopPlacement
 	{
 		return layer switch
 		{
-			DesktopLayerKind.Window => "window", 
-			DesktopLayerKind.Floating => "floating", 
-			_ => "desktop", 
+			DesktopLayerKind.Window => "window",
+			DesktopLayerKind.Floating => "floating",
+			_ => "desktop",
 		};
 	}
 }

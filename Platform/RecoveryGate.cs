@@ -2,16 +2,16 @@ using System;
 
 namespace TableNote;
 
+/// <summary>
+/// Wallpaper mode hides the editor, so it is only entered when there is a way back: the tray icon and the
+/// "start TableNote again" signal (Ctrl+Shift+E is a bonus, not required). The same rules decide the mode at start-up.
+/// </summary>
 public static class RecoveryGate
 {
 	// v2.4.2: notices are resolved in the UI language when shown (were Thai consts).
 	public static string TrayUnavailable => Localizer.T("recovery.tray_unavailable");
 
 	public static string SignalUnavailable => Localizer.T("recovery.signal_unavailable");
-
-	public static string ClickThroughFailed => Localizer.T("recovery.click_through_failed");
-
-	public static string PartialRollback => Localizer.T("recovery.partial_rollback");
 
 	public static string ForcedEdit => Localizer.T("recovery.forced_edit");
 
@@ -22,10 +22,6 @@ public static class RecoveryGate
 	public static string HotkeyCollision => Localizer.T("recovery.hotkey_collision");
 
 	public static string HotkeyUnavailable => Localizer.T("recovery.hotkey_unavailable");
-
-	public static string TaskbarHideFailed => Localizer.T("recovery.taskbar_hide_failed");
-
-	public static string NotAttachedStaysEditor => Localizer.T("recovery.not_attached");
 
 	public static bool CanEnter(RecoveryRoutes routes)
 	{
