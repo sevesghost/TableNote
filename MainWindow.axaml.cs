@@ -122,7 +122,7 @@ public partial class MainWindow : Window
         // The toolbar keeps the everyday commands; copy, image export, print, delete column, language, help,
         // and the system settings are in the menu bar (MainWindow.MenuBar.cs).
         AddRowButton.Click += async (_, _) => await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_row"), AddRowAsync));
-        DeleteRowButton.Click += async (_, _) => await RunStructureAsync(DeleteRowAsync);
+        DeleteRowButton.Click += async (_, _) => await RunStructureAsync(() => DeleteRowsAsync(-1)); // 2.6.0: every selected row
         InitColumnToggle();
         SortDueButton.Click += (_, _) => SortByDue();
         ExportButton.Click += async (_, _) => await ExportAsync();
@@ -492,9 +492,9 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.F5: e.Handled = true; _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_row"), AddRowAsync)); break;
-            case Key.F6: e.Handled = true; _ = RunStructureAsync(DeleteRowAsync); break;
+            case Key.F6: e.Handled = true; _ = RunStructureAsync(() => DeleteRowsAsync(-1)); break; // 2.6.0: every selected row
             case Key.F7: e.Handled = true; _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), AddColumnAsync)); break;
-            case Key.F8: e.Handled = true; _ = RunStructureAsync(() => SnapshotStep(Localizer.T("delete.undo_column"), DeleteColumnAsync)); break;
+            case Key.F8: e.Handled = true; _ = RunStructureAsync(() => DeleteColumnsAsync(-1)); break; // 2.6.0: every selected column
         }
     }
 
@@ -1182,21 +1182,23 @@ public partial class MainWindow : Window
         if (rowIndex < 0 || rowIndex >= _session.Doc.Rows.Count) return;
         var rowBg = RowBackground(rowIndex);
         var rowLabel = RowLabelColors(rowIndex);
+        var number = new TextBlock
+        {
+            Text = (rowIndex + 1).ToString(),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = rowLabel.Foreground, FontFamily = AppFonts.Thai, Margin = new Thickness(4, 0)
+        };
         var border = new Border
         {
             Background = rowLabel.Background,
             BorderBrush = GridLine,
             BorderThickness = new Thickness(1),
-            Child = new TextBlock
-            {
-                Text = (rowIndex + 1).ToString(),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Foreground = rowLabel.Foreground, FontFamily = AppFonts.Thai, Margin = new Thickness(4, 0)
-            }
+            Child = _view == ViewMode.Edit ? WithRowGrip(number) : number // 2.6.0: ⋮⋮ moves the row, the number selects it
         };
         border.PointerPressed += (_, e) =>
         {
+            if (_view == ViewMode.Edit) { OnRowLabelPressed(rowIndex, border, e); return; } // 2.6.0: whole rows, like Excel
             _session.ChooseRow(rowIndex);
             Highlight();
             UpdateStatus();
@@ -1635,6 +1637,7 @@ public partial class MainWindow : Window
         {
             if (_view == ViewMode.Background) return;
             if (!header && row >= 0) { OnCellFocused(row, column, e.KeyModifiers); return; } // 2.6.0: Excel-style cells
+            if (header) { OnHeaderFocused(box, column); UpdateStatus(); return; } // 2.6.0: a header selects its column
             if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift)) _session.ChooseCell(row, column);
             Highlight();
             UpdateStatus();
@@ -1733,6 +1736,7 @@ public partial class MainWindow : Window
             else MoveVertical(row, column, up);
         }, RoutingStrategies.Tunnel);
         if (!header && row >= 0) AttachExcelCell(box, row, column); // 2.6.0: click selects, typing replaces, F2 edits
+        if (header && column >= 0) AttachExcelHeader(box, column); // 2.6.0: click selects the column, double-click renames
         return box;
     }
 
@@ -1923,7 +1927,7 @@ public partial class MainWindow : Window
     }
 
     private RecoveryRoutes CurrentRoutes() => new(_trayReady, Program.SignalReady);
-    private void ShowHelp() => InfoWindow.Show(Localizer.T("tip.help"), AppInfo.HelpText);
+    private void ShowHelp() => HelpWindow.Show(Localizer.T("tip.help"), AppInfo.HelpText, _settings.Scale / 100.0); // 2.6.0: topics that open and close
     private void ShowLog() => InfoWindow.Show(Localizer.T("tray.log"), AppInfo.LogText); // v2.4.2: same key as the tray Log item
 
     /// <summary>

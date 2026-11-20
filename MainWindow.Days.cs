@@ -74,6 +74,7 @@ public partial class MainWindow
             UpdateStatus();
         }, RoutingStrategies.Tunnel);
         cell.GotFocus += (_, e) => { if (_view == ViewMode.Edit) OnCellFocused(row, column, e.KeyModifiers); };
+        AttachCellMenu(cell, row, column); // 2.6.0: right-click → copy, insert, delete
         var rowId = doc.RowIdAt(row);
         var columnId = doc.ColumnIdAt(column);
         cell.Click += (_, _) =>

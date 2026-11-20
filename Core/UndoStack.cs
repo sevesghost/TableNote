@@ -19,6 +19,7 @@ public sealed class UndoStack
     }
     public bool CanRedo => _redo.Count > 0;
     public string? LastUndoLabel => _undo.Count > 0 ? _undo[^1].Label : null;
+    public string? LastRedoLabel => _redo.Count > 0 ? _redo[^1].Label : null;
 
     public void Push(IUndoAction action)
     {

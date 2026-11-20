@@ -13,6 +13,8 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
 ## Features
 
 - **Wallpaper mode (2.6.0, Windows):** **Wallpaper** on the toolbar draws the table over your own wallpaper, full screen, where the window was. The editor goes to the tray. Click the tray icon or press Ctrl+Shift+E to edit again, and your own wallpaper comes back. See [Wallpaper mode](#wallpaper-mode).
+- **Whole rows and columns (2.6.0):** click a row number or a column header to select the whole row or column; drag or Shift+click for several. Right-click: insert as many rows (above / below) or columns (left / right) as are selected, delete them, or **Insert copied** — copied rows come back with their row color, repeat and advance reminders, copied columns with their type and width; text from Excel goes in as new rows. Drag the ⋮⋮ grip beside a row number to move the selected rows. Double-click a header to rename it.
+- **Help in topics (2.6.0):** **Help → Help** lists topics; click one to open it, click again to close it (Open all / Close all).
 - **Excel-style cells (2.6.0):** a click selects a cell (filled gold), dragging or Shift selects a block, typing replaces the cell, double-click or F2 edits it, Delete clears, Ctrl+C / Ctrl+X / Ctrl+V copy, cut and paste blocks to and from Excel, Ctrl+A or the top-left corner selects everything, a click on an empty spot clears the selection. No fill handle.
 - **Formula bar (2.6.0):** above the table: the selected cell's address (B3) and its whole text, to read or edit long text (no calculation).
 - **Find (2.6.0):** Ctrl+F (or **Table → Find…**) finds text in the table: every match is marked, Enter / Shift+Enter go to the next / previous one.
@@ -71,7 +73,7 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
 
 ### Reminders keep running
 
-- Closing the main window hides TableNote to the system tray; reminders keep working. To quit, right-click the tray icon and choose **Quit** (**ออก** in Thai). A one-time notice explains this. If the tray icon can't be created, closing the window quits TableNote.
+- Closing the main window (X, Alt+F4, or **File → Close window**) hides TableNote to the system tray; reminders keep working. To quit, choose **File → Exit TableNote**, or right-click the tray icon and choose **Quit** (**ออก** in Thai). A one-time notice explains this. If the tray icon can't be created, closing the window quits TableNote.
 - Taskbar and tray: while you edit the table, TableNote has an icon on the taskbar and in the tray. In wallpaper mode only the tray icon remains. **Edit table** in the tray menu, clicking the tray icon, or Ctrl+Shift+E brings the editor (and its taskbar icon) back, and the mode is kept after a restart.
 - With **Launch at sign-in** turned on (the startup entry is named `TableNote`), TableNote starts hidden in the tray (`--startup`). If it was last in wallpaper mode, it draws the table on the wallpaper again instead.
 
@@ -97,9 +99,12 @@ The in-app Help (**Help → Help** in the menu bar, or Help / วิธีใช
 | Key | Action |
 | --- | --- |
 | F5 | Add row |
-| F6 | Delete row |
+| F6 | Delete the selected rows (asks first when they have text) |
 | F7 | Add column |
-| F8 | Delete column |
+| F8 | Delete the selected columns |
+| Click / drag a row number | Select whole rows (Shift+click extends); drag the ⋮⋮ grip beside the number to move them |
+| Click / drag a column header | Select whole columns (Shift+click extends); double-click or F2 renames the column |
+| Right-click a row number / header / cell | Insert rows or columns (as many as are selected), delete them, Insert copied |
 | Alt+Shift+← / → | Move the active column left / right |
 | Alt+Shift+↑ / ↓ | Move the active row up / down (skips hidden rows when Hide done is on) |
 | Click / drag | Select a cell / a block of cells (filled gold) |
@@ -114,8 +119,9 @@ The in-app Help (**Help → Help** in the menu bar, or Help / วิธีใช
 | Ctrl+X | Cut the selected cells |
 | Ctrl+V | Paste: a block from Excel starts at the selected cell; one value fills every selected cell |
 | Ctrl+F / F3 / Shift+F3 | Find in the table / next / previous (Esc closes) |
-| Ctrl+Z | Undo (up to 100 steps) |
-| Ctrl+Y / Ctrl+Shift+Z | Redo |
+| Ctrl+Z | Undo (up to 100 steps; also Table → Undo) |
+| Ctrl+Y / Ctrl+Shift+Z | Redo (also Table → Redo) |
+| Alt+F4 / the window's X | Close the window; TableNote keeps running in the tray (File → Exit TableNote quits) |
 | Ctrl+Shift+E | Back to the editor from wallpaper mode (Windows) |
 | Ctrl++ / Ctrl+− / Ctrl+0 | Zoom in / zoom out / back to 100% |
 | Ctrl+mouse wheel | Zoom in or out |

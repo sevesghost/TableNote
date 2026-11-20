@@ -9,200 +9,259 @@ public static class AppInfo
     public static string HelpText => Localizer.Current == "th" ? HelpTextTh : HelpTextEn;
     public static string LogText => Localizer.Current == "th" ? LogTextTh : LogTextEn;
 
+    /// <summary>2.6.0: help in topics ("# Title", "Key :: text", "- bullet"); see <see cref="HelpContent"/> and HelpWindow.</summary>
     public static string HelpTextEn { get; } = (@"TableNote {VERSION}
 
-Shortcuts
-  F5 / F6        add / delete row        F7 / F8   add / delete column
-  Alt+Shift+←/→  move column left/right  Alt+Shift+↑/↓  move row up/down
-  Click / drag   select a cell / a block  Shift+click, Shift+arrows  grow the block
-  Typing         replaces the selected cell; double-click or F2 edits its text, Esc puts it back
-  Arrows / Tab   next cell                Enter / Shift+Enter  keep the edit, cell below / above
-  Delete         clear the selected cells Ctrl+A or the top-left corner  select all
-  Ctrl+C / Ctrl+X / Ctrl+V  copy / cut / paste cells (to and from Excel; one value fills every selected cell)
-  Ctrl+F         find in the table (Enter / Shift+Enter or F3 / Shift+F3 next / previous, Esc closes)
-  Formula bar    above the table: the cell's address and whole text (no calculation); Enter keeps, Esc puts back
-  Ctrl+Z         undo (up to 100 steps)  Ctrl+Y / Ctrl+Shift+Z  redo
-  Ctrl+Home      first cell              Ctrl+End  last row
-  Ctrl + / Ctrl − / Ctrl 0   larger / smaller / 100% (80–200%); Ctrl+mouse wheel too; A− 100% A+ buttons
-  View → Language  switch language (saved in settings.json; note.json is not touched)
-  Ctrl+Shift+E   back to editing from wallpaper mode (Windows)
+# Getting started
+TableNote is a task table like Excel that reminds you when a task is due. It saves by itself after every change.
+- Type the task in Title and Detail.
+- Set Due with 📅 or type a date, e.g. 5/1/2026 9:00.
+- Pick a status: Not started / In progress / Done.
+- When it is due, a reminder window opens with a sound.
++ Row / − Row / + Column :: toolbar buttons (F5 / F6 / F7); delete a column with F8 or by right-clicking its header
 
-Columns and rows
-  Right-click a header → Column settings…: name, width, type (text / number / choice / checkbox / days counter).
-  Right-click a row number → Row color / Highlight row. A row color replaces the status color;
-  a highlighted row gets an orange row number.
+# Cells (like Excel)
+Click :: select a cell (gold)
+Drag or Shift+click :: select a block of cells
+Typing :: replaces the text of the selected cell
+Double-click or F2 :: edit the text that is there (the caret goes to the end)
+Esc :: puts back what you just typed
+Enter / Shift+Enter :: keep it and go to the cell below / above
+Tab / arrows :: next cell (Shift+arrows grow the block)
+Alt+Enter :: a new line inside a cell
+Delete :: clear the selected cells
+Ctrl+A or the top-left corner :: select every cell
+Click an empty spot :: nothing selected
+Ctrl+Home / Ctrl+End :: first cell / last row
+Formula bar :: above the table: the cell's address (B3) and its whole text; edit it there (no calculation); Enter keeps, Esc puts back
+There is no fill handle (+) to drag.
 
-Days counter
-  Table → Add days counter column: each row shows how many days since its start date (""150 days""). Rows that are
-  not done start today; a new row starts on the day it is added. A row set to Done stops counting (""42 days ✓"").
-  Click a days cell (or Space) for its pop-up: how long it has been open, the start date (pick another or Today),
-  the status and since when, the last update, and the history newest first — status changes, edits of the row and
-  progress notes, each with date, time and the day since the start. Type a progress note and press Enter to add it;
-  Edit (or a double-click) changes a note (Enter keeps, Esc puts it back), ✕ then Delete? removes one.
-  History is kept from the day the table got a days column; Ctrl+Z of an edit is recorded as another change.
-  Exports keep the start date (yyyy-MM-dd); pictures, print and the wallpaper show the days.
+# Rows and columns: select, insert, delete
+Click a row number :: select the whole row (drag or Shift+click for several)
+Click a column header :: select the whole column (drag or Shift+click for several)
+Double-click a header, or F2 :: rename the column (Enter keeps, Esc puts the name back)
+Right-click a row number :: insert rows above / below, delete rows, insert copied rows — as many as are selected
+Right-click a column header :: insert columns left / right, delete columns, insert copied columns
+Right-click a cell :: Insert ▸ / Delete ▸ rows or columns, and Insert copied cells
+F5 / F6 :: add a row / delete the selected rows (asks first when they have text)
+F7 / F8 :: add a column / delete the selected columns
+Drag ⋮⋮ beside a row number :: move the row (select several rows first to move them together)
+Drag ⋮⋮ on a header :: move the column
+Alt+Shift+arrows :: move the row up / down, or the column left / right
+Right-click a header → Column settings… :: name, width and type (text / number / choice / checkbox / days counter)
+Right-click a row number → Row color / Highlight row :: a row color replaces the status color; a highlighted row gets an orange number
 
-Alert boxes
-  Table → Add alert box adds the first box; the alert panel above the table appears with it, and its + Alert adds more.
-  Edit a box's title and text. Drag the ⋮⋮ grip to change the order,
-  or use Up and Down (they work without dragging, and with the keyboard). Delete asks first, then removes that box.
-  This can't be undone with Ctrl+Z.
-  The boxes and their order are saved in note.json. Each box keeps a stable id. Ctrl+Z does not undo
-  alert-box changes. These boxes are separate from due-date reminders.
+# Copy, paste and find
+Ctrl+C / Ctrl+X :: copy / cut the selected cells (tab-separated, so they paste into Excel as they look)
+Ctrl+V :: paste: a block from Excel starts at the selected cell; one value fills every selected cell
+Insert copied :: copy whole rows or columns, then right-click → Insert copied rows / columns. The copy keeps its row color, repeat and advance reminders (or the column's type and width). Text from Excel goes in as new rows.
+Ctrl+F :: find in the table; matches turn yellow (Enter / Shift+Enter or F3 / Shift+F3: next / previous; Esc closes)
+File → Copy table / Copy with headers :: copy the whole table
 
-Wallpaper mode (Windows)
-  Wallpaper (toolbar) or File → Set as wallpaper: the table is drawn over your own wallpaper, full screen, where the
-  window was, at the window's size at most; the editor goes to the tray. The picture follows the table: a task marked
-  done, a task turning overdue, a new day.
-  Back to editing: click the tray icon, Tray → Edit table, Ctrl+Shift+E, or start TableNote again. Your own wallpaper
-  comes back then, and also on Tray → Quit. Wallpaper mode is kept after a restart (it is redrawn at sign-in).
-  Taskbar: editing = icon on the taskbar and in the tray; wallpaper mode = tray icon only.
+# Undo and redo
+Ctrl+Z :: undo — the last 100 steps are remembered
+Ctrl+Y or Ctrl+Shift+Z :: redo (forward again)
+Table → Undo / Redo :: also in the menu, with the name of the step
+While you type in a cell, Ctrl+Z first takes back the letters in that cell.
+Not undone with Ctrl+Z: alert boxes, and progress notes in the days pop-up.
 
-Reminders
-  Set the Due column with the calendar + HH:mm (24-hour). Dates are always CE (e.g. 2026).
-    Typed text: yyyy-MM-dd HH:mm or d/M/yyyy, e.g. 5/1/2026 9:00 = 5 Jan 2026 09:00.
-    📅 on an empty cell sets now + 1 minute; Shift+click 📅 = tomorrow 09:00.
-  Status: Not started / In progress / Done (stored as todo / doing / done). A blank status shows as Not started.
-  Repeat: None / Daily / Weekly / Monthly — marking it Done keeps the row as history and adds the next one below.
-  ⏰ advance reminders: 15 min / 1 hour / 1 day or custom, up to 5 per task. The on-time reminder always fires.
-  Reminders gather in ONE window: Snooze 10 min / Done / Acknowledge; Close = acknowledge all; X = snooze.
-  Reminders work while the program runs (closing the window keeps it in the tray; quit from the tray menu).
-  View → System → Reminder sound…: mute, the sound (Windows' sounds or your own .wav), the volume (50 % unless
-  set; above 50 % it asks first) and a test button.
+# Reminders
+Due :: calendar + HH:mm (24-hour); dates are CE (a B.E. year such as 09/11/2569 becomes 2026)
+Typed dates :: yyyy-MM-dd HH:mm or day/month/year, e.g. 5/1/2026 9:00 = 5 Jan 2026 09:00
+📅 :: opens the calendar (an empty cell gets now + 1 minute); Shift+click = tomorrow 09:00
+Status :: Not started / In progress / Done (blank = Not started)
+Repeat 🔁 :: None / Daily / Weekly / Monthly; Done keeps the row as history and adds the next one below
+⏰ advance reminders :: 15 min / 1 hour / 1 day or your own, up to 5 per task (the on-time reminder always fires)
+⚠ before a due date :: the date can't be read, so that task won't remind
+Done statuses: done, complete, completed, ✓, ✔, เสร็จ, เสร็จแล้ว (the whole word).
 
-Export (Export… button or tray menu)
-  .xlsx / .csv (UTF-8 with BOM) / .txt (tab-separated; tabs and line breaks inside a cell become a space).
-  Status and repeat use the current language's labels; dates are yyyy-MM-dd [HH:mm] (CE).
-  In .csv/.txt a value starting with = + - @ gets a leading ' (never a formula), except plain numbers.
-  When done rows are hidden you can choose to include them.
+# Reminder window and sound
+Reminders that are due together gather in one window, with a sound.
+Snooze 10 min :: reminds again in 10 minutes
+Done :: sets the status (and adds the next round of a repeating task)
+Acknowledge :: no more reminders for this time
+Close :: acknowledges every task left in the window
+X (window corner) :: snoozes every task left for 10 minutes
+View → System → Reminder sound… :: the sound (Windows' sounds or your own .wav), the volume (50 % unless you change it; above 50 % it asks first), mute and a test button
+Reminders work while TableNote runs — also when it is only in the tray.
 
-Files
-  Windows: %APPDATA%\TableNote\note.json   Linux: ~/.local/share/TableNote/note.json
-  settings.json (language, zoom) sits next to note.json. tablenote.log keeps 2 files, ≤ 512 KB.
-  Older files are backed up once per version (note.v2.bak, note.v3.bak, note.v4.bak …, never overwritten).
-  More than 1000 rows: the full file is copied to note.overlimit-<time>.bak (never deleted) and the first 1000 rows open.
-  Broken files are kept as note.json*.bak (newest 5).
-  Limits: 1000 rows, 30 user columns, 2,000 characters per cell, note.json up to 8 MB.
+# Colors
+Light red :: overdue
+Yellow :: due today
+Faded and struck through :: done
+Row color :: replaces the colors above (right-click a row number → Row color)
+Hide done rows / Sort by due :: toolbar buttons
+
+# Days counter and progress notes
+Table → Add days counter column :: each row shows the days since its start (150 days); Done stops it (42 days ✓)
+Click a days cell (or Space) :: the start date, the status and since when, the last update, and the row's history
+Progress notes :: type one and press Enter to add it; Edit (or a double-click) changes it; ✕ then Delete? removes it
+History is kept from the day the table got a days column. Exports keep the start date; pictures, print and the wallpaper show the days.
+
+# Alert boxes
+Table → Add alert box :: text boxes above the table; + Alert adds more
+Drag ⋮⋮, or Up / Down :: change their order
+Delete :: asks first; it can't be undone with Ctrl+Z
+These boxes are separate from the due-date reminders.
+
+# Closing the window and exiting
+Close the window (X) or Alt+F4 :: TableNote goes to the tray (bottom-right) and keeps reminding you
+File → Close window :: the same as X
+File → Exit TableNote :: quits TableNote; no reminders until you start it again
+Right-click the tray icon → Quit :: quits as well
+Open it again :: click the tray icon, or start TableNote again
+View → System → Launch at sign-in :: starts hidden in the tray when you sign in
+
+# Wallpaper mode (Windows)
+Wallpaper button or File → Set as wallpaper :: the table is drawn over your own wallpaper, full screen; the editor goes to the tray
+The picture follows the table :: tasks marked done, tasks turning overdue, a new day
+Back to editing :: click the tray icon, Tray → Edit table, Ctrl+Shift+E, or start TableNote again (your own wallpaper comes back)
+
+# Size and language
+Ctrl + / Ctrl − / Ctrl 0 :: larger / smaller / 100% (80–200%)
+Ctrl+mouse wheel, or A− 100% A+ :: zoom
+View → Language :: switch the language (kept in settings.json)
+
+# Export, print and pictures
+Export button :: .xlsx (Excel) / .csv (UTF-8) / .txt (tab-separated); status and repeat as words; dates as yyyy-MM-dd
+File → Export image / Print :: a PNG / JPEG picture of the table, or print it as it looks
+When done rows are hidden, you can choose to include them.
+
+# Files and backups
+Windows :: %APPDATA%\TableNote\note.json
+Linux :: ~/.local/share/TableNote/note.json
+TableNote saves by itself about 1.5 seconds after you stop typing.
+settings.json :: language, zoom and sound, next to note.json
+tablenote.log :: what the program did; 2 files, at most 512 KB in all
+Backups :: older formats as note.v2.bak, note.v3.bak, note.v4.bak …; broken files as note.json*.bak (the newest 5)
+Limits :: 1000 rows, 30 columns, 2,000 characters per cell, note.json up to 8 MB
 ").Replace("{VERSION}", Version);
 
     public static string HelpTextTh { get; } = (@"ตารางโน้ต รุ่น {VERSION}
-หน้าต่างวิธีใช้นี้ไม่ใช่โหมดลอยของตาราง
 
-วิธีใช้ ตารางโน้ต (TableNote) รุ่น {VERSION}
+# เริ่มต้นใช้งาน
+ตารางโน้ตเป็นตารางงานแบบ Excel ที่เตือนเมื่อถึงกำหนดส่ง บันทึกให้อัตโนมัติทุกครั้งที่แก้ ไม่ต้องกดบันทึก
+- พิมพ์งานในคอลัมน์ หัวข้อ และ รายละเอียด
+- ตั้ง กำหนดส่ง ด้วยปุ่ม 📅 หรือพิมพ์วันที่ เช่น 5/1/2026 9:00
+- เลือกสถานะ: ยังไม่เริ่ม / กำลังทำ / เสร็จแล้ว
+- ถึงเวลาจะมีหน้าต่างเตือนเด้งขึ้นพร้อมเสียง
++ แถว / − แถว / + คอลัมน์ :: ปุ่มบนแถบเครื่องมือ (F5 / F6 / F7) ลบคอลัมน์ใช้ F8 หรือคลิกขวาที่หัวคอลัมน์
 
-ปุ่มลัด
-  F5             เพิ่มแถว
-  F6             ลบแถว
-  F7             เพิ่มคอลัมน์
-  F8             ลบคอลัมน์
-  Alt+Shift+←/→  ย้ายคอลัมน์ซ้าย/ขวา
-  Alt+Shift+↑/↓  ย้ายแถวขึ้น/ลง (ข้ามแถวที่ซ่อนเมื่อติ๊กซ่อนงานเสร็จ)
-  คลิก / ลาก     เลือกช่อง / คลุมหลายช่อง   Shift+คลิก, Shift+ลูกศร  ขยายการคลุม
-  พิมพ์           เขียนทับช่องที่เลือก   ดับเบิลคลิก หรือ F2  แก้ข้อความเดิม   Esc  คืนค่าเดิม
-  ลูกศร / Tab    ไปช่องถัดไป
-  Enter          บันทึกแล้วไปช่องถัดลงไป   Shift+Enter  ไปช่องข้างบน
-  Delete         ล้างข้อมูลในช่องที่เลือก   Ctrl+A หรือคลิกมุมซ้ายบน  เลือกทั้งหมด
-  Ctrl+C         คัดลอกช่องที่เลือก (ไม่มีหัวคอลัมน์ วางใน Excel ได้)
-  Ctrl+X         ตัดช่องที่เลือก
-  Ctrl+V         วาง (ชุดข้อมูลจาก Excel เริ่มที่ช่องที่เลือก ค่าเดียวเติมทุกช่องที่เลือก)
-  Ctrl+F         ค้นหาในตาราง (Enter / Shift+Enter หรือ F3 / Shift+F3 ถัดไป / ก่อนหน้า Esc ปิด)
-  แถบสูตร        เหนือตาราง แสดงที่อยู่ช่องและข้อความทั้งหมด (ไม่คำนวณ) Enter = บันทึก Esc = คืนค่าเดิม
-  Ctrl+Z         ย้อนการแก้ตาราง (สูงสุด 100 ขั้น)
-                 ระหว่างพิมพ์ในช่อง Ctrl+Z ย้อนตัวอักษรในช่องก่อน
-  Ctrl+Y / Ctrl+Shift+Z  ทำซ้ำ
-  Ctrl+Shift+E   กลับมาหน้าแก้ไขจากโหมดวอลเปเปอร์ (Windows)
-  Ctrl+Home      ไปช่องแรกของตาราง   Ctrl+End  ไปแถวสุดท้าย
-  Ctrl + / Ctrl − / Ctrl 0   ขยาย / ย่อ / กลับ 100% (80–200%)
-  Ctrl+ล้อเมาส์   ขยาย/ย่อ   ปุ่ม A− 100% A+ บนแถบเครื่องมือ
-  มุมมอง → ภาษา  สลับภาษา (จำไว้ใน settings.json ไม่แตะ note.json)
+# เลือกช่องและแก้ไข (แบบ Excel)
+คลิก :: เลือกช่อง (เป็นสีทอง)
+ลาก หรือ Shift+คลิก :: คลุมหลายช่อง
+พิมพ์ :: เขียนทับข้อความในช่องที่เลือก
+ดับเบิลคลิก หรือ F2 :: แก้ข้อความเดิม (เคอร์เซอร์อยู่ท้ายข้อความ)
+Esc :: ยกเลิกสิ่งที่เพิ่งพิมพ์ ข้อความเดิมกลับมา
+Enter / Shift+Enter :: เก็บแล้วไปช่องข้างล่าง / ข้างบน
+Tab / ลูกศร :: ไปช่องถัดไป (Shift+ลูกศร = ขยายการคลุม)
+Alt+Enter :: ขึ้นบรรทัดใหม่ในช่อง
+Delete :: ล้างข้อมูลในช่องที่เลือก
+Ctrl+A หรือคลิกมุมซ้ายบน :: เลือกทุกช่อง
+คลิกที่ว่าง :: ยกเลิกการเลือก
+Ctrl+Home / Ctrl+End :: ไปช่องแรก / แถวสุดท้าย
+แถบสูตร :: เหนือตาราง แสดงชื่อช่อง (เช่น B3) และข้อความทั้งหมด แก้ตรงนั้นได้ (ไม่คำนวณสูตร) Enter = เก็บ, Esc = คืนค่าเดิม
+ไม่มีจุด + สำหรับลากเติมแบบ Excel
 
-ตั้งเตือนงาน
-  1. พิมพ์งานในคอลัมน์ ""หัวข้อ"" และ ""รายละเอียด""
-  2. ตั้ง ""กำหนดส่ง"" ด้วยปฏิทิน + ช่องเวลา HH:mm
-     รองรับข้อความ yyyy-MM-dd HH:mm และ วัน/เดือน/ปี เช่น 5/1/2026 9:00 = 5 ม.ค. 2026 09:00
-     แสดงและเก็บเป็นปี ค.ศ. ทั้งสองภาษา (ถ้าพิมพ์ปี พ.ศ. เช่น 09/11/2569 จะแปลงเป็น ค.ศ. 2026)
-     ปุ่ม 📅 เปิดปฏิทิน (ถ้าช่องว่างจะตั้ง +1 นาทีเพื่อทดสอบ)
-     Shift+คลิก 📅 = พรุ่งนี้ 09:00
-  3. เลือกสถานะ: ยังไม่เริ่ม / กำลังทำ / เสร็จแล้ว (ในไฟล์เก็บเป็นรหัส todo / doing / done)
-     ช่องสถานะว่างแสดงเป็น ยังไม่เริ่ม และยังว่างในไฟล์
-  4. ทำซ้ำ: ไม่ซ้ำ / ทุกวัน / ทุกสัปดาห์ / ทุกเดือน
-     เมื่อกดเสร็จ แถวเดิมเป็นประวัติ และแทรกแถวรอบถัดไปด้านล่าง
-     ทุกเดือนวันที่ 31 → เดือนที่สั้นกว่าใช้วันสุดท้าย แล้วกลับเป็น 31 (31 ม.ค. → 28 ก.พ. → 31 มี.ค.)
-  5. ปุ่ม ⏰ เตือนล่วงหน้า: ก่อน 15 นาที / 1 ชั่วโมง / 1 วัน หรือกำหนดเอง
-     (นาที/ชั่วโมง/วัน ไม่เกิน 30 วัน) ได้สูงสุด 5 ครั้งต่องาน ค่าซ้ำนับครั้งเดียว
-     เตือนตรงเวลายังมีเสมอ  เวลาเตือนที่เลยไปแล้วตอนตั้งค่าจะข้าม (ไม่เด้งทันที)
-     งานที่เลยกำหนดไปแล้ว เตือนเฉพาะ ""ครบกำหนดแล้ว"" ไม่เด้งเตือนล่วงหน้าที่พลาดไป
-     ⚠ หน้าช่องกำหนดส่ง = อ่านวันที่ไม่ได้ งานนั้นจะไม่เตือน
+# เลือกแถวและคอลัมน์ แทรก ลบ
+คลิกเลขแถว :: เลือกทั้งแถว (ลาก หรือ Shift+คลิก เพื่อเลือกหลายแถว)
+คลิกหัวคอลัมน์ :: เลือกทั้งคอลัมน์ (ลาก หรือ Shift+คลิก เพื่อเลือกหลายคอลัมน์)
+ดับเบิลคลิกหัวคอลัมน์ หรือ F2 :: เปลี่ยนชื่อคอลัมน์ (Enter = เก็บ, Esc = ชื่อเดิม)
+คลิกขวาเลขแถว :: แทรกแถวด้านบน / ด้านล่าง ลบแถว แทรกแถวที่คัดลอก ตามจำนวนแถวที่เลือก
+คลิกขวาหัวคอลัมน์ :: แทรกคอลัมน์ทางซ้าย / ขวา ลบคอลัมน์ แทรกคอลัมน์ที่คัดลอก
+คลิกขวาที่ช่อง :: แทรก ▸ / ลบ ▸ แถวหรือคอลัมน์ และแทรกเซลล์ที่คัดลอก
+F5 / F6 :: เพิ่มแถว / ลบแถวที่เลือก (ถามก่อนถ้ามีข้อมูล)
+F7 / F8 :: เพิ่มคอลัมน์ / ลบคอลัมน์ที่เลือก
+ลาก ⋮⋮ ข้างเลขแถว :: ย้ายแถว (เลือกหลายแถวก่อน แล้วลากไปพร้อมกันได้)
+ลาก ⋮⋮ ที่หัวคอลัมน์ :: ย้ายคอลัมน์
+Alt+Shift+ลูกศร :: ย้ายแถวขึ้น / ลง หรือย้ายคอลัมน์ซ้าย / ขวา
+คลิกขวาหัวคอลัมน์ → ตั้งค่าคอลัมน์… :: ชื่อ ความกว้าง และชนิด (ข้อความ / ตัวเลข / ตัวเลือก / ช่องติ๊ก / นับวัน)
+คลิกขวาเลขแถว → สีแถว / ไฮไลต์แถว :: สีแถวใช้แทนสีตามสถานะ ไฮไลต์แถว = เลขแถวเป็นสีส้ม
 
-  เมื่อถึงเวลา จะเด้งหน้าต่างเตือน (รวมหลายงานในหน้าต่างเดียว) พร้อมเสียง
-    ""อีก 15 นาทีครบกำหนด"" = เตือนล่วงหน้า   ""ครบกำหนดแล้ว"" = เตือนตรงเวลา
-    เลื่อน 10 นาที   เตือนอีกครั้งในอีก 10 นาที (เฉพาะเวลาเตือนนั้น ถ้าเลยกำหนดส่งจะรวมกับเตือนตรงเวลา)
-    เสร็จแล้ว        เปลี่ยนสถานะ และสร้างรอบถัดไปถ้าตั้งทำซ้ำไว้
-    รับทราบ         ไม่เตือนซ้ำสำหรับเวลานี้ เฉพาะงานนั้น (รวมเวลาเตือนก่อนหน้า)
-    ปิด             รับทราบทุกงานที่ยังค้างในหน้าต่าง (แก้กำหนดส่งแล้วจะเตือนใหม่ได้)
-    X (ปิดหน้าต่าง) เลื่อน 10 นาที สำหรับงานที่ยังค้าง
-  มุมมอง → ตั้งค่าระบบ → ""ปิดเสียงเตือน"" ถ้าไม่ต้องการเสียง (ป๊อปอัปยังขึ้น)
-  มุมมอง → ตั้งค่าระบบ → ""เสียงแจ้งเตือน…"" เลือกเสียง (ของ Windows หรือไฟล์ .wav ของเอง) ความดัง
-    (เริ่มต้น 50% ถ้าเกิน 50% จะถามยืนยัน) ปิดเสียง และปุ่มทดลองฟัง
-  สำคัญ: การเตือนทำงานเมื่อโปรแกรมทำงานอยู่
-    ปิดหน้าต่าง (X) = ย่อไปอยู่ที่ถาดไอคอน การเตือนยังทำงาน  ออกจริง: คลิกขวาไอคอนถาด → ออก
-    ""เปิดเมื่อเข้าสู่ระบบ"" จะเริ่มแบบซ่อนอยู่ในถาด (--startup)
-  สถานะที่ถือว่าเสร็จ: เสร็จ, เสร็จแล้ว, done, complete, completed, ✓, ✔ (ตรงทั้งคำ)
-    ""ยังไม่เสร็จ"" / ""ไม่เสร็จ"" ไม่ถือว่าเสร็จ
+# คัดลอก วาง และค้นหา
+Ctrl+C / Ctrl+X :: คัดลอก / ตัดช่องที่เลือก (คั่นด้วยแท็บ วางใน Excel ได้ตามที่เห็น)
+Ctrl+V :: วาง ชุดข้อมูลจาก Excel เริ่มที่ช่องที่เลือก ค่าเดียวจะเติมทุกช่องที่เลือก
+แทรกที่คัดลอก :: คัดลอกทั้งแถวหรือทั้งคอลัมน์ แล้วคลิกขวา → แทรกแถว / คอลัมน์ที่คัดลอก สำเนาจะมีสีแถว การทำซ้ำ และการเตือนล่วงหน้าด้วย (หรือชนิดและความกว้างของคอลัมน์) ข้อความจาก Excel จะแทรกเป็นแถวใหม่
+Ctrl+F :: ค้นหาในตาราง ช่องที่เจอเป็นสีเหลือง (Enter / Shift+Enter หรือ F3 / Shift+F3 = ถัดไป / ก่อนหน้า, Esc = ปิด)
+ไฟล์ → คัดลอกตาราง / คัดลอกพร้อมหัว :: คัดลอกทั้งตาราง
 
-ความหมายของสีแถว
-  แดงอ่อน    เลยกำหนดส่งแล้ว
-  เหลือง     ครบกำหนดภายในวันนี้
-  เทาจาง + ขีดฆ่า   เสร็จแล้ว
-  ปุ่ม ""เรียงตามกำหนด"" / ช่อง ""ซ่อนงานเสร็จ""
-  สีแถวที่ตั้งเอง (คลิกขวาที่เลขแถว → สีแถว) ใช้แทนสีพื้นข้างบน  ไฮไลต์แถว = เลขแถวสีส้ม
-  คลิกขวาที่หัวคอลัมน์ → ตั้งค่าคอลัมน์… เปลี่ยนชื่อ ความกว้าง และชนิด (ข้อความ / ตัวเลข / ตัวเลือก / ช่องติ๊ก / นับวัน)
+# ย้อนกลับและทำซ้ำ
+Ctrl+Z :: ย้อนกลับ จำได้ 100 ครั้งล่าสุด
+Ctrl+Y หรือ Ctrl+Shift+Z :: ทำซ้ำ (ไปข้างหน้า)
+ตาราง → ย้อนกลับ / ทำซ้ำ :: ในเมนูก็มี และบอกชื่อการกระทำที่จะย้อน
+ระหว่างพิมพ์ในช่อง Ctrl+Z จะย้อนตัวอักษรในช่องนั้นก่อน
+ย้อนด้วย Ctrl+Z ไม่ได้: กล่องแจ้งเตือน และบันทึกความคืบหน้าในหน้าต่างนับวัน
 
-นับวัน
-  ตาราง → เพิ่มคอลัมน์นับวัน: แต่ละแถวแสดงว่ารับงานมากี่วันแล้ว (""150 วัน"")
-  งานที่ยังไม่เสร็จเริ่มนับจากวันนี้ แถวใหม่เริ่มนับตั้งแต่วันที่เพิ่ม  ตั้งสถานะเป็นเสร็จแล้วจะหยุดนับ (""42 วัน ✓"")
-  คลิกช่องนับวัน (หรือกด Space) เปิดหน้าต่างรายละเอียด: ค้างมากี่วัน วันรับงาน (เลือกวันอื่นหรือกด วันนี้)
-  สถานะและตั้งแต่เมื่อไร อัปเดตล่าสุด และประวัติจากใหม่ไปเก่า — เปลี่ยนสถานะ แก้ข้อมูลในแถว และบันทึกความคืบหน้า
-  แต่ละรายการมีวันที่ เวลา และนับเป็นวันที่เท่าไรหลังรับงาน  พิมพ์บันทึกความคืบหน้าแล้วกด Enter เพื่อเพิ่ม
-  กด แก้ไข (หรือดับเบิลคลิก) เพื่อแก้บันทึก (Enter = เก็บ, Esc = คืนค่าเดิม)  กด ✕ แล้ว ลบ? เพื่อลบ
-  ประวัติเริ่มเก็บตั้งแต่ตารางมีคอลัมน์นับวัน  Ctrl+Z การแก้ไขจะบันทึกเป็นการเปลี่ยนแปลงอีกรายการ
-  ส่งออกไฟล์เก็บเป็นวันรับงาน (yyyy-MM-dd)  ภาพ งานพิมพ์ และวอลเปเปอร์แสดงเป็นจำนวนวัน
+# ตั้งเตือนงาน
+กำหนดส่ง :: ปฏิทิน + เวลา HH:mm (24 ชั่วโมง) เก็บเป็นปี ค.ศ. (พิมพ์ปี พ.ศ. เช่น 09/11/2569 จะแปลงเป็น 2026)
+พิมพ์วันที่ :: yyyy-MM-dd HH:mm หรือ วัน/เดือน/ปี เช่น 5/1/2026 9:00 = 5 ม.ค. 2026 09:00
+📅 :: เปิดปฏิทิน (ช่องว่างจะตั้ง +1 นาทีเพื่อทดสอบ) Shift+คลิก = พรุ่งนี้ 09:00
+สถานะ :: ยังไม่เริ่ม / กำลังทำ / เสร็จแล้ว (ช่องว่าง = ยังไม่เริ่ม)
+ทำซ้ำ 🔁 :: ไม่ซ้ำ / ทุกวัน / ทุกสัปดาห์ / ทุกเดือน กดเสร็จแล้วแถวเดิมเป็นประวัติ และแทรกรอบถัดไปด้านล่าง
+⏰ เตือนล่วงหน้า :: ก่อน 15 นาที / 1 ชั่วโมง / 1 วัน หรือกำหนดเอง ได้ 5 ครั้งต่องาน (เตือนตรงเวลายังมีเสมอ)
+⚠ หน้าช่องกำหนดส่ง :: อ่านวันที่ไม่ได้ งานนั้นจะไม่เตือน
+สถานะที่ถือว่าเสร็จ: เสร็จ, เสร็จแล้ว, done, complete, completed, ✓, ✔ (ตรงทั้งคำ)
 
-กล่องแจ้งเตือน
-  เมนู ตาราง → เพิ่มกล่องแจ้งเตือน เพิ่มกล่องแรก (ช่องกล่องแจ้งเตือนเหนือตารางจะขึ้นมาด้วย)
-  ปุ่ม + กล่องแจ้งเตือน ในช่องนั้นเพิ่มกล่องต่อไป แก้หัวข้อและข้อความได้
-  ลากที่จับ ⋮⋮ เพื่อเรียงลำดับ หรือใช้ปุ่ม ขึ้น / ลง (ใช้ได้โดยไม่ต้องลาก และใช้คีย์บอร์ดได้)
-  ปุ่ม ลบ จะถามก่อน แล้วจึงเอาออก การลบนี้กู้คืนด้วย Ctrl+Z ไม่ได้
-  กล่องและลำดับถูกบันทึกใน note.json แต่ละกล่องมีรหัสคงที่
-  Ctrl+Z ไม่ย้อนการแก้กล่องแจ้งเตือน กล่องนี้คนละอย่างกับเตือนตามกำหนดส่ง
+# หน้าต่างเตือนและเสียง
+งานที่ถึงเวลาพร้อมกันจะรวมอยู่ในหน้าต่างเดียว พร้อมเสียง
+เลื่อน 10 นาที :: เตือนอีกครั้งในอีก 10 นาที
+เสร็จแล้ว :: เปลี่ยนสถานะ และสร้างรอบถัดไปถ้าตั้งทำซ้ำไว้
+รับทราบ :: ไม่เตือนซ้ำสำหรับเวลานี้
+ปิด :: รับทราบทุกงานที่ค้างในหน้าต่าง
+X (มุมหน้าต่าง) :: เลื่อน 10 นาทีทุกงานที่ค้าง
+มุมมอง → ตั้งค่าระบบ → เสียงแจ้งเตือน… :: เลือกเสียง (ของ Windows หรือไฟล์ .wav ของเอง) ตั้งความดัง (เริ่มต้น 50% ถ้าเกิน 50% จะถามก่อน) ปิดเสียง และปุ่มทดลองฟัง
+การเตือนทำงานเมื่อโปรแกรมเปิดอยู่ รวมตอนที่อยู่ที่ถาดไอคอน
 
-โหมดวอลเปเปอร์ (Windows)
-  ปุ่ม วอลเปเปอร์ บนแถบเครื่องมือ หรือ ไฟล์ → ตั้งเป็นวอลเปเปอร์: วาดตารางทับวอลเปเปอร์เดิมของคุณแบบเต็มจอ
-  ตรงตำแหน่งที่หน้าต่างอยู่ ขนาดไม่เกินหน้าต่าง แล้วหน้าแก้ไขไปอยู่ที่ถาด
-  ภาพอัปเดตตามตาราง: งานที่กดเสร็จ งานที่เลยกำหนด หรือขึ้นวันใหม่
-  กลับมาแก้ไข: คลิกไอคอนที่ถาด, ถาด → แก้ไขตาราง, Ctrl+Shift+E หรือเปิดโปรแกรมอีกครั้ง
-  วอลเปเปอร์เดิมจะกลับมาเอง และกลับมาเมื่อเลือก ถาด → ออก ด้วย  ปิดแล้วเปิดใหม่ยังอยู่ในโหมดวอลเปเปอร์ (วาดใหม่ตอนเข้าระบบ)
-  ไอคอน: ตอนแก้ไขมีทั้งที่แถบงานและถาด  โหมดวอลเปเปอร์มีที่ถาดอย่างเดียว
+# ความหมายของสี
+แดงอ่อน :: เลยกำหนดส่งแล้ว
+เหลือง :: ครบกำหนดภายในวันนี้
+เทาจาง + ขีดฆ่า :: เสร็จแล้ว
+สีแถวที่ตั้งเอง :: ใช้แทนสีข้างบน (คลิกขวาที่เลขแถว → สีแถว)
+ซ่อนงานเสร็จ / เรียงตามกำหนด :: ปุ่มบนแถบเครื่องมือ
 
-ที่เก็บไฟล์
-  Windows: %APPDATA%\TableNote\note.json
-  Linux:   ~/.local/share/TableNote/note.json
-  บันทึกอัตโนมัติหลังหยุดพิมพ์ประมาณ 1.5 วินาที
-  ก่อนบันทึกเป็นรูปแบบใหม่ครั้งแรก จะสำรองไฟล์เดิมตามรุ่นของไฟล์
-    note.v2.bak (รุ่น 1.x/2.0), note.v3.bak (รุ่น 2.1.0), note.v4.bak (รุ่น 2.2–2.3)
-    ไม่ทับไฟล์สำรองเดิม ถ้าชื่อซ้ำจะเติมวันเวลาต่อท้าย
-  ค่าในไฟล์ที่อ่านไม่ได้จะใช้ค่าเริ่มต้นแทน ตารางยังอยู่ครบ รายละเอียดใน tablenote.log
-  ไฟล์ที่มีเกิน 1000 แถว: สำรองไฟล์เต็มเป็น note.overlimit-<วันเวลา>.bak (ไม่ลบเอง) แล้วเปิด 1000 แถวแรก
-  ไฟล์เสียเก็บเป็น note.json*.bak ล่าสุด 5 ไฟล์  ภาษา/ขนาดเก็บใน settings.json
-  tablenote.log เก็บ 2 ไฟล์ (tablenote.log + tablenote.1.log) รวมไม่เกิน 512 KB
-  ขีดจำกัด: ไม่เกิน 1000 แถว 30 คอลัมน์ผู้ใช้ ช่องละ 2,000 ตัวอักษร ไฟล์ note.json ไม่เกิน 8 MB
+# นับวันและบันทึกความคืบหน้า
+ตาราง → เพิ่มคอลัมน์นับวัน :: แต่ละแถวแสดงว่ารับงานมากี่วัน (150 วัน) ตั้งเป็นเสร็จแล้วจะหยุดนับ (42 วัน ✓)
+คลิกช่องนับวัน (หรือกด Space) :: ดูวันรับงาน สถานะและตั้งแต่เมื่อไร อัปเดตล่าสุด และประวัติของแถว
+บันทึกความคืบหน้า :: พิมพ์แล้วกด Enter เพื่อเพิ่ม กด แก้ไข (หรือดับเบิลคลิก) เพื่อแก้ กด ✕ แล้ว ลบ? เพื่อลบ
+ประวัติเริ่มเก็บตั้งแต่ตารางมีคอลัมน์นับวัน ส่งออกไฟล์เก็บเป็นวันรับงาน ส่วนภาพ งานพิมพ์ และวอลเปเปอร์แสดงเป็นจำนวนวัน
 
-ส่งออก (ปุ่ม ส่งออก… หรือเมนูถาด)
-  .xlsx (Excel) / .csv (UTF-8 มี BOM) / .txt (คั่นด้วยแท็บ — แท็บ/ขึ้นบรรทัดในช่องเป็นช่องว่าง)
-  สถานะและทำซ้ำเป็นป้ายตามภาษาที่เลือก  วันที่เป็น yyyy-MM-dd [HH:mm] ปี ค.ศ.
-  ค่าที่ขึ้นต้นด้วย = + - @ ใน .csv/.txt มี ' นำหน้า (ไม่ให้เป็นสูตร) ยกเว้นตัวเลขล้วน
-  ถ้าซ่อนงานเสร็จอยู่ จะถามว่าจะรวมแถวที่ซ่อนหรือไม่
-  ลบคอลัมน์กำหนดส่งได้ (ถามก่อน) แต่จะไม่มีการเตือนจนกว่าจะเพิ่มกลับจากปุ่ม + คอลัมน์
+# กล่องแจ้งเตือน
+ตาราง → เพิ่มกล่องแจ้งเตือน :: กล่องข้อความเหนือตาราง ปุ่ม + กล่องแจ้งเตือน เพิ่มกล่องต่อไป
+ลาก ⋮⋮ หรือปุ่ม ขึ้น / ลง :: เรียงลำดับกล่อง
+ลบ :: ถามก่อน และย้อนกลับด้วย Ctrl+Z ไม่ได้
+กล่องนี้คนละอย่างกับการเตือนตามกำหนดส่ง
+
+# ปิดหน้าต่างและออกจากโปรแกรม
+ปิดหน้าต่าง (X) หรือ Alt+F4 :: ไปอยู่ที่ถาดไอคอน (มุมขวาล่าง) ตารางโน้ตยังเตือนงานต่อ
+ไฟล์ → ปิดหน้าต่าง :: เหมือนกด X
+ไฟล์ → ออกจากโปรแกรม :: ปิดโปรแกรมจริง จะไม่มีการเตือนจนกว่าจะเปิดใหม่
+คลิกขวาไอคอนในถาด → ออก :: ปิดโปรแกรมจริงเหมือนกัน
+เปิดกลับ :: คลิกไอคอนในถาด หรือเปิดโปรแกรมอีกครั้ง
+มุมมอง → ตั้งค่าระบบ → เปิดเมื่อเข้าสู่ระบบ :: เริ่มแบบซ่อนอยู่ที่ถาดทุกครั้งที่เข้าเครื่อง
+
+# โหมดวอลเปเปอร์ (Windows)
+ปุ่ม วอลเปเปอร์ หรือ ไฟล์ → ตั้งเป็นวอลเปเปอร์ :: วาดตารางทับวอลเปเปอร์ของคุณแบบเต็มจอ แล้วหน้าแก้ไขไปอยู่ที่ถาด
+ภาพอัปเดตตามตาราง :: งานที่เสร็จ งานที่เลยกำหนด และวันใหม่
+กลับมาแก้ไข :: คลิกไอคอนที่ถาด, ถาด → แก้ไขตาราง, Ctrl+Shift+E หรือเปิดโปรแกรมอีกครั้ง (วอลเปเปอร์เดิมกลับมาเอง)
+
+# ขนาดตัวอักษรและภาษา
+Ctrl + / Ctrl − / Ctrl 0 :: ขยาย / ย่อ / กลับ 100% (80–200%)
+Ctrl+ล้อเมาส์ หรือปุ่ม A− 100% A+ :: ขยายหรือย่อ
+มุมมอง → ภาษา :: สลับภาษา (จำไว้ใน settings.json)
+
+# ส่งออก พิมพ์ และภาพ
+ปุ่ม ส่งออก :: .xlsx (Excel) / .csv (UTF-8) / .txt (คั่นด้วยแท็บ) สถานะและทำซ้ำเป็นคำตามภาษา วันที่เป็น yyyy-MM-dd
+ไฟล์ → ส่งออกภาพ / พิมพ์ :: ภาพ PNG / JPEG ของตาราง หรือสั่งพิมพ์ตามที่เห็น
+ถ้าซ่อนงานเสร็จอยู่ จะถามว่าจะรวมแถวที่ซ่อนหรือไม่
+
+# ที่เก็บไฟล์และการสำรอง
+Windows :: %APPDATA%\TableNote\note.json
+Linux :: ~/.local/share/TableNote/note.json
+บันทึกอัตโนมัติหลังหยุดพิมพ์ประมาณ 1.5 วินาที
+settings.json :: ภาษา ขนาด และเสียง อยู่ข้าง note.json
+tablenote.log :: บันทึกการทำงานของโปรแกรม เก็บ 2 ไฟล์ รวมไม่เกิน 512 KB
+ไฟล์สำรอง :: รูปแบบเก่าเป็น note.v2.bak, note.v3.bak, note.v4.bak … ไฟล์เสียเก็บเป็น note.json*.bak ล่าสุด 5 ไฟล์
+ขีดจำกัด :: 1000 แถว 30 คอลัมน์ ช่องละ 2,000 ตัวอักษร note.json ไม่เกิน 8 MB
 ").Replace("{VERSION}", Version);
 
     public static string LogTextEn { get; } =
@@ -211,6 +270,7 @@ Files
 20 Nov 2026 — 2.6.0
 New: Wallpaper (toolbar) puts the table on your desktop wallpaper, full screen, over your own picture and where the window was. The tray icon or Ctrl+Shift+E brings the editor back, and your own wallpaper with it. This replaces Pin to desktop.
 Changed: one toolbar row with the everyday buttons. Copy, image export, print, delete column, language and the system settings are in the menu bar. The alert panel shows only when there are alert boxes (Table → Add alert box). Zoom scales the table, not the menu and toolbar.
+New: whole rows and columns: click a row number or a header (drag / Shift+click for several); right-click to insert, delete or insert copied rows / columns; drag ⋮⋮ beside a row number to move rows. Table → Undo / Redo. File → Close window (to the tray) and File → Exit TableNote. Help in topics that open and close.
 New: Excel-style cells: click selects (gold), drag selects a block, typing replaces, double-click or F2 edits, Delete clears, Ctrl+C / X / V copy, cut and paste blocks to and from Excel, Ctrl+A selects everything.
 New: formula bar above the table (the cell's address and whole text, no calculation); Ctrl+F finds text in the table.
 New: View → System → Reminder sound…: pick the sound, set the volume (asks above 50 %), mute, test. The Table Note logo is the program's icon.
@@ -273,6 +333,7 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 20 พ.ย. 2026 — 2.6.0
 ใหม่: ปุ่ม วอลเปเปอร์ ตั้งตารางเป็นวอลเปเปอร์เต็มจอ ทับภาพเดิมของคุณตรงตำแหน่งหน้าต่าง คลิกไอคอนที่ถาดหรือกด Ctrl+Shift+E เพื่อกลับมาแก้ไข แล้ววอลเปเปอร์เดิมจะกลับมา ใช้แทน วางแนบพื้นหลัง
 เปลี่ยน: แถบเครื่องมือเหลือแถวเดียวเฉพาะปุ่มที่ใช้บ่อย คัดลอก ส่งออกภาพ พิมพ์ ลบคอลัมน์ ภาษา และตั้งค่าระบบ อยู่ในแถบเมนู ช่องกล่องแจ้งเตือนขึ้นเมื่อมีกล่องเท่านั้น (ตาราง → เพิ่มกล่องแจ้งเตือน) ปุ่มขยาย/ย่อขยายเฉพาะตาราง ไม่ขยายเมนูและแถบเครื่องมือ
+ใหม่: เลือกทั้งแถว / ทั้งคอลัมน์ (คลิกเลขแถวหรือหัวคอลัมน์ ลากหรือ Shift+คลิกเลือกหลายอัน) คลิกขวาเพื่อแทรก ลบ หรือแทรกแถว / คอลัมน์ที่คัดลอก ลาก ⋮⋮ ข้างเลขแถวเพื่อย้าย ตาราง → ย้อนกลับ / ทำซ้ำ ไฟล์ → ปิดหน้าต่าง (ไปที่ถาด) และ ไฟล์ → ออกจากโปรแกรม วิธีใช้แบ่งเป็นหัวข้อ คลิกเพื่อขยาย / ยุบ
 ใหม่: ช่องแบบ Excel: คลิก = เลือก (สีทอง) ลากคลุมหลายช่อง พิมพ์ = เขียนทับ ดับเบิลคลิก/F2 = แก้ Delete = ล้าง Ctrl+C / X / V คัดลอก ตัด วาง ไป-มากับ Excel Ctrl+A = เลือกทั้งหมด
 ใหม่: แถบสูตรเหนือตาราง (ที่อยู่ช่องและข้อความทั้งหมด ไม่คำนวณ) และ Ctrl+F ค้นหาในตาราง
 ใหม่: มุมมอง → ตั้งค่าระบบ → เสียงแจ้งเตือน… เลือกเสียง ตั้งความดัง (เกิน 50% ถามก่อน) ปิดเสียง ทดลองฟัง และโลโก้ Table Note เป็นไอคอนโปรแกรม

@@ -17,7 +17,7 @@ TableNote is a spreadsheet-style task list, similar to Excel, that reminds you w
 > - Clicking the main window's close button (X) does **not** quit TableNote. It minimizes to the tray icon and keeps reminding you. A message explains this the first time.
 > - If there is no TableNote icon in the tray (for example, the system could not create it), clicking X really quits, and you won't get reminders until you open it again.
 > - To bring the window back, click the tray icon or choose **Edit table**.
-> - To really quit, right-click the tray icon and choose **Quit**. You won't get reminders until you open TableNote again.
+> - To really quit, choose **File → Exit TableNote**, or right-click the tray icon and choose **Quit**. You won't get reminders until you open TableNote again. (**File → Close window** does the same as X.)
 > - We recommend turning on **View → System → Launch at sign-in**. TableNote then starts hidden in the tray every time you sign in. If you last used wallpaper mode, it puts the table on the wallpaper again instead.
 > - For in-app help, choose **Help → Help** in the menu bar or **Help** from the tray menu.
 
@@ -35,6 +35,13 @@ TableNote is a spreadsheet-style task list, similar to Excel, that reminds you w
 - **Drag** across cells (or Shift+click, or Shift+arrows) to select a block. **Delete** clears it, **Ctrl+C** copies it, **Ctrl+X** cuts it, **Ctrl+V** pastes. **Ctrl+A** or a click on the top-left corner of the table selects every cell; a click on an empty spot clears the selection. Right-click a cell for the same commands.
 - The **formula bar** is for reading and editing long text: click it, change the text, press Enter (Esc puts it back, Alt+Enter adds a line). It does not calculate.
 - **Ctrl+F** (or **Table → Find…**) finds text: every cell that has it turns yellow, the current one is selected; Enter / Shift+Enter (or F3 / Shift+F3) go to the next / previous one; Esc closes the find bar.
+
+**Whole rows and columns (2.6.0)**
+- Click a **row number** to select the whole row, or a **column header** to select the whole column. Drag along the numbers or headers, or Shift+click, to select several.
+- **Right-click** the selected row numbers: **Insert N rows above / below**, **Delete N rows**, **Insert copied rows**. On column headers: **Insert N columns left / right**, **Delete N columns**, **Insert copied columns**. On a cell: **Insert ▸** and **Delete ▸** for its rows or columns, and **Insert copied cells**. N is how many are selected. Deleting asks first when there is text; F6 and F8 delete every selected row or column.
+- **Insert copied**: copy whole rows (or columns) with Ctrl+C, select where they should go, right-click → Insert copied. Rows come back with their row colour, highlight, repeat and advance reminders; columns with their name, type, choices and width. A copied status or reminder-date column becomes a plain text column (the table keeps one of each). Text copied from Excel goes in as new rows.
+- **Move rows**: drag the faint **⋮⋮** grip at the left of a row number. When several rows are selected, they move together.
+- **Rename a column**: double-click its header (or select it and press F2), type the name, press Enter. Esc keeps the old name.
 
 Steps
 1. Click **+ Row** or press F5.
@@ -159,13 +166,13 @@ Tick **Hide done** to hide rows that are done, and untick it to show them again.
 
 ## 7. Undo
 
-Press **Ctrl+Z** to undo, and **Ctrl+Y** or **Ctrl+Shift+Z** to redo. Up to 100 steps are kept.
+Press **Ctrl+Z** to undo, and **Ctrl+Y** or **Ctrl+Shift+Z** to redo — or use **Table → Undo / Redo**, which also shows what will be undone ("Undo: Delete rows"). Up to 100 steps are kept.
 
 Each of these is undone one step at a time:
 - Typing in a cell (one step per edit, counted when you press Enter or click out of the cell)
 - Editing a column header
 - Pasting from Excel (the whole paste is one step)
-- Adding or deleting rows and columns (F5 to F8), including delete-column from the header menu
+- Adding or deleting rows and columns (F5 to F8), including several at once and Insert copied, from any menu
 - Moving a column or a row
 - Column settings, and a row's colour or highlight
 - Changing the status, including clicking **Done** when it creates the next occurrence (one step)
@@ -203,9 +210,11 @@ The tray menu has **Edit table**, **Help**, **Log**, **Export…**, **Language**
 | Key | What it does |
 |---|---|
 | F5 | Add a row |
-| F6 | Delete a row |
+| F6 | Delete the selected rows |
 | F7 | Add a column |
-| F8 | Delete a column |
+| F8 | Delete the selected columns |
+| Click a row number / header | Select the whole row / column (drag or Shift+click for several) |
+| Double-click a header / F2 | Rename the column |
 | Alt+Shift+← / → | Move the active column left / right |
 | Alt+Shift+↑ / ↓ | Move the active row up / down (skips hidden rows when Hide done is on) |
 | Click / drag | Select a cell / a block |

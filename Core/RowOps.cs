@@ -56,6 +56,41 @@ public static class RowOps
         return before > row ? before - 1 : before; // removing the row first shifts later indices by one
     }
 
+    /// <summary>2.6.0: drag of several selected rows. <paramref name="rows"/> (document indexes, visible) move together, in
+    /// their order, into the gap <paramref name="slot"/> of the VISIBLE list; hidden rows stay where they are. False when
+    /// the gap is inside or next to the block (nothing to do).</summary>
+    public static bool MoveRowsToSlot(NoteDocument doc, IReadOnlyList<int> visible, IReadOnlyList<int> rows, int slot)
+    {
+        doc.EnsureRowIds();
+        var moving = rows.Where(r => r >= 0 && r < doc.Rows.Count).Distinct().OrderBy(r => r).ToList();
+        if (moving.Count == 0 || slot < 0 || slot > visible.Count) return false;
+        var vis = moving.Select(r => IndexOf(visible, r)).Where(i => i >= 0).ToList();
+        if (vis.Count == 0) return false;
+        if (slot >= vis.Min() && slot <= vis.Max() + 1) return false; // dropped onto the block itself
+        var ids = moving.Select(r => doc.RowIds[r]).ToList();
+        var movingSet = new HashSet<string>(ids, StringComparer.Ordinal);
+        var rest = doc.RowIds.Where(id => !movingSet.Contains(id)).ToList();
+        int at;
+        if (slot < visible.Count) at = rest.IndexOf(doc.RowIds[visible[slot]]);          // before that visible row
+        else at = rest.IndexOf(doc.RowIds[visible[^1]]) + 1;                              // after the last visible row
+        if (at < 0) return false;
+        rest.InsertRange(at, ids);
+        ApplyOrder(doc, rest);
+        return true;
+    }
+
+    /// <summary>Puts the rows in the order of <paramref name="order"/> (row ids). Rows not listed keep their order after them.</summary>
+    public static void ApplyOrder(NoteDocument doc, IReadOnlyList<string> order)
+    {
+        doc.EnsureRowIds();
+        var pos = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < order.Count; i++) pos.TryAdd(order[i], i);
+        var sorted = doc.RowIds.Select((id, i) => (id, row: doc.Rows[i], i))
+            .OrderBy(x => pos.TryGetValue(x.id, out var p) ? p : int.MaxValue).ThenBy(x => x.i).ToList();
+        doc.RowIds = sorted.Select(x => x.id).ToList();
+        doc.Rows = sorted.Select(x => x.row).ToList();
+    }
+
     private static int IndexOf(IReadOnlyList<int> list, int value)
     {
         for (var i = 0; i < list.Count; i++) if (list[i] == value) return i;
@@ -85,4 +120,13 @@ public sealed class RowMoveAction(string rowId, int from, int to, string? label 
         var i = doc.RowIds.IndexOf(rowId);
         if (i >= 0) RowOps.MoveRow(doc, i, index); // row gone (deleted later outside undo order) → skip
     }
+}
+
+/// <summary>2.6.0: undo step for moving several rows at once: the row order before and after (row ids).</summary>
+public sealed class RowOrderAction(List<string> before, List<string> after, string label) : IUndoAction
+{
+    public string Label => label;
+    public long Bytes => (before.Count + after.Count) * 40L + 64;
+    public void Undo(NoteDocument doc) => RowOps.ApplyOrder(doc, before);
+    public void Redo(NoteDocument doc) => RowOps.ApplyOrder(doc, after);
 }

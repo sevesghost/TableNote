@@ -36,6 +36,7 @@ public partial class MainWindow
     private static readonly IBrush CurrentMatchEdge = new SolidColorBrush(Color.Parse("#E06A00"));
 
     private bool _dragSelecting;
+    private MenuFlyout? _lastCellMenu;
     private Point _dragPoint;
     private DispatcherTimer? _dragScrollTimer;
     /// <summary>The next cell focus is the active cell of a block: keep the block (normally a focus selects that one cell).</summary>
@@ -75,9 +76,13 @@ public partial class MainWindow
         foreach (var c in RowsList.GetRealizedContainers())
         {
             if (c is not ContentPresenter { Child: Grid { Tag: int r } g } || r >= _session.Doc.Rows.Count) continue;
-            if (g.Children.FirstOrDefault() is Border label) label.Background = LabelBrushFor(r, RowNumberBackground(r));
+            if (g.Children.FirstOrDefault() is Border label)
+            {
+                label.Background = LabelBrushFor(r, RowNumberBackground(r));
+            }
             ApplyOverlays(g, r);
         }
+        RefreshHeaderVisuals();
         SyncFormulaBar();
     }
 
@@ -155,11 +160,14 @@ public partial class MainWindow
     private static bool IsDataCell(Control control) => control.Classes.Contains("cell");
 
     /// <summary>The element has the focus inside a table row (a cell control, or a control inside a cell).</summary>
-    private bool FocusInTable()
+    private bool FocusInRows()
     {
         if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is not Visual v) return false;
         return v.GetVisualAncestors().Prepend(v).Any(a => a is Grid { Tag: int } && a.GetVisualParent() is ContentPresenter);
     }
+
+    /// <summary>A cell has the focus, or a column header in select mode (the selected columns take the keys).</summary>
+    private bool FocusInTable() => FocusInRows() || FocusedHeaderBox() != null;
 
     // ───────────────────────── text cells: select mode ↔ edit mode ─────────────────────────
 
@@ -170,7 +178,7 @@ public partial class MainWindow
         box.IsReadOnly = true;
         box.CaretBrush = Brushes.Transparent;
         box.ContextFlyout = null;
-        box.ContextRequested += (_, e) => { e.Handled = true; ShowCellMenu(box, row, column); };
+        box.ContextRequested += (_, e) => { e.Handled = true; ShowCellMenu(box, box, row, column); };
         box.AddHandler(PointerPressedEvent, (_, e) => OnCellPointerPressed(box, row, column, e), RoutingStrategies.Tunnel);
         box.AddHandler(TextInputEvent, (_, e) =>
         {
@@ -274,6 +282,7 @@ public partial class MainWindow
         }, RoutingStrategies.Tunnel, handledEventsToo: true);
         root.AddHandler(GotFocusEvent, (_, e) => { if (_view == ViewMode.Edit) OnCellFocused(row, column, e.KeyModifiers); },
             RoutingStrategies.Bubble);
+        AttachCellMenu(root, row, column); // 2.6.0: right-click → copy, insert, delete, like a text cell
     }
 
     /// <summary>One cell, focused, in select mode.</summary>
@@ -331,12 +340,13 @@ public partial class MainWindow
         _dragPoint = e.GetPosition(TableHost);
         e.Pointer.Capture(TableHost);
         _dragScrollTimer ??= NewDragScrollTimer();
-        _dragScrollTimer.Start();
+        if (_dragKind != DragKind.Columns) _dragScrollTimer.Start(); // headers: no row scrolling
     }
 
     private void StopDragSelect()
     {
         _dragSelecting = false;
+        _dragKind = DragKind.Cells;
         _dragScrollTimer?.Stop();
     }
 
@@ -356,10 +366,30 @@ public partial class MainWindow
 
     private void ExtendDragTo(Point point)
     {
+        if (_dragKind == DragKind.Columns)
+        {
+            // Headers: the column under the pointer, every row (2.6.0).
+            if (TableHost.TranslatePoint(point, TableGrid) is not { } p) return;
+            var column = NearestVisibleGroupColumn(ColumnAtX(p.X));
+            if (column == _session.ActiveCol) return;
+            _session.ExtendTo(_session.ActiveRow, column);
+            RefreshSelectionVisuals();
+            UpdateDragCount();
+            return;
+        }
         if (CellAt(point) is not { } hit) return;
+        if (_dragKind == DragKind.Rows) hit = (hit.Row, LastVisibleColumn()); // row numbers: whole rows
         if (hit.Row == _session.ActiveRow && hit.Column == _session.ActiveCol) return;
         _session.ExtendTo(hit.Row, hit.Column);
         RefreshSelectionVisuals();
+        UpdateDragCount();
+    }
+
+    private void UpdateDragCount()
+    {
+        var (rows, cols) = SelectedCells();
+        if (_dragKind == DragKind.Rows && rows.Count > 1) StatusText.Text = Localizer.T("rows.selected", rows.Count);
+        else if (_dragKind == DragKind.Columns && cols.Count > 1) StatusText.Text = Localizer.T("cols.selected", cols.Count);
     }
 
     /// <summary>The cell (document row, column) under a point of the table, or null.</summary>
@@ -411,7 +441,11 @@ public partial class MainWindow
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         if (e.KeyModifiers.HasFlag(KeyModifiers.Alt)) return false; // Alt+Shift+arrows move rows / columns
-        if (!_session.HasSelection || _session.AnchorRow < 0) return false;
+        if (!_session.HasSelection || _session.AnchorRow < 0)
+        {
+            if (e.Key == Key.F2 && FocusedHeaderBox() is { } h) { EnterHeaderEdit(h); return true; } // empty table: still renames
+            return false;
+        }
         int row = _session.AnchorRow, col = _session.AnchorCol;
         switch (e.Key)
         {
@@ -430,6 +464,7 @@ public partial class MainWindow
                 return true;
             case Key.F2:
                 if (focused is TextBox box && IsDataCell(box)) { CollapseTo(row, col); EnterEditMode(box, null); }
+                else if (FocusedHeaderBox() is { } header) EnterHeaderEdit(header); // 2.6.0: rename the selected column
                 return true;
             case Key.Delete:
                 ClearSelectedCells(Localizer.T("undo.clear_cells"));
@@ -550,7 +585,7 @@ public partial class MainWindow
     /// <summary>Rows on screen are re-created; the focus goes back to the active cell and the block stays.</summary>
     private void RefreshRowsKeepingSelection(IEnumerable<int> rows)
     {
-        var hadFocus = FocusInTable();
+        var hadFocus = FocusInRows(); // a selected column header keeps the focus (no jump to the top row)
         _ignoreText = true;
         try
         {
@@ -591,6 +626,7 @@ public partial class MainWindow
         if (text == null) { StatusText.Text = Localizer.T("ui.copy_too_big"); return false; }
         if (Clipboard == null) { StatusText.Text = Localizer.T("ui.copy_failed"); return false; }
         await Clipboard.SetTextAsync(text);
+        RememberCopy(text); // 2.6.0: Insert copied brings rows / columns back with their data
         var n = SelectedCellCount();
         StatusText.Text = n > 1 ? Localizer.T("cell.copied", n) : Localizer.T("ui.copied_selection");
         return true;
@@ -641,30 +677,30 @@ public partial class MainWindow
 
     // ───────────────────────── cell menu ─────────────────────────
 
-    private void ShowCellMenu(TextBox box, int row, int column)
+    /// <param name="box">The cell's text box (null for status, date, check and days cells: no Edit item).</param>
+    private void ShowCellMenu(Control anchor, TextBox? box, int row, int column)
     {
         if (_view != ViewMode.Edit) return;
-        var editing = !box.IsReadOnly;
+        var editing = box is { IsReadOnly: false };
         MenuItem Item(string key, string gesture, Action act, bool enabled = true)
         {
             var m = new MenuItem { Header = Localizer.T(key), InputGesture = KeyGesture.Parse(gesture), IsEnabled = enabled };
             m.Click += (_, _) => act();
             return m;
         }
-        var flyout = new MenuFlyout
-        {
-            Items =
-            {
-                Item("cell.menu_copy", "Ctrl+C", () => { if (editing) box.Copy(); else _ = CopySelectionAsync(); }),
-                Item("cell.menu_cut", "Ctrl+X", () => { if (editing) box.Cut(); else _ = CutAsync(); }),
-                Item("cell.menu_paste", "Ctrl+V", () => { if (editing) box.Paste(); else _ = PasteIntoSelectionAsync(); }),
-                Item("cell.menu_clear", "Delete", () => ClearSelectedCells(Localizer.T("undo.clear_cells")), !editing),
-                new Separator(),
-                Item("cell.menu_edit", "F2", () => { CollapseTo(row, column); EnterEditMode(box, null); }, !editing),
-                Item("cell.menu_select_all", "Ctrl+A", SelectAll)
-            }
-        };
-        flyout.ShowAt(box, showAtPointer: true);
+        var flyout = new MenuFlyout();
+        flyout.Items.Add(Item("cell.menu_copy", "Ctrl+C", () => { if (editing) box!.Copy(); else _ = CopySelectionAsync(); }));
+        flyout.Items.Add(Item("cell.menu_cut", "Ctrl+X", () => { if (editing) box!.Cut(); else _ = CutAsync(); }));
+        flyout.Items.Add(Item("cell.menu_paste", "Ctrl+V", () => { if (editing) box!.Paste(); else _ = PasteIntoSelectionAsync(); }));
+        if (!editing)
+            foreach (var item in CellStructureMenuItems(row, column)) flyout.Items.Add(item); // 2.6.0: insert copied, insert ▸, delete ▸
+        flyout.Items.Add(Item("cell.menu_clear", "Delete", () => ClearSelectedCells(Localizer.T("undo.clear_cells")), !editing));
+        flyout.Items.Add(new Separator());
+        if (box != null)
+            flyout.Items.Add(Item("cell.menu_edit", "F2", () => { CollapseTo(row, column); EnterEditMode(box, null); }, !editing));
+        flyout.Items.Add(Item("cell.menu_select_all", "Ctrl+A", SelectAll));
+        _lastCellMenu = flyout; // tests read the menu that was shown
+        flyout.ShowAt(anchor, showAtPointer: true);
     }
 
     /// <summary>Column letter of a column position: A … Z, AA … (as in Excel).</summary>

@@ -44,6 +44,18 @@
     <Style Selector="TextBox.cell.selected:pointerover /template/ Border#PART_BorderElement">
       <Setter Property="Background" Value="#F1D27C"/>
     </Style>
+    <Style Selector="TextBox.colhead.selected /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F0CF6E"/>
+    </Style>
+    <Style Selector="TextBox.colhead.selected:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#EDC85E"/>
+    </Style>
+    <Style Selector="TextBox.colhead.selected:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F0CF6E"/>
+    </Style>
+    <Style Selector="TextBox.colhead:focus /template/ Border#PART_BorderElement">
+      <Setter Property="BorderBrush" Value="#C08A1E"/>
+    </Style>
     <Style Selector="TextBox.cell.match /template/ Border#PART_BorderElement">
       <Setter Property="Background" Value="#FFE98A"/>
     </Style>

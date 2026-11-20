@@ -36,18 +36,12 @@ public partial class MainWindow
     private void AttachRowMove(Border label, int rowIndex)
     {
         if (_view != ViewMode.Edit) return;
-        label.Cursor = RowDragCursor;
+        label.Cursor = RowSelectCursor; // the ⋮⋮ grip has the move cursor (WithRowGrip)
         ToolTip.SetTip(label, Localizer.T("row.drag_tip"));
+        ToolTip.SetShowDelay(label, 1200); // 2.6.0: row numbers are clicked often now
         label.ContextMenu = BuildRowMenu(rowIndex);
-        // handledEventsToo: the existing PointerPressed handler (select row) marks the event handled.
-        label.AddHandler(PointerPressedEvent, (_, e) =>
-        {
-            if (!e.GetCurrentPoint(label).Properties.IsLeftButtonPressed || _busy) return;
-            _rowDragRow = rowIndex;
-            _rowDragging = false;
-            _rowDragStart = e.GetPosition(RowsList);
-            e.Pointer.Capture(label);
-        }, RoutingStrategies.Bubble, handledEventsToo: true);
+        // 2.6.0: a press on a row number selects the row (OnRowLabelPressed); on a row that is already selected it arms
+        // the move (ArmRowMove), and the handlers below drag it.
         label.PointerMoved += (_, e) =>
         {
             if (_rowDragRow != rowIndex) return;
@@ -69,10 +63,9 @@ public partial class MainWindow
             var slot = _rowDropSlot;
             EndRowDrag();
             e.Pointer.Capture(null);
-            if (!dragged) return;
             e.Handled = true;
-            var target = RowOps.TargetForSlot(_visibleRows, rowIndex, slot);
-            if (target >= 0) _ = RunStructureAsync(() => { MoveRowTo(rowIndex, target, focus: false); return Task.CompletedTask; });
+            if (!dragged) return; // a click on the grip: the row is selected (OnRowLabelPressed)
+            DropSelectedRows(rowIndex, slot); // the selected rows move together (one row: as before)
         };
         label.PointerCaptureLost += (_, _) => { if (_rowDragRow == rowIndex) EndRowDrag(); };
     }
@@ -88,9 +81,8 @@ public partial class MainWindow
         menu.Opening += (_, _) =>
         {
             NoteSizingSelection(); // v2.6: Row height… applies to the shift-selection, read before ChooseRow
-            _session.ChooseRow(rowIndex);
-            Highlight();
-            UpdateStatus();
+            // 2.6.0: a right-click inside the selected rows keeps them (insert / delete work on all of them).
+            if (!(WholeRowsSelected() && IsRowSelected(rowIndex))) SelectRows(rowIndex, rowIndex, focus: false);
             Fill();
         };
         Fill();
@@ -111,7 +103,7 @@ public partial class MainWindow
             (RowMoveKind.Top, "row.move_top", null),
             (RowMoveKind.Bottom, "row.move_bottom", null),
         };
-        var list = new List<Control>();
+        var list = RowEditMenuItems(rowIndex); // 2.6.0: copy / insert / delete the selected rows
         foreach (var (kind, key, gesture) in items)
         {
             var move = kind;

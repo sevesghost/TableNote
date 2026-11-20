@@ -28,6 +28,10 @@ public partial class MainWindow
     private MenuItem _exportImageItem = null!;
     private MenuItem _printItem = null!;
     private MenuItem _pinItem = null!; // File → Set as wallpaper
+    private MenuItem _closeWindowItem = null!; // 2.6.0: File → Close window (TableNote stays in the tray)
+    private MenuItem _exitItem = null!; // 2.6.0: File → Exit TableNote
+    private MenuItem _undoItem = null!; // 2.6.0: Table → Undo (Ctrl+Z)
+    private MenuItem _redoItem = null!; // 2.6.0: Table → Redo (Ctrl+Y)
     private MenuItem _colorItem = null!;
     private MenuItem _addRowItem = null!;
     private MenuItem _deleteRowItem = null!;
@@ -79,9 +83,18 @@ public partial class MainWindow
         _fileMenu.Items.Add(_printItem);
         _fileMenu.Items.Add(new Separator());
         _fileMenu.Items.Add(_pinItem);
+        // 2.6.0: two ways out. Close: the window goes, TableNote keeps reminding from the tray. Exit: TableNote ends.
+        _closeWindowItem = Act("menu.close_to_tray", () => Close());
+        _closeWindowItem.InputGesture = new KeyGesture(Key.F4, KeyModifiers.Alt);
+        _exitItem = Act("menu.exit", QuitApp);
+        _fileMenu.Items.Add(new Separator());
+        _fileMenu.Items.Add(_closeWindowItem);
+        _fileMenu.Items.Add(_exitItem);
         _fileMenu.SubmenuOpened += (_, _) =>
         {
             var edit = _view == ViewMode.Edit;
+            _closeWindowItem.Header = Localizer.T(_trayReady ? "menu.close_to_tray" : "menu.close_window");
+            ToolTip.SetTip(_closeWindowItem, _trayReady ? Localizer.T("tip.close_to_tray") : Localizer.T("tip.exit"));
             _copyAllItem.IsEnabled = edit;
             _copyHeadersItem.IsEnabled = edit;
             _exportItem.IsEnabled = edit && !_exporting;
@@ -93,9 +106,13 @@ public partial class MainWindow
         _tableMenu = new MenuItem();
         _colorItem = Act("color.button", () => _ = OpenColorDialog());
         _addRowItem = Act("toolbar.add_row", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_row"), AddRowAsync)));
-        _deleteRowItem = Act("toolbar.delete_row", () => _ = RunStructureAsync(DeleteRowAsync));
+        _deleteRowItem = Act("toolbar.delete_row", () => _ = RunStructureAsync(() => DeleteRowsAsync(-1)));
         _addColumnItem = Act("toolbar.add_column", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), AddColumnAsync)));
-        _deleteColumnItem = Act("toolbar.delete_column", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("delete.undo_column"), DeleteColumnAsync)));
+        _deleteColumnItem = Act("toolbar.delete_column", () => _ = RunStructureAsync(() => DeleteColumnsAsync(-1)));
+        _undoItem = Act("menu.undo", () => { CommitFocusedEdit(); DoUndo(); });
+        _undoItem.InputGesture = new KeyGesture(Key.Z, KeyModifiers.Control);
+        _redoItem = Act("menu.redo", () => { CommitFocusedEdit(); DoRedo(); });
+        _redoItem.InputGesture = new KeyGesture(Key.Y, KeyModifiers.Control);
         _sortItem = Act("toolbar.sort_due", SortByDue);
         _addAlertItem = Act("menu.add_alert", AddAlert);
         _addDaysItem = Act("menu.add_days", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("menu.add_days"), AddDaysColumnAsync)));
@@ -109,6 +126,9 @@ public partial class MainWindow
         _findItem.InputGesture = new KeyGesture(Key.F, KeyModifiers.Control);
         _selectAllItem = Act("menu.select_all", SelectAll);
         _selectAllItem.InputGesture = new KeyGesture(Key.A, KeyModifiers.Control);
+        _tableMenu.Items.Add(_undoItem);
+        _tableMenu.Items.Add(_redoItem);
+        _tableMenu.Items.Add(new Separator());
         _tableMenu.Items.Add(_findItem);
         _tableMenu.Items.Add(_selectAllItem);
         _tableMenu.Items.Add(new Separator());
@@ -126,6 +146,11 @@ public partial class MainWindow
         _tableMenu.SubmenuOpened += (_, _) =>
         {
             var edit = _view == ViewMode.Edit && !_busy;
+            CommitFocusedEdit(); // a cell being typed in is a step of its own (then Undo takes it back)
+            _undoItem.IsEnabled = edit && _undo.CanUndo;
+            _redoItem.IsEnabled = edit && _undo.CanRedo;
+            _undoItem.Header = _undo.LastUndoLabel is { } u ? Localizer.T("menu.undo_named", u) : Localizer.T("menu.undo");
+            _redoItem.Header = _undo.LastRedoLabel is { } r ? Localizer.T("menu.redo_named", r) : Localizer.T("menu.redo");
             _colorItem.IsEnabled = _view == ViewMode.Edit;
             _findItem.IsEnabled = _view == ViewMode.Edit;
             _selectAllItem.IsEnabled = _view == ViewMode.Edit && _visibleRows.Count > 0;
@@ -299,6 +324,11 @@ public partial class MainWindow
         ToolTip.SetTip(_printItem, Localizer.T("tip.print"));
         _pinItem.Header = Localizer.T("menu.wallpaper");
         ToolTip.SetTip(_pinItem, Localizer.T("tip.wallpaper"));
+        _closeWindowItem.Header = Localizer.T(_trayReady ? "menu.close_to_tray" : "menu.close_window");
+        _exitItem.Header = Localizer.T("menu.exit");
+        ToolTip.SetTip(_exitItem, Localizer.T("tip.exit"));
+        _undoItem.Header = Localizer.T("menu.undo");
+        _redoItem.Header = Localizer.T("menu.redo");
         _colorItem.Header = Localizer.T("color.button");
         _addRowItem.Header = Localizer.T("toolbar.add_row");
         _deleteRowItem.Header = Localizer.T("toolbar.delete_row");
