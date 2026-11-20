@@ -205,6 +205,7 @@ Source layout:
 - `Platform/`: Windows wallpaper (IDesktopWallpaper), hotkey, taskbar, start-again signal, and autostart.
 - `Services/`: reminder timer, popup, ⏰ dialog, and sound.
 - `MainWindow.axaml(.cs)`: main UI.
+- `Assets/Brand/`: the Table Note logo shown on the loading screen (`SplashWindow.cs`).
 - `Assets/`: fonts (Noto Sans Thai with the Latin of Noto Sans and a few Noto symbols merged in, so Thai, digits and Latin share one design; rebuilt with `tools/fonts/merge_noto.py`) and tray icon.
 
 Want to fix a bug or add a language? See [CONTRIBUTING.md](CONTRIBUTING.md).

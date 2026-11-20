@@ -24,6 +24,8 @@ internal static class Program
         ForceEdit = args.Any(a => string.Equals(a, "--edit", StringComparison.OrdinalIgnoreCase));
         StartHidden = !ForceEdit && args.Any(a => string.Equals(a, "--startup", StringComparison.OrdinalIgnoreCase));
         _instance = SingleInstance.TryAcquire(SingleInstance.DefaultLockPath());
+        if (_instance == null && OperatingSystem.IsWindows())
+            _instance = TakeOverFromOtherCopy(); // 2.6.0: a copy from another file (an older version) is running
         if (_instance == null)
         {
             if (!EditorSignal.TrySend())
@@ -42,6 +44,34 @@ internal static class Program
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         _signal.Dispose();
         GC.KeepAlive(_instance);
+    }
+
+    /// <summary>Another TableNote holds the lock. If it runs from another file (e.g. the old version is still in the tray),
+    /// ask whether to close it and start this one; otherwise (or on No) it is just brought forward, as before.</summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static SingleInstance? TakeOverFromOtherCopy()
+    {
+        try
+        {
+            var other = OtherInstance.Pick(Environment.ProcessPath, OtherInstance.Find());
+            if (other == null) return null;
+            Localizer.SetLanguage(AppSettings.Load(NoteStore.DefaultPath()).Language);
+            AppLog.Write("start", $"another TableNote is running: {other.Version} from {other.Path}");
+            if (!OtherInstance.Ask(other)) return null;
+            if (!OtherInstance.Stop(other, TimeSpan.FromSeconds(5))) return null;
+            for (var i = 0; i < 20; i++)
+            {
+                if (SingleInstance.TryAcquire(SingleInstance.DefaultLockPath()) is { } taken)
+                {
+                    AppLog.Write("start", $"closed TableNote {other.Version}; starting {AppInfo.Version} from {Environment.ProcessPath}");
+                    return taken;
+                }
+                Thread.Sleep(150);
+            }
+            AppLog.Write("start", "the other TableNote was closed but its lock did not come free");
+        }
+        catch (Exception ex) { AppLog.Write("start", "could not take over from the other TableNote: " + ex.GetType().Name + ": " + ex.Message); }
+        return null;
     }
 
     // 2.6.0: the bundled font (Noto Sans Thai with Noto Sans Latin and symbols merged in, Assets/Fonts) is the

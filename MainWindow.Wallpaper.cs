@@ -150,6 +150,7 @@ public partial class MainWindow
         try
         {
             if (!Wallpaper.Pending) return null;
+            using var _ = UiActivity.Scope("wallpaper restore");
             var outcome = Wallpaper.Restore();
             if (outcome.Ok && outcome.Changed) AppLog.Write("wallpaper", "wallpaper mode off");
             return outcome.Message;

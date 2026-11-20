@@ -161,6 +161,7 @@ public partial class MainWindow : Window
     }
 
     private bool _startedUp;
+    private bool _startedUpEditor; // the first EnterEdit logs its first frame; later ones only a window that is never drawn
 
     protected override void OnOpened(EventArgs e)
     {
@@ -173,13 +174,17 @@ public partial class MainWindow : Window
         // return added another window hook and Screens handler. Start-up runs once.
         if (_startedUp) return;
         _startedUp = true;
+        LogStart(); // 2.6.0: one line per start in tablenote.log
         if (Screens != null)
             Screens.Changed += (_, _) => OnDisplayChanged();
 
-        InstallShellHook();
-        // v2.4.2: the taskbar button now follows the mode (EnterEdit / EnterWallpaperView set it).
-        _trayReady = TryCreateTray();
-        _hotkeyReady = TryRegisterHotkey();
+        using (UiActivity.Scope("start: tray and shortcut"))
+        {
+            InstallShellHook();
+            // v2.4.2: the taskbar button now follows the mode (EnterEdit / EnterWallpaperView set it).
+            _trayReady = TryCreateTray();
+            _hotkeyReady = TryRegisterHotkey();
+        }
 
         var routes = CurrentRoutes();
         var notice = RecoveryGate.StartupNotice(_session.Doc.View, Program.ForceEdit, routes);
@@ -199,7 +204,8 @@ public partial class MainWindow : Window
         {
             // Login start: stay hidden in the tray; reminders still run.
             // The editor gets its taskbar button when it is shown (tray / hotkey / second start → EnterEdit).
-            RestorePendingWallpaper(); // a table picture left by a crash: put the user's wallpaper back
+            using (UiActivity.Scope("start: restore wallpaper"))
+                RestorePendingWallpaper(); // a table picture left by a crash: put the user's wallpaper back
             Dispatcher.UIThread.Post(Hide);
         }
         else EnterEdit(notice);
@@ -1911,6 +1917,8 @@ public partial class MainWindow : Window
         ApplyTaskbarPresence(); // v2.4.2: edit mode has a taskbar button
         ApplyChrome();
         Show();
+        WatchDrawing("editor", logFirstFrame: !_startedUpEditor); // 2.6.0: logged if never drawn; the first time also how fast
+        _startedUpEditor = true;
         ApplyRequestedLayer();
         EnsureVisible();
         Activate(); // v2.3.1: after the layer/position is final (was before ApplyRequestedLayer)

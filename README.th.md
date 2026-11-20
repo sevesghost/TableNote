@@ -188,6 +188,7 @@ dotnet publish -c Release -r win-x64 --self-contained true \
 - `Platform/` ส่วนของ Windows เช่น วอลเปเปอร์ (IDesktopWallpaper) ปุ่มลัด แถบงาน สัญญาณเปิดซ้ำ และการเปิดเมื่อเข้าสู่ระบบ
 - `Services/` ระบบแจ้งเตือน หน้าต่างเตือน หน้าต่างตั้งเตือนล่วงหน้า และเสียง
 - `MainWindow.axaml(.cs)` หน้าจอหลัก
+- `Assets/Brand/` โลโก้ Table Note ที่ขึ้นบนหน้าโหลด (`SplashWindow.cs`)
 - `Assets/` ฟอนต์ (Noto Sans Thai รวมตัวอังกฤษของ Noto Sans และสัญลักษณ์บางตัวของ Noto ไว้ในไฟล์เดียว ไทย ตัวเลข และอังกฤษจึงเป็นแบบเดียวกัน สร้างใหม่ได้ด้วย `tools/fonts/merge_noto.py`) และไอคอนถาด
 
 ## ประวัติรุ่น
