@@ -2,7 +2,7 @@
 
 All notable changes to TableNote. [ภาษาไทย](CHANGELOG.th.md)
 
-- **2.6.0** (20 November 2026)
+- **2.6.0** (21 November 2026)
   - New: **wallpaper mode** replaces *Pin to desktop*. **Wallpaper** on the toolbar (or **File → Set as wallpaper**) draws the table over your own wallpaper, full screen, on the monitor the window is on: a card with the alert boxes and the table where the window was, at the window's size at most and at its zoom (rows that don't fit are counted as "+ N more rows"). The editor goes to the tray. The picture is redrawn when the table changes (for example a task marked done from a reminder), when a task turns overdue or due today, and on a new day.
   - Clicking the tray icon, **Edit table** in the tray menu, Ctrl+Shift+E or starting TableNote again brings the editor back and puts your own wallpaper back. **Quit** puts it back too; wallpaper mode stays on and the next start draws the table again. At sign-out with **Launch at sign-in** on, the table stays and is redrawn at sign-in.
   - Your wallpaper is kept before anything changes (`%LOCALAPPDATA%\TableNote\wallpaper\wallpaper.json` and a copy of the picture), so it comes back after a crash too, also when Windows only had it in its own cache. A slideshow is started again; Windows spotlight can't be turned back on by a program, so TableNote asks first. A wallpaper you pick meanwhile is kept. A wallpaper fixed by Group Policy is left alone. Span (one picture across monitors) is supported.

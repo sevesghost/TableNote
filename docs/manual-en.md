@@ -401,4 +401,4 @@ Moving columns or rows, deleting a column, changing column settings, and changin
 - The text colour of row numbers and the background colour of the whole table are not included in the image or printout yet.
 
 ---
-*This guide is based on the TableNote 2.6.0 code as of 20 Nov 2026 (Thailand time, UTC+7).*
+*This guide is based on the TableNote 2.6.0 code as of 21 Nov 2026 (Thailand time, UTC+7).*

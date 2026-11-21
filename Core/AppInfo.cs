@@ -4,7 +4,7 @@ public static class AppInfo
 {
     public const string Version = "2.6.0";
     public const string ConfirmedCommit = "rewrite-" + Version;
-    public const string BuildNote = "วันบิลด์: 20 พฤศจิกายน 2026 (เวลาไทย UTC+7) — โหมดวอลเปเปอร์ และแถบเครื่องมือแถวเดียว";
+    public const string BuildNote = "วันบิลด์: 21 พฤศจิกายน 2026 (เวลาไทย UTC+7) — โหมดวอลเปเปอร์ ช่องแบบ Excel นับวัน และแถบการทำงาน";
 
     public static string HelpText => Localizer.Current == "th" ? HelpTextTh : HelpTextEn;
     public static string LogText => Localizer.Current == "th" ? LogTextTh : LogTextEn;
@@ -283,9 +283,9 @@ tablenote.log :: บันทึกการทำงานของโปรแ
 ").Replace("{VERSION}", Version);
 
     public static string LogTextEn { get; } =
-@"TableNote " + Version + @" — built 20 Nov 2026 (Bangkok time, UTC+7)
+@"TableNote " + Version + @" — built 21 Nov 2026 (Bangkok time, UTC+7)
 
-20 Nov 2026 — 2.6.0
+21 Nov 2026 — 2.6.0
 New: Wallpaper (toolbar) puts the table on your desktop wallpaper, full screen, over your own picture and where the window was. The tray icon or Ctrl+Shift+E brings the editor back, and your own wallpaper with it. This replaces Pin to desktop.
 Changed: one toolbar row with the everyday buttons. Copy, image export, print, delete column, language and the system settings are in the menu bar. The alert panel shows only when there are alert boxes (Table → Add alert box). Zoom scales the table, not the menu and toolbar.
 New: activity bar at the bottom (View → Activity bar): what TableNote is doing now (a progress bar while it exports, prints or draws the wallpaper), the last thing it did, when it last saved, and a History list. ✕ hides it.
@@ -349,7 +349,7 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 รุ่นที่แสดง: " + Version + @"
 " + BuildNote + @"
 
-20 พ.ย. 2026 — 2.6.0
+21 พ.ย. 2026 — 2.6.0
 ใหม่: ปุ่ม วอลเปเปอร์ ตั้งตารางเป็นวอลเปเปอร์เต็มจอ ทับภาพเดิมของคุณตรงตำแหน่งหน้าต่าง คลิกไอคอนที่ถาดหรือกด Ctrl+Shift+E เพื่อกลับมาแก้ไข แล้ววอลเปเปอร์เดิมจะกลับมา ใช้แทน วางแนบพื้นหลัง
 เปลี่ยน: แถบเครื่องมือเหลือแถวเดียวเฉพาะปุ่มที่ใช้บ่อย คัดลอก ส่งออกภาพ พิมพ์ ลบคอลัมน์ ภาษา และตั้งค่าระบบ อยู่ในแถบเมนู ช่องกล่องแจ้งเตือนขึ้นเมื่อมีกล่องเท่านั้น (ตาราง → เพิ่มกล่องแจ้งเตือน) ปุ่มขยาย/ย่อขยายเฉพาะตาราง ไม่ขยายเมนูและแถบเครื่องมือ
 ใหม่: แถบการทำงานด้านล่าง (มุมมอง → แถบการทำงาน) บอกว่าโปรแกรมกำลังทำอะไร (มีหลอดความคืบหน้าตอนส่งออก พิมพ์ หรือวาดวอลเปเปอร์) ทำอะไรล่าสุด บันทึกล่าสุดเมื่อไร และมีปุ่ม ประวัติ กด ✕ เพื่อซ่อน
