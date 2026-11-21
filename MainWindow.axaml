@@ -142,7 +142,27 @@
       <CheckBox x:Name="LockBox"/>
       <CheckBox x:Name="LaunchBox"/>
       <CheckBox x:Name="MuteSoundBox"/>
+      <CheckBox x:Name="ActivityBox"/>
     </StackPanel>
+
+    <!-- 2.6.0: activity bar (View → Activity bar, or ✕ to hide): what TableNote is doing now, with a progress bar while
+         it works, the last thing it did, when it last saved, and a History list. -->
+    <Border x:Name="ActivityBar" DockPanel.Dock="Bottom" Margin="0,4,0,0" Padding="8,2,4,2"
+            Background="#FFF8E0" BorderBrush="#E4D08A" BorderThickness="1" CornerRadius="6">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+        <Ellipse x:Name="ActivityDot" Grid.Column="0" Width="8" Height="8" Margin="0,0,7,0"
+                 VerticalAlignment="Center" Fill="#4E9A5B"/>
+        <ProgressBar x:Name="ActivityProgress" Grid.Column="1" Width="90" MinWidth="90" Height="6" MinHeight="6"
+                     Margin="0,0,8,0" VerticalAlignment="Center" IsIndeterminate="True" IsVisible="False"
+                     Foreground="#C08A1E" Background="#F1E3B0"/>
+        <TextBlock x:Name="ActivityText" Grid.Column="2" FontSize="12" Foreground="#4F4330"
+                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+        <TextBlock x:Name="ActivitySaved" Grid.Column="3" FontSize="12" Foreground="#7A6A48"
+                   VerticalAlignment="Center" Margin="10,0,8,0"/>
+        <Button x:Name="ActivityHistoryButton" Grid.Column="4" Classes="tool" Padding="8,1" FontSize="12" Content="History"/>
+        <Button x:Name="ActivityHideButton" Grid.Column="5" Classes="tool" Padding="7,1" Margin="4,0,0,0" FontSize="12" Content="✕"/>
+      </Grid>
+    </Border>
 
     <TextBlock x:Name="StatusText" DockPanel.Dock="Bottom"
                Margin="0,6,0,0" FontSize="12" Foreground="#6B5E48"

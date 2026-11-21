@@ -30,6 +30,8 @@ public sealed class ReminderService : IDisposable
 
     private bool _running;
     private bool _checking;
+    /// <summary>2.6.0: when the reminders were last checked (the activity bar shows that they run).</summary>
+    public DateTime? LastCheck { get; private set; }
     public void Start() { _running = true; _timer.Start(); }
     public void Stop() { _running = false; _timer.Stop(); }
     public void CheckNow() => Check();
@@ -48,6 +50,7 @@ public sealed class ReminderService : IDisposable
         {
             using var _ = UiActivity.Scope("reminders: check");
             batch = ReminderPlan.Collect(_doc(), DateTime.Now, _inPopup);
+            LastCheck = DateTime.Now;
             if (batch.Count == 0) return;
             foreach (var t in batch) _inPopup.Add(t.RowId);
             _onDueBatch(batch);

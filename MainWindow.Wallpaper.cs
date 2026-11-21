@@ -71,17 +71,25 @@ public partial class MainWindow
     /// <summary>Draws the table picture and sets it (the first time, or again after a change).</summary>
     private WallpaperOutcome ApplyWallpaper(bool confirmed)
     {
+        var run = ActivityLog.Shared.Begin(Localizer.T("activity.wallpaper")); // 2.6.0: History shows each redraw
         try
         {
             var screens = WallpaperScreens();
+            WallpaperOutcome outcome;
             using (UiActivity.Scope("wallpaper"))
-                return Wallpaper.Apply(WindowPixelRect(screens), screens, RenderWallpaper, confirmed);
+                outcome = Wallpaper.Apply(WindowPixelRect(screens), screens, RenderWallpaper, confirmed);
+            if (outcome.Ok) run.Done(Localizer.T("activity.wallpaper_done"));
+            else if (outcome.NeedsConfirm) run.Warn(outcome.Message ?? Localizer.T("activity.wallpaper"));
+            else run.Fail(outcome.Message ?? Localizer.T("activity.wallpaper"));
+            return outcome;
         }
         catch (Exception ex)
         {
             // Never leave the editor half-switched: report it and stay (or go back) in the editor.
             AppLog.Write("wallpaper", "failed: " + ex.GetType().Name + ": " + ex.Message);
-            return new WallpaperOutcome(false, Localizer.T("wallpaper.set_failed", ex.Message), ex.Message);
+            var message = Localizer.T("wallpaper.set_failed", ex.Message);
+            run.Fail(message);
+            return new WallpaperOutcome(false, message, ex.Message);
         }
     }
 

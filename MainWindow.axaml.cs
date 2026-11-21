@@ -148,6 +148,7 @@ public partial class MainWindow : Window
         InitExcelSelection(); // 2.6.0
         InitFormulaBar();
         InitFind();
+        InitActivityBar(); // 2.6.0: what TableNote is doing (bottom bar)
         ApplyZoom();
         InitMenuBar();
         ApplyLanguageTexts();
@@ -179,6 +180,7 @@ public partial class MainWindow : Window
         if (_startedUp) return;
         _startedUp = true;
         LogStart(); // 2.6.0: one line per start in tablenote.log
+        NoteStart(); // 2.6.0: "opened the table: N rows (x s)" — the first line of the activity bar's History
         if (Screens != null)
             Screens.Changed += (_, _) => OnDisplayChanged();
 
@@ -365,6 +367,10 @@ public partial class MainWindow : Window
 
     private void OnDueBatch(IReadOnlyList<DueTask> tasks)
     {
+        // 2.6.0: History shows which reminders came up.
+        var titles = string.Join(", ", tasks.Take(2).Select(t => "\"" + RowHistoryOps.Clip(string.IsNullOrWhiteSpace(t.Title) ? Localizer.T("days.row_n", t.RowIndex + 1) : t.Title, 40) + "\""));
+        if (tasks.Count > 2) titles += " …";
+        ActivityLog.Shared.Add(ActivityLevel.Info, tasks.Count == 1 ? Localizer.T("activity.reminded_one", titles) : Localizer.T("activity.reminded", tasks.Count, titles));
         // v2.4.2: window could not be shown → say so in the status bar (tasks remind again on the next check).
         ReminderPopup.ShowFailed = n => StatusText.Text = Localizer.T("notify.popup_failed", n);
         ReminderPopup.ShowBatch(
@@ -547,6 +553,7 @@ public partial class MainWindow : Window
     {
         var label = _undo.Undo(_session.Doc);
         if (label == null) return;
+        ActivityLog.Shared.Add(ActivityLevel.Info, Localizer.T("ui.undo_done", label));
         Rebuild();
         FlushSave(); // v2.4.1: undo/redo of a row move / delete is a structure change → save now, like the action itself
         StatusText.Text = Localizer.T("ui.undo_done", label);
@@ -557,6 +564,7 @@ public partial class MainWindow : Window
     {
         var label = _undo.Redo(_session.Doc);
         if (label == null) return;
+        ActivityLog.Shared.Add(ActivityLevel.Info, Localizer.T("ui.redo_done", label));
         Rebuild();
         FlushSave(); // v2.4.1: undo/redo of a row move / delete is a structure change → save now, like the action itself
         StatusText.Text = Localizer.T("ui.redo_done", label);
@@ -580,7 +588,12 @@ public partial class MainWindow : Window
         // then carried a stale column index.
         CommitFocusedEdit();
         try { await action(); }
-        catch (Exception ex) { StatusText.Text = Localizer.T("ui.action_failed", ex.Message); }
+        catch (Exception ex)
+        {
+            StatusText.Text = Localizer.T("ui.action_failed", ex.Message);
+            ActivityLog.Shared.Add(ActivityLevel.Error, StatusText.Text);
+            AppLog.Write("ui", "action failed: " + ex.GetType().Name + ": " + ex.Message);
+        }
     }
 
     private Task AddRowAsync()
@@ -799,6 +812,7 @@ public partial class MainWindow : Window
         StatusText.Text = Localizer.T("ui.saving");
         _saveTimer.Stop();
         _saveTimer.Start();
+        RefreshActivityBar(); // 2.6.0: "edited — saving shortly"
     }
 
     private bool FlushSave()
@@ -826,6 +840,7 @@ public partial class MainWindow : Window
                 var side = NoteStore.SaveSideCopy(_path, _session.Doc);
                 _sideCopyName = Path.GetFileName(side);
                 _saveFailureMessage = null;
+                ActivityLog.Shared.Add(ActivityLevel.Warning, Localizer.T("activity.saved_side", Path.GetFileName(side)), "save");
                 ScheduleWallpaperRefresh();
                 StatusText.Text = Localizer.T("ui.saved_side", _loadWarning ?? TableLimits.FileTooBigKeptMessage, Path.GetFileName(side));
                 return true;
@@ -835,6 +850,7 @@ public partial class MainWindow : Window
                 AppLog.Write("save", "note.unsaved.json failed: " + ex.Message);
                 _saveFailureMessage = SaveFeedback.Failure(ex);
                 StatusText.Text = _saveFailureMessage;
+                ActivityLog.Shared.Add(ActivityLevel.Error, _saveFailureMessage, "save-failed");
                 return false; // quit is blocked with the "not saved" dialog instead of losing the edits
             }
         }
@@ -851,6 +867,7 @@ public partial class MainWindow : Window
             if (_session.Doc.Columns.Count != colsBefore || _session.Doc.Rows.Count != rowsBefore)
                 Dispatcher.UIThread.Post(Rebuild);
             _saveFailureMessage = null;
+            ActivityLog.Shared.Add(ActivityLevel.Done, Localizer.T("activity.saved", Path.GetFileName(_path)), "save"); // 2.6.0
             UpdateStatus();
             ScheduleWallpaperRefresh(); // wallpaper mode: a reminder marked done etc. shows on the desktop too
             if (size > TableLimits.MaxSaveFileBytes * 3L / 4) // P5: warn from 75 % of the cap
@@ -861,12 +878,14 @@ public partial class MainWindow : Window
         {
             _saveFailureMessage = ex.Message;
             StatusText.Text = ex.Message;
+            ActivityLog.Shared.Add(ActivityLevel.Error, ex.Message, "save-failed");
             return false;
         }
         catch (Exception ex)
         {
             _saveFailureMessage = SaveFeedback.Failure(ex);
             StatusText.Text = _saveFailureMessage;
+            ActivityLog.Shared.Add(ActivityLevel.Error, _saveFailureMessage, "save-failed");
             AppLog.Write("save", "note.json save failed: " + ex.GetType().Name + ": " + ex.Message); // v2.4.1: was only in the status bar (lost on OS shutdown)
             return false;
         }
@@ -912,6 +931,7 @@ public partial class MainWindow : Window
         Title = T("app.title");
         ApplyFormulaBarTexts(); // 2.6.0
         ApplyFindTexts();
+        ApplyActivityTexts();
         AddRowButton.Content = T("toolbar.add_row"); ToolTip.SetTip(AddRowButton, T("tip.add_row"));
         DeleteRowButton.Content = T("toolbar.delete_row"); ToolTip.SetTip(DeleteRowButton, T("tip.delete_row"));
         AddColumnButton.Content = T("toolbar.add_column"); ToolTip.SetTip(AddColumnButton, T("tip.add_column"));
@@ -1010,15 +1030,18 @@ public partial class MainWindow : Window
         _exporting = true;
         ExportButton.IsEnabled = false;
         StatusText.Text = Localizer.T("export.running");
+        var run = ActivityLog.Shared.Begin(Localizer.T("activity.exporting", Path.GetFileName(path))); // 2.6.0: the bar moves
         try
         {
             await Task.Run(() => Exporter.Export(rows, headers, path, format, cols)); // off the UI thread
             StatusText.Text = Localizer.T(rows.Count == 1 ? "export.done_one" : "export.done", rows.Count, Path.GetFileName(path));
+            run.Done(StatusText.Text);
             AppLog.Write("export", $"{format} {rows.Count} rows → {path}");
         }
         catch (Exception ex)
         {
             StatusText.Text = Localizer.T("export.failed", ex.Message);
+            run.Fail(StatusText.Text);
             AppLog.Write("export", "failed: " + ex.Message);
         }
         finally
@@ -2021,6 +2044,7 @@ public partial class MainWindow : Window
         EditTools.IsVisible = edit;
         ToolScroll.IsVisible = edit;
         FormulaBar.IsVisible = edit; // 2.6.0
+        ApplyActivityVisibility();
         if (!edit) CloseFind();
         IsHitTestVisible = edit;
         CanResize = edit && !_session.Doc.Window.Locked;

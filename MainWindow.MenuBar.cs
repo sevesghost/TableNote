@@ -53,6 +53,7 @@ public partial class MainWindow
     private MenuItem _launchItem = null!;
     private MenuItem _muteItem = null!;
     private MenuItem _soundItem = null!; // 2.6.0: View → System → Reminder sound…
+    private MenuItem _activityItem = null!; // 2.6.0: View → Activity bar
     private MenuItem _helpItem = null!;
     private MenuItem _logItem = null!;
 
@@ -206,6 +207,9 @@ public partial class MainWindow
         _viewMenu.Items.Add(_zoomResetItem);
         _viewMenu.Items.Add(_zoomInItem);
         _viewMenu.Items.Add(_languageMenu);
+        _activityItem = CheckItem("menu.activity", ActivityBox);
+        ToolTip.SetTip(_activityItem, Localizer.T("activity.tip"));
+        _viewMenu.Items.Add(_activityItem);
         _viewMenu.Items.Add(new Separator());
         _viewMenu.Items.Add(_systemMenu);
         _viewMenu.SubmenuOpened += (_, _) =>
@@ -216,6 +220,7 @@ public partial class MainWindow
             _zoomOutItem.IsEnabled = edit;
             _zoomResetItem.IsEnabled = edit;
             _zoomInItem.IsEnabled = edit;
+            _activityItem.IsEnabled = edit;
             RefreshChecks();
         };
 
@@ -347,6 +352,7 @@ public partial class MainWindow
         ToolTip.SetTip(_lockItem, Localizer.T("tip.lock"));
         ToolTip.SetTip(_muteItem, Localizer.T("tip.mute"));
         _soundItem.Header = Localizer.T("menu.sound");
+        ToolTip.SetTip(_activityItem, Localizer.T("activity.tip"));
         _helpItem.Header = Localizer.T("tray.help");
         _logItem.Header = Localizer.T("tray.log");
         _zoomOutItem.Header = Localizer.T("tray.zoom_out");

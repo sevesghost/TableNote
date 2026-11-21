@@ -112,6 +112,15 @@ Right-click the tray icon → Quit :: quits as well
 Open it again :: click the tray icon, or start TableNote again
 View → System → Launch at sign-in :: starts hidden in the tray when you sign in
 
+# Activity bar (bottom)
+The bar at the bottom of the window shows what TableNote is doing and what it did last.
+Dot :: green = ready / done, yellow = working or about to save, orange = worth knowing, red = something failed
+Progress bar :: moves while TableNote exports, saves a picture, prepares pages to print or draws the wallpaper
+Last saved :: when note.json was saved last
+History :: what TableNote did lately (opened the table, saved, reminders, undo, export …) with the times, and Open folder (where tablenote.log is)
+✕ :: hides the bar; View → Activity bar shows it again (kept in settings.json)
+If TableNote stops responding for more than 2 seconds, an orange line says for how long and what it was doing.
+
 # Wallpaper mode (Windows)
 Wallpaper button or File → Set as wallpaper :: the table is drawn over your own wallpaper, full screen; the editor goes to the tray
 The picture follows the table :: tasks marked done, tasks turning overdue, a new day
@@ -239,6 +248,15 @@ X (มุมหน้าต่าง) :: เลื่อน 10 นาทีท�
 เปิดกลับ :: คลิกไอคอนในถาด หรือเปิดโปรแกรมอีกครั้ง
 มุมมอง → ตั้งค่าระบบ → เปิดเมื่อเข้าสู่ระบบ :: เริ่มแบบซ่อนอยู่ที่ถาดทุกครั้งที่เข้าเครื่อง
 
+# แถบการทำงาน (ด้านล่าง)
+แถบล่างสุดของหน้าต่างบอกว่าตารางโน้ตกำลังทำอะไร และทำอะไรล่าสุด
+จุดสี :: เขียว = พร้อม / เสร็จแล้ว, เหลือง = กำลังทำงานหรือรอบันทึก, ส้ม = มีเรื่องควรรู้, แดง = ทำไม่สำเร็จ
+หลอดความคืบหน้า :: วิ่งตอนกำลังส่งออก บันทึกภาพ เตรียมหน้าพิมพ์ หรือวาดวอลเปเปอร์
+บันทึกล่าสุด :: เวลาที่บันทึก note.json ครั้งล่าสุด
+ประวัติ :: สิ่งที่โปรแกรมทำล่าสุด (เปิดตาราง บันทึก แจ้งเตือน ย้อนกลับ ส่งออก …) พร้อมเวลา และปุ่มเปิดโฟลเดอร์ที่มี tablenote.log
+✕ :: ซ่อนแถบ เปิดอีกครั้งที่ มุมมอง → แถบการทำงาน (จำไว้ใน settings.json)
+ถ้าโปรแกรมไม่ตอบสนองเกิน 2 วินาที จะมีบรรทัดสีส้มบอกว่าค้างกี่วินาที และขณะทำอะไรอยู่
+
 # โหมดวอลเปเปอร์ (Windows)
 ปุ่ม วอลเปเปอร์ หรือ ไฟล์ → ตั้งเป็นวอลเปเปอร์ :: วาดตารางทับวอลเปเปอร์ของคุณแบบเต็มจอ แล้วหน้าแก้ไขไปอยู่ที่ถาด
 ภาพอัปเดตตามตาราง :: งานที่เสร็จ งานที่เลยกำหนด และวันใหม่
@@ -270,6 +288,7 @@ tablenote.log :: บันทึกการทำงานของโปรแ
 20 Nov 2026 — 2.6.0
 New: Wallpaper (toolbar) puts the table on your desktop wallpaper, full screen, over your own picture and where the window was. The tray icon or Ctrl+Shift+E brings the editor back, and your own wallpaper with it. This replaces Pin to desktop.
 Changed: one toolbar row with the everyday buttons. Copy, image export, print, delete column, language and the system settings are in the menu bar. The alert panel shows only when there are alert boxes (Table → Add alert box). Zoom scales the table, not the menu and toolbar.
+New: activity bar at the bottom (View → Activity bar): what TableNote is doing now (a progress bar while it exports, prints or draws the wallpaper), the last thing it did, when it last saved, and a History list. ✕ hides it.
 New: whole rows and columns: click a row number or a header (drag / Shift+click for several); right-click to insert, delete or insert copied rows / columns; drag ⋮⋮ beside a row number to move rows. Table → Undo / Redo. File → Close window (to the tray) and File → Exit TableNote. Help in topics that open and close.
 New: Excel-style cells: click selects (gold), drag selects a block, typing replaces, double-click or F2 edits, Delete clears, Ctrl+C / X / V copy, cut and paste blocks to and from Excel, Ctrl+A selects everything.
 New: formula bar above the table (the cell's address and whole text, no calculation); Ctrl+F finds text in the table.
@@ -333,6 +352,7 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 20 พ.ย. 2026 — 2.6.0
 ใหม่: ปุ่ม วอลเปเปอร์ ตั้งตารางเป็นวอลเปเปอร์เต็มจอ ทับภาพเดิมของคุณตรงตำแหน่งหน้าต่าง คลิกไอคอนที่ถาดหรือกด Ctrl+Shift+E เพื่อกลับมาแก้ไข แล้ววอลเปเปอร์เดิมจะกลับมา ใช้แทน วางแนบพื้นหลัง
 เปลี่ยน: แถบเครื่องมือเหลือแถวเดียวเฉพาะปุ่มที่ใช้บ่อย คัดลอก ส่งออกภาพ พิมพ์ ลบคอลัมน์ ภาษา และตั้งค่าระบบ อยู่ในแถบเมนู ช่องกล่องแจ้งเตือนขึ้นเมื่อมีกล่องเท่านั้น (ตาราง → เพิ่มกล่องแจ้งเตือน) ปุ่มขยาย/ย่อขยายเฉพาะตาราง ไม่ขยายเมนูและแถบเครื่องมือ
+ใหม่: แถบการทำงานด้านล่าง (มุมมอง → แถบการทำงาน) บอกว่าโปรแกรมกำลังทำอะไร (มีหลอดความคืบหน้าตอนส่งออก พิมพ์ หรือวาดวอลเปเปอร์) ทำอะไรล่าสุด บันทึกล่าสุดเมื่อไร และมีปุ่ม ประวัติ กด ✕ เพื่อซ่อน
 ใหม่: เลือกทั้งแถว / ทั้งคอลัมน์ (คลิกเลขแถวหรือหัวคอลัมน์ ลากหรือ Shift+คลิกเลือกหลายอัน) คลิกขวาเพื่อแทรก ลบ หรือแทรกแถว / คอลัมน์ที่คัดลอก ลาก ⋮⋮ ข้างเลขแถวเพื่อย้าย ตาราง → ย้อนกลับ / ทำซ้ำ ไฟล์ → ปิดหน้าต่าง (ไปที่ถาด) และ ไฟล์ → ออกจากโปรแกรม วิธีใช้แบ่งเป็นหัวข้อ คลิกเพื่อขยาย / ยุบ
 ใหม่: ช่องแบบ Excel: คลิก = เลือก (สีทอง) ลากคลุมหลายช่อง พิมพ์ = เขียนทับ ดับเบิลคลิก/F2 = แก้ Delete = ล้าง Ctrl+C / X / V คัดลอก ตัด วาง ไป-มากับ Excel Ctrl+A = เลือกทั้งหมด
 ใหม่: แถบสูตรเหนือตาราง (ที่อยู่ช่องและข้อความทั้งหมด ไม่คำนวณ) และ Ctrl+F ค้นหาในตาราง

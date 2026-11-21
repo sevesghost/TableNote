@@ -71,19 +71,23 @@ public partial class MainWindow
             path = file.TryGetLocalPath();
             if (string.IsNullOrEmpty(path))
             {
+                var pictureRun = ActivityLog.Shared.Begin(Localizer.T("activity.image", file.Name)); // 2.6.0
                 try
                 {
                     _imageBusy = true;
                     StatusText.Text = Localizer.T("export.image_running");
+                    await LetBarDraw();
                     await using var stream = await file.OpenWriteAsync();
                     var bytes = CaptureTable(ViewImageFormat.Png);
                     await stream.WriteAsync(bytes);
                     StatusText.Text = Localizer.T("export.image_done", file.Name);
+                    pictureRun.Done(StatusText.Text);
                     AppLog.Write("export", "image " + file.Name);
                 }
                 catch (Exception ex)
                 {
                     StatusText.Text = Localizer.T("export.image_failed", ex.Message);
+                    pictureRun.Fail(StatusText.Text);
                     AppLog.Write("export", "image failed: " + ex.Message);
                 }
                 finally
@@ -102,15 +106,19 @@ public partial class MainWindow
 
         _imageBusy = true;
         StatusText.Text = Localizer.T("export.image_running");
+        var run = ActivityLog.Shared.Begin(Localizer.T("activity.image", Path.GetFileName(path))); // 2.6.0
         try
         {
+            await LetBarDraw();
             File.WriteAllBytes(path, CaptureTable(format));
             StatusText.Text = Localizer.T("export.image_done", Path.GetFileName(path));
+            run.Done(StatusText.Text);
             AppLog.Write("export", $"image {format} → {path}");
         }
         catch (Exception ex)
         {
             StatusText.Text = Localizer.T("export.image_failed", ex.Message);
+            run.Fail(StatusText.Text);
             AppLog.Write("export", "image failed: " + ex.Message);
         }
         finally
@@ -125,8 +133,10 @@ public partial class MainWindow
         CommitFocusedEdit();
         _imageBusy = true;
         StatusText.Text = Localizer.T("print.running");
+        var run = ActivityLog.Shared.Begin(Localizer.T("activity.printing")); // 2.6.0
         try
         {
+            await LetBarDraw();
             ViewPrintFiles.CleanupExpired();
             var spec = new ViewPrintSpec();
             var pages = ViewImage.RenderPrintPages(_session.Doc, CaptureOptions(), spec);
@@ -141,6 +151,7 @@ public partial class MainWindow
                 try { job = ViewPrintFiles.Write(ViewPrintPdf.FromPngs(pages, spec.Dpi), ".pdf"); }
                 catch (Exception ex) { AppLog.Write("export", "combined print file skipped: " + ex.Message); }
             }
+            run.Done(Localizer.T("activity.printed", pages.Count));
             var dlg = new ViewPrintWindow(paths, job);
             await dlg.ShowDialog(this);
             UpdateStatus();
@@ -148,6 +159,7 @@ public partial class MainWindow
         catch (Exception ex)
         {
             StatusText.Text = Localizer.T("print.failed", ex.Message);
+            run.Fail(StatusText.Text);
             AppLog.Write("export", "print failed: " + ex.Message);
         }
         finally

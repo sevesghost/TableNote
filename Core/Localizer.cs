@@ -163,6 +163,8 @@ public sealed class AppSettings
     public string ReminderSound { get; set; } = ReminderSounds.Default;
     /// <summary>2.6.0: reminder volume 0–100 (50 unless set; above 50 the sound dialog asks first).</summary>
     public int ReminderVolume { get; set; } = ReminderSounds.DefaultVolume;
+    /// <summary>2.6.0: the activity bar at the bottom (what TableNote is doing). On unless hidden; written only when off.</summary>
+    public bool ShowActivity { get; set; } = true;
     public const int MinScale = 80, MaxScale = 200, ScaleStep = 10;
     public static int ClampScale(int s) => s < MinScale || s > MaxScale ? 100 : (int)Math.Round(s / (double)ScaleStep) * ScaleStep;
 
@@ -194,6 +196,8 @@ public sealed class AppSettings
                     s.ReminderSound = (prop.Value.GetString() ?? "").Trim();
                 else if (prop.NameEquals("reminderVolume") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number && prop.Value.TryGetInt32(out var vol))
                     s.ReminderVolume = ReminderSounds.ClampVolume(vol);
+                else if (prop.NameEquals("showActivity") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.False)
+                    s.ShowActivity = false;
             }
         }
         catch (Exception ex)
@@ -219,7 +223,8 @@ public sealed class AppSettings
                 ? ",\n  \"reminderSound\": \"" + System.Text.Json.JsonEncodedText.Encode(ReminderSound, System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping) + "\""
                 : "";
             var volume = ReminderVolume != ReminderSounds.DefaultVolume ? $",\n  \"reminderVolume\": {ReminderSounds.ClampVolume(ReminderVolume)}" : "";
-            File.WriteAllText(tmp, $"{{\n  \"language\": \"{Language}\",\n  \"uiScale\": {Scale}{tip}{sound}{volume}\n}}\n");
+            var activity = ShowActivity ? "" : ",\n  \"showActivity\": false";
+            File.WriteAllText(tmp, $"{{\n  \"language\": \"{Language}\",\n  \"uiScale\": {Scale}{tip}{sound}{volume}{activity}\n}}\n");
             File.Move(tmp, p, overwrite: true);
         }
         catch (Exception ex) { AppLog.Write("settings", "save failed: " + ex.Message); }

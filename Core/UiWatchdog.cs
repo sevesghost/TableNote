@@ -52,6 +52,18 @@ public static class UiWatchdog
         _thread.Start();
     }
 
+    /// <summary>The UI thread works again after a stall: tablenote.log, and (2.6.0) the activity bar's History, in plain words.</summary>
+    public static void ReportRecovered(double seconds, string? busyIn)
+    {
+        AppLog.Write("watchdog", $"UI thread responsive again after {seconds:0.0} s (was busy in: {busyIn})");
+        try
+        {
+            ActivityLog.Shared.Add(ActivityLevel.Warning,
+                Localizer.T("activity.stall", seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), ActivityLog.Describe(busyIn)), "stall");
+        }
+        catch (Exception ex) { AppLog.Write("watchdog", "activity note failed: " + ex.Message); }
+    }
+
     public static void Stop()
     {
         _stop = true;
@@ -73,7 +85,7 @@ public static class UiWatchdog
                 if (reported)
                 {
                     var s = Interlocked.Read(ref _lastWaitTicks) / (double)Stopwatch.Frequency;
-                    AppLog.Write("watchdog", $"UI thread responsive again after {s:0.0} s (was busy in: {stalledIn})");
+                    ReportRecovered(s, stalledIn);
                     reported = false;
                 }
                 var stamp = Clock.ElapsedTicks;

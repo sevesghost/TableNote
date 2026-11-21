@@ -18,6 +18,8 @@ TableNote is a spreadsheet-style task list, similar to Excel, that reminds you w
 > - If there is no TableNote icon in the tray (for example, the system could not create it), clicking X really quits, and you won't get reminders until you open it again.
 > - To bring the window back, click the tray icon or choose **Edit table**.
 > - To really quit, choose **File → Exit TableNote**, or right-click the tray icon and choose **Quit**. You won't get reminders until you open TableNote again. (**File → Close window** does the same as X.)
+
+**Activity bar (2.6.0).** The slim bar at the bottom of the window tells you what TableNote is doing: a moving progress bar while it exports, saves a picture, prepares pages to print or draws the wallpaper; "Saving in a moment…" right after an edit; otherwise the last thing it did and when, plus the time it last saved note.json. The dot is green when all is well, yellow while it works, orange for something worth knowing (for example "did not respond for 3.2 s while saving note.json") and red when something failed. **History** lists what it did lately, newest first, and **Open folder** opens the folder with `tablenote.log`. Click **✕** to hide the bar; **View → Activity bar** shows it again.
 > - We recommend turning on **View → System → Launch at sign-in**. TableNote then starts hidden in the tray every time you sign in. If you last used wallpaper mode, it puts the table on the wallpaper again instead.
 > - For in-app help, choose **Help → Help** in the menu bar or **Help** from the tray menu.
 
