@@ -125,21 +125,34 @@ Ok("menu bar binds the alert-date and status spots through MenuCommandRules",
     menuBar.Contains("MenuCommandRules.AddStatusColumn(", StringComparison.Ordinal) &&
     menuBar.Contains("AddSystemColumnAsync(ColumnRoles.Due)", StringComparison.Ordinal) &&
     menuBar.Contains("AddSystemColumnAsync(ColumnRoles.Status)", StringComparison.Ordinal));
-Ok("toolbar groups are in the window layout",
-    axaml.Contains("GroupTableLabel", StringComparison.Ordinal) &&
-    axaml.Contains("GroupCopyLabel", StringComparison.Ordinal) &&
-    axaml.Contains("GroupViewLabel", StringComparison.Ordinal) &&
-    axaml.Contains("GroupSystemLabel", StringComparison.Ordinal) &&
-    axaml.Contains("GroupHelpLabel", StringComparison.Ordinal) &&
+// 2.6.0: one toolbar row of everyday commands (no labelled groups); the rest is in the menu bar.
+Ok("one toolbar row in the window layout",
+    axaml.Contains("<WrapPanel x:Name=\"EditTools\">", StringComparison.Ordinal) &&
+    axaml.Contains("x:Name=\"WallpaperButton\"", StringComparison.Ordinal) &&
     axaml.Contains("x:Name=\"MainMenu\"", StringComparison.Ordinal) &&
-    axaml.Contains("WrapPanel", StringComparison.Ordinal));
+    !axaml.Contains("GroupTableLabel", StringComparison.Ordinal) &&
+    !axaml.Contains("toolgroup", StringComparison.Ordinal));
+Ok("commands that left the toolbar are still in the menu bar",
+    menuBar.Contains("\"toolbar.copy_all\"", StringComparison.Ordinal) &&
+    menuBar.Contains("\"toolbar.copy_headers\"", StringComparison.Ordinal) &&
+    menuBar.Contains("\"toolbar.export_image\"", StringComparison.Ordinal) &&
+    menuBar.Contains("\"toolbar.print\"", StringComparison.Ordinal) &&
+    menuBar.Contains("\"toolbar.delete_column\"", StringComparison.Ordinal) &&
+    menuBar.Contains("CheckItem(\"toolbar.topmost\"", StringComparison.Ordinal) &&
+    menuBar.Contains("CheckItem(\"toolbar.lock\"", StringComparison.Ordinal) &&
+    menuBar.Contains("CheckItem(\"toolbar.launch_at_login\"", StringComparison.Ordinal) &&
+    menuBar.Contains("CheckItem(\"toolbar.mute\"", StringComparison.Ordinal) &&
+    menuBar.Contains("\"menu.wallpaper\"", StringComparison.Ordinal) &&
+    menuBar.Contains("\"menu.add_alert\"", StringComparison.Ordinal) &&
+    menuBar.Contains("FillLanguageMenu", StringComparison.Ordinal) &&
+    menuBar.Contains("\"tray.help\"", StringComparison.Ordinal) && menuBar.Contains("\"tray.log\"", StringComparison.Ordinal));
 Ok("file format version is untouched", Read("Core/NoteDocument.cs").Contains("public const int CurrentVersion = 6;", StringComparison.Ordinal));
 
 var menuKeys = new[]
 {
     "menu.file", "menu.table", "menu.column", "menu.row", "menu.view", "menu.help",
     "menu.system", "menu.language",
-    "menu.group.table", "menu.group.copy", "menu.group.view", "menu.group.system", "menu.group.help",
+    "menu.wallpaper", "menu.add_alert",
     "menu.spot.add_due", "menu.spot.add_status", "menu.spot.pending"
 };
 Dictionary<string, string> Lang(string code) =>

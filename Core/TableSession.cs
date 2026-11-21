@@ -25,6 +25,9 @@ public sealed partial class TableSession
         HasSelection = true;
     }
 
+    /// <summary>2.6.0: a click on an empty spot: nothing is selected.</summary>
+    public void ClearSelection() => HasSelection = false;
+
     public void ChooseRow(int row)
     {
         ActiveRow = row;

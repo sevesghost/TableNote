@@ -7,8 +7,8 @@ public static partial class T
     static Dictionary<string, string> UiSamples() => new()
     {
         ["tray_notice"] = Localizer.T("ui.tray_notice_body", Localizer.T("tray.edit"), Localizer.T("tray.quit")),
-        ["bg_bottom"] = "N " + Localizer.T("ui.bg_return_bottom", Localizer.T("tray.edit")) + " " + Localizer.T("ui.bg_return_hotkey"),
-        ["bg_desktop"] = "N " + Localizer.T("ui.bg_return_desktop", Localizer.T("tray.edit")),
+        // 2.6.0: the "pinned to desktop" return hints are gone; the wallpaper tip says how to get back.
+        ["wallpaper_tip"] = Localizer.T("wallpaper.tip_body", Localizer.T("tray.edit"), Localizer.T("tray.quit")),
         ["save_failed"] = Localizer.T("ui.save_failed_body", Localizer.T("ui.save_failed")),
         ["alarm"] = Localizer.T("ui.alarm_tip_offsets", Localizer.T("remind.before", "X")),
         ["names"] = Localizer.T("ui.snoozed", Localizer.T("ui.names_many", 4, "\"a\", \"b\", \"c\" …")),
@@ -24,9 +24,8 @@ public static partial class T
         {
             ["tray_notice"] = "ปิดหน้าต่างแล้ว แต่ตารางโน้ตยังทำงานอยู่ที่ถาดไอคอน (มุมขวาล่าง) เพื่อให้แจ้งเตือนงานต่อได้\n\n" +
                               "เปิดกลับ: คลิกไอคอนในถาด → แก้ไขตาราง หรือเปิดโปรแกรมอีกครั้ง\n" +
-                              "ออกจริง: คลิกขวาไอคอนในถาด → ออก (ข้อความนี้แสดงครั้งเดียว)",
-            ["bg_bottom"] = "N กลับได้จากถาดเมนู แก้ไขตาราง, เปิดโปรแกรมอีกครั้ง, หรือ --edit หรือ Ctrl+Shift+E",
-            ["bg_desktop"] = "N Win+D ไม่ซ่อนตารางนี้เพราะฝังกับพื้นโต๊ะ กลับได้จากถาดเมนู แก้ไขตาราง, เปิดโปรแกรมอีกครั้ง, หรือ --edit",
+                              "ออกจากโปรแกรมจริง: ไฟล์ → ออกจากโปรแกรม หรือคลิกขวาไอคอนในถาด → ออก (ข้อความนี้แสดงครั้งเดียว)", // 2.6.0: File → Exit
+            ["wallpaper_tip"] = "ตารางเป็นวอลเปเปอร์แล้ว จะแก้ไข: คลิกไอคอนตารางโน้ตที่ถาด (หรือคลิกขวา → แก้ไขตาราง) แล้ววอลเปเปอร์เดิมจะกลับมา และกลับมาเมื่อเลือก ออก ด้วย",
             ["save_failed"] = "บันทึกไม่สำเร็จ\n\nยังไม่ปิดโปรแกรม เพื่อไม่ให้ข้อมูลที่ยังไม่บันทึกหายไป",
             ["alarm"] = "เตือนล่วงหน้า: ก่อน X + ตรงเวลา",
             ["names"] = "เลื่อนแจ้งเตือน 4 งาน: \"a\", \"b\", \"c\" … 10 นาที",
@@ -34,7 +33,7 @@ public static partial class T
             ["path"] = "บันทึกที่ /p/note.json\nรายละเอียดค่าที่อ่านไม่ได้: /p/tablenote.log",
             ["row_task"] = "งานแถว 2",
         };
-        foreach (var (k, v) in expected) Ok("[th] ui." + k + " = 2.4.1 text", th[k] == v, th[k]);
+        foreach (var (k, v) in expected) Ok("[th] ui." + k + " = agreed text", th[k] == v, th[k]);
     }
 
     public static void TestUiTextEnglish()

@@ -1,4 +1,13 @@
 Copyright 2022 The Noto Project Authors (https://github.com/notofonts/thai)
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols)
+Copyright 2022 Google LLC. All Rights Reserved. (Noto Sans Math, https://github.com/notofonts/math)
+
+NotoSansThai-Regular.ttf and NotoSansThai-Bold.ttf are Noto Sans Thai with the Latin glyphs of Noto Sans
+and a few symbols (arrows, check marks, triangles, warning sign, ≈ ≤ ⋮) of Noto Sans Symbols,
+Noto Sans Symbols 2 and Noto Sans Math merged in by TableNote (tools/fonts/merge_noto.py),
+so Thai, digits, Latin and symbols share one design.
+All of these fonts are under this license and declare no Reserved Font Name.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

@@ -11,9 +11,10 @@
     <Style Selector="Button.tool">
       <Setter Property="Background" Value="#F0D78A"/>
       <Setter Property="Foreground" Value="#3B3222"/>
-      <Setter Property="Padding" Value="8,4"/>
+      <Setter Property="Padding" Value="8,3"/>
+      <Setter Property="MinHeight" Value="0"/>
       <Setter Property="FontSize" Value="12"/>
-      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="CornerRadius" Value="6"/>
       <Setter Property="BorderBrush" Value="#D4B86A"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="Margin" Value="0,2,4,2"/>
@@ -23,166 +24,197 @@
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Foreground" Value="#3B3222"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
-      <Setter Property="Margin" Value="4,2,8,2"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Margin" Value="2,0,6,0"/>
     </Style>
-    <Style Selector="Border.toolgroup">
-      <Setter Property="Background" Value="#FFF8DC"/>
-      <Setter Property="BorderBrush" Value="#E4D08A"/>
-      <Setter Property="BorderThickness" Value="0,0,0,1"/>
-      <Setter Property="Padding" Value="4,3,2,3"/>
-      <Setter Property="Margin" Value="0,0,0,4"/>
-    </Style>
-    <Style Selector="TextBlock.groupcap">
-      <Setter Property="FontSize" Value="12"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="#8A7040"/>
+    <Style Selector="Border.toolsep">
+      <Setter Property="Width" Value="1"/>
+      <Setter Property="Height" Value="18"/>
+      <Setter Property="Background" Value="#E4D08A"/>
+      <Setter Property="Margin" Value="3,0,7,0"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
-      <Setter Property="TextWrapping" Value="Wrap"/>
-      <Setter Property="Margin" Value="2,0,8,0"/>
+    </Style>
+    <!-- 2.6.0: a selected text cell is filled (behind its text), also while it has the focus or the mouse. -->
+    <Style Selector="TextBox.cell.selected /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F4D98C"/>
+    </Style>
+    <Style Selector="TextBox.cell.selected:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F4D98C"/>
+    </Style>
+    <Style Selector="TextBox.cell.selected:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F1D27C"/>
+    </Style>
+    <Style Selector="TextBox.colhead.selected /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F0CF6E"/>
+    </Style>
+    <Style Selector="TextBox.colhead.selected:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#EDC85E"/>
+    </Style>
+    <Style Selector="TextBox.colhead.selected:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#F0CF6E"/>
+    </Style>
+    <Style Selector="TextBox.colhead:focus /template/ Border#PART_BorderElement">
+      <Setter Property="BorderBrush" Value="#C08A1E"/>
+    </Style>
+    <Style Selector="TextBox.cell.match /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#FFE98A"/>
+    </Style>
+    <Style Selector="TextBox.cell.match:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#FFE27A"/>
+    </Style>
+    <Style Selector="TextBox.cell:focus /template/ Border#PART_BorderElement">
+      <Setter Property="BorderBrush" Value="#C08A1E"/>
     </Style>
     <Style Selector="Menu.note">
       <Setter Property="Background" Value="#F6E7A4"/>
       <Setter Property="Foreground" Value="#3B3222"/>
       <Setter Property="FontSize" Value="13"/>
-      <Setter Property="Padding" Value="2,1"/>
+      <Setter Property="Padding" Value="2,0"/>
     </Style>
     <Style Selector="Menu.note MenuItem">
       <Setter Property="Foreground" Value="#3B3222"/>
       <Setter Property="FontSize" Value="13"/>
-      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="Padding" Value="9,4"/>
     </Style>
   </Window.Styles>
 
-  <LayoutTransformControl x:Name="ZoomHost">
-  <DockPanel Margin="12,10">
-    <Menu x:Name="MainMenu" Classes="note" DockPanel.Dock="Top" Margin="0,0,0,6"/>
+  <DockPanel Margin="10,6,10,6">
+    <Menu x:Name="MainMenu" Classes="note" DockPanel.Dock="Top" Margin="0,0,0,4"/>
 
     <TextBlock x:Name="ModeNotice" DockPanel.Dock="Top"
                TextWrapping="Wrap" FontSize="12" Foreground="#A05A12"
-               Margin="0,0,0,6" IsVisible="False"/>
+               Margin="0,0,0,4" IsVisible="False"/>
 
-    <!-- Groups wrap inside each row so a narrow window never clips a button. -->
+    <!-- One row of the everyday commands; everything else is in the menu bar. A narrow window wraps the row. -->
     <ScrollViewer x:Name="ToolScroll" DockPanel.Dock="Top"
                   HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto"
-                  MaxHeight="220"
+                  MaxHeight="96"
                   ClipToBounds="True"
-                  Margin="0,0,0,4">
-      <StackPanel x:Name="EditTools">
-        <Border Classes="toolgroup">
-          <Grid ColumnDefinitions="124,*">
-            <TextBlock x:Name="GroupTableLabel" Classes="groupcap" Text="Edit table"/>
-            <WrapPanel x:Name="TableEditTools" Grid.Column="1">
-              <Button x:Name="AddRowButton" Classes="tool" Content="+ Row" ToolTip.Tip="Add row (F5)"/>
-              <Button x:Name="DeleteRowButton" Classes="tool" Content="− Row" ToolTip.Tip="Delete row (F6)"/>
-              <Button x:Name="AddColumnButton" Classes="tool" Content="+ Column" ToolTip.Tip="Add column (F7)"/>
-              <Button x:Name="DeleteColumnButton" Classes="tool" Content="− Column" ToolTip.Tip="Delete column (F8)"/>
-            </WrapPanel>
-          </Grid>
-        </Border>
-        <Border Classes="toolgroup">
-          <Grid ColumnDefinitions="124,*">
-            <TextBlock x:Name="GroupCopyLabel" Classes="groupcap" Text="Copy / export"/>
-            <WrapPanel Grid.Column="1">
-              <Button x:Name="CopyAllButton" Classes="tool" Content="Copy table"/>
-              <Button x:Name="CopyHeadersButton" Classes="tool" Content="Copy with headers"/>
-              <Button x:Name="ExportButton" Classes="tool" Content="Export" ToolTip.Tip="Save the table as .txt / .csv / .xlsx"/>
-              <Button x:Name="ExportImageButton" Classes="tool" Content="Export image" ToolTip.Tip="Save the current view as a PNG or JPEG image"/>
-              <Button x:Name="PrintButton" Classes="tool" Content="Print" ToolTip.Tip="Print the current view"/>
-            </WrapPanel>
-          </Grid>
-        </Border>
-        <Border Classes="toolgroup">
-          <Grid ColumnDefinitions="124,*">
-            <TextBlock x:Name="GroupViewLabel" Classes="groupcap" Text="View"/>
-            <WrapPanel Grid.Column="1">
-              <CheckBox x:Name="HideDoneBox" Classes="tool" Content="Hide done rows"/>
-              <Button x:Name="SortDueButton" Classes="tool" Content="Sort by due"
-                      ToolTip.Tip="Sort rows by the nearest due date"/>
-              <Button x:Name="ZoomOutButton" Classes="tool" Content="A−" ToolTip.Tip="Zoom out (Ctrl+−)"/>
-              <Button x:Name="ZoomResetButton" Classes="tool" Content="100%" ToolTip.Tip="Reset zoom (Ctrl+0)"/>
-              <Button x:Name="ZoomInButton" Classes="tool" Content="A+" ToolTip.Tip="Zoom in (Ctrl++)"/>
-              <Button x:Name="LanguageButton" Classes="tool" Content="EN/TH"
-                      ToolTip.Tip="Change the display language"/>
-            </WrapPanel>
-          </Grid>
-        </Border>
-        <Border Classes="toolgroup">
-          <Grid ColumnDefinitions="124,*">
-            <TextBlock x:Name="GroupSystemLabel" Classes="groupcap" Text="System"/>
-            <WrapPanel Grid.Column="1">
-              <CheckBox x:Name="TopmostBox" Classes="tool" Content="Always on top" ToolTip.Tip="Keep the window on top"/>
-              <CheckBox x:Name="LockBox" Classes="tool" Content="Lock position"
-                        ToolTip.Tip="Locked: dragging doesn't move the window"/>
-              <CheckBox x:Name="LaunchBox" Classes="tool" Content="Launch at sign-in"/>
-              <CheckBox x:Name="MuteSoundBox" Classes="tool" Content="Mute reminders"
-                        ToolTip.Tip="No sound when a reminder pops up (the popup still shows)"/>
-              <Button x:Name="BackgroundButton" Classes="tool" Content="Pin to desktop"
-                      ToolTip.Tip="View only, clicks pass through (Windows)"/>
-            </WrapPanel>
-          </Grid>
-        </Border>
-        <Border Classes="toolgroup">
-          <Grid ColumnDefinitions="124,*">
-            <TextBlock x:Name="GroupHelpLabel" Classes="groupcap" Text="Help"/>
-            <WrapPanel Grid.Column="1">
-              <Button x:Name="HelpButton" Classes="tool" Content="?" ToolTip.Tip="Help"/>
-              <Button x:Name="LogButton" Classes="tool" Content="Change log" ToolTip.Tip="Change log"/>
-            </WrapPanel>
-          </Grid>
-        </Border>
-      </StackPanel>
+                  Margin="0,0,0,2">
+      <WrapPanel x:Name="EditTools">
+        <Button x:Name="AddRowButton" Classes="tool" Content="+ Row" ToolTip.Tip="Add row (F5)"/>
+        <Button x:Name="DeleteRowButton" Classes="tool" Content="− Row" ToolTip.Tip="Delete row (F6)"/>
+        <Button x:Name="AddColumnButton" Classes="tool" Content="+ Column" ToolTip.Tip="Add column (F7)"/>
+        <!-- InitColors adds the Colors button here -->
+        <Border Classes="toolsep"/>
+        <CheckBox x:Name="HideDoneBox" Classes="tool" Content="Hide done rows"/>
+        <Button x:Name="SortDueButton" Classes="tool" Content="Sort by due"
+                ToolTip.Tip="Sort rows by the nearest due date"/>
+        <Border Classes="toolsep"/>
+        <Button x:Name="ZoomOutButton" Classes="tool" Content="A−" ToolTip.Tip="Zoom out (Ctrl+−)"/>
+        <Button x:Name="ZoomResetButton" Classes="tool" Content="100%" ToolTip.Tip="Reset zoom (Ctrl+0)"/>
+        <Button x:Name="ZoomInButton" Classes="tool" Content="A+" ToolTip.Tip="Zoom in (Ctrl++)"/>
+        <Border Classes="toolsep"/>
+        <Button x:Name="ExportButton" Classes="tool" Content="Export" ToolTip.Tip="Save the table as .txt / .csv / .xlsx"/>
+        <Button x:Name="WallpaperButton" Classes="tool" Content="Wallpaper"/>
+      </WrapPanel>
     </ScrollViewer>
 
-    <Border x:Name="AlertHost" DockPanel.Dock="Top" Margin="0,2,0,6"
-            Background="#FFF8E0" BorderBrush="#E4D08A" BorderThickness="1"
-            CornerRadius="8" Padding="8,6">
-      <DockPanel>
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,4">
-          <TextBlock x:Name="AlertHeading" VerticalAlignment="Center" FontSize="13"
-                     FontWeight="SemiBold" Foreground="#3B3222" TextWrapping="Wrap"/>
-          <Button x:Name="AddAlertButton" Grid.Column="1" Classes="tool" Margin="8,0,0,0"
-                  Content="+ Alert" VerticalAlignment="Center"/>
-        </Grid>
-        <TextBlock x:Name="AlertEmpty" DockPanel.Dock="Top" FontSize="12" Foreground="#6B5E48"
-                   TextWrapping="Wrap" IsVisible="False" Margin="0,0,0,2"/>
-        <ScrollViewer x:Name="AlertScroll" MaxHeight="220"
-                      HorizontalScrollBarVisibility="Disabled"
-                      VerticalScrollBarVisibility="Auto">
-          <StackPanel x:Name="AlertList"/>
-        </ScrollViewer>
-      </DockPanel>
+    <!-- 2.6.0: find (Ctrl+F), shown while it is used. -->
+    <Border x:Name="FindBar" DockPanel.Dock="Top" IsVisible="False" Margin="0,0,0,4" Padding="8,3"
+            Background="#FFF8E0" BorderBrush="#E4D08A" BorderThickness="1" CornerRadius="6">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock x:Name="FindLabel" VerticalAlignment="Center" FontSize="12" Foreground="#3B3222"/>
+        <TextBox x:Name="FindBox" Width="260" FontSize="13" MinHeight="28" Padding="6,3" VerticalContentAlignment="Center"/>
+        <TextBlock x:Name="FindCount" VerticalAlignment="Center" FontSize="12" Foreground="#6B5E48" MinWidth="64"/>
+        <Button x:Name="FindPrevButton" Classes="tool" Content="▲"/>
+        <Button x:Name="FindNextButton" Classes="tool" Content="▼"/>
+        <Button x:Name="FindCloseButton" Classes="tool" Content="✕"/>
+      </StackPanel>
+    </Border>
+
+    <!-- 2.6.0: formula bar: the selected cell's address and its whole text (edit here or in the cell; no calculation). -->
+    <Grid x:Name="FormulaBar" DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,*" Margin="0,0,0,4">
+      <Border Grid.Column="0" MinWidth="74" Padding="8,0" Background="#FFFDF6"
+              BorderBrush="#E4D08A" BorderThickness="1" CornerRadius="4">
+        <TextBlock x:Name="NameBox" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="12" Foreground="#3B3222"/>
+      </Border>
+      <TextBlock Grid.Column="1" Text="fx" FontStyle="Italic" FontSize="13" Foreground="#8A7A55"
+                 VerticalAlignment="Center" Margin="8,0"/>
+      <TextBox Grid.Column="2" x:Name="FormulaBox" MinHeight="28" MaxHeight="84" FontSize="13" Padding="6,3"
+               TextWrapping="Wrap" AcceptsReturn="False" VerticalContentAlignment="Center"/>
+    </Grid>
+
+    <!-- Settings that live in View → System only. These check boxes keep their state; the menu items toggle them. -->
+    <StackPanel x:Name="MenuOnlyToggles" DockPanel.Dock="Top" IsVisible="False">
+      <CheckBox x:Name="TopmostBox"/>
+      <CheckBox x:Name="LockBox"/>
+      <CheckBox x:Name="LaunchBox"/>
+      <CheckBox x:Name="MuteSoundBox"/>
+      <CheckBox x:Name="ActivityBox"/>
+    </StackPanel>
+
+    <!-- 2.6.0: activity bar (View → Activity bar, or ✕ to hide): what TableNote is doing now, with a progress bar while
+         it works, the last thing it did, when it last saved, and a History list. -->
+    <Border x:Name="ActivityBar" DockPanel.Dock="Bottom" Margin="0,4,0,0" Padding="8,2,4,2"
+            Background="#FFF8E0" BorderBrush="#E4D08A" BorderThickness="1" CornerRadius="6">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+        <Ellipse x:Name="ActivityDot" Grid.Column="0" Width="8" Height="8" Margin="0,0,7,0"
+                 VerticalAlignment="Center" Fill="#4E9A5B"/>
+        <ProgressBar x:Name="ActivityProgress" Grid.Column="1" Width="90" MinWidth="90" Height="6" MinHeight="6"
+                     Margin="0,0,8,0" VerticalAlignment="Center" IsIndeterminate="True" IsVisible="False"
+                     Foreground="#C08A1E" Background="#F1E3B0"/>
+        <TextBlock x:Name="ActivityText" Grid.Column="2" FontSize="12" Foreground="#4F4330"
+                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+        <TextBlock x:Name="ActivitySaved" Grid.Column="3" FontSize="12" Foreground="#7A6A48"
+                   VerticalAlignment="Center" Margin="10,0,8,0"/>
+        <Button x:Name="ActivityHistoryButton" Grid.Column="4" Classes="tool" Padding="8,1" FontSize="12" Content="History"/>
+        <Button x:Name="ActivityHideButton" Grid.Column="5" Classes="tool" Padding="7,1" Margin="4,0,0,0" FontSize="12" Content="✕"/>
+      </Grid>
     </Border>
 
     <TextBlock x:Name="StatusText" DockPanel.Dock="Bottom"
-               Margin="0,8,0,0" FontSize="12" Foreground="#6B5E48"
+               Margin="0,6,0,0" FontSize="12" Foreground="#6B5E48"
                TextWrapping="Wrap" Text="Autosave"/>
 
-    <!-- Horizontal scrolling only out here; rows scroll vertically inside RowsList so that only the
-         visible rows are realized (VirtualizingStackPanel). -->
-    <ScrollViewer x:Name="TableScroll"
-                  HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Disabled"
-                  Margin="0,4,0,0">
-      <DockPanel x:Name="TableHost" HorizontalAlignment="Left">
-        <Grid x:Name="TableGrid" DockPanel.Dock="Top"/>
-        <TextBlock x:Name="EmptyText" DockPanel.Dock="Top" Margin="8,10" IsVisible="False" Foreground="#3B3222"/>
-        <ItemsControl x:Name="RowsList">
-          <ItemsControl.Template>
-            <ControlTemplate>
-              <ScrollViewer x:Name="PART_ScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                <ItemsPresenter x:Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}"/>
-              </ScrollViewer>
-            </ControlTemplate>
-          </ItemsControl.Template>
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <VirtualizingStackPanel/>
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-        </ItemsControl>
+    <!-- Zoom (A− / A+) scales the alert boxes and the table only; the menu, toolbar and status bar stay small. -->
+    <LayoutTransformControl x:Name="ZoomHost">
+      <DockPanel>
+        <Border x:Name="AlertHost" DockPanel.Dock="Top" Margin="0,2,0,6"
+                Background="#FFF8E0" BorderBrush="#E4D08A" BorderThickness="1"
+                CornerRadius="8" Padding="8,6" IsVisible="False">
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+              <TextBlock x:Name="AlertHeading" VerticalAlignment="Center" FontSize="13"
+                         FontWeight="SemiBold" Foreground="#3B3222" TextWrapping="Wrap"/>
+              <Button x:Name="AddAlertButton" Grid.Column="1" Classes="tool" Margin="8,0,0,0"
+                      Content="+ Alert" VerticalAlignment="Center"/>
+            </Grid>
+            <ScrollViewer x:Name="AlertScroll" MaxHeight="220"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+              <StackPanel x:Name="AlertList"/>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+
+        <!-- Horizontal scrolling only out here; rows scroll vertically inside RowsList so that only the
+             visible rows are realized (VirtualizingStackPanel). -->
+        <ScrollViewer x:Name="TableScroll"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled"
+                      Margin="0,2,0,0">
+          <DockPanel x:Name="TableHost" HorizontalAlignment="Left">
+            <Grid x:Name="TableGrid" DockPanel.Dock="Top"/>
+            <TextBlock x:Name="EmptyText" DockPanel.Dock="Top" Margin="8,10" IsVisible="False" Foreground="#3B3222"/>
+            <ItemsControl x:Name="RowsList">
+              <ItemsControl.Template>
+                <ControlTemplate>
+                  <ScrollViewer x:Name="PART_ScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <ItemsPresenter x:Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                  </ScrollViewer>
+                </ControlTemplate>
+              </ItemsControl.Template>
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+          </DockPanel>
+        </ScrollViewer>
       </DockPanel>
-    </ScrollViewer>
+    </LayoutTransformControl>
   </DockPanel>
-  </LayoutTransformControl>
 </Window>

@@ -20,9 +20,20 @@ dotnet build -c Release
 dotnet run -c Release --project tests/PersistenceTests
 dotnet run -c Release --project tests/LangTests
 dotnet run -c Release --project tests/AlertUiTests
+dotnet run -c Release --project tests/WallpaperTests
+dotnet run -c Release --project tests/DaysTests
+dotnet run -c Release --project tests/StartTests
+dotnet run -c Release --project tests/ExcelTests
+dotnet run -c Release --project tests/SoundTests
+dotnet run -c Release --project tests/RowColTests
+dotnet run -c Release --project tests/ActivityTests
 ```
 
-The Windows build is `dotnet publish -c Release -r win-x64` (see [Building from source](README.md#building-from-source)). The app also runs on Linux for UI testing, but background mode only works on Windows.
+Every folder under `tests/` is a console program; run them all before a pull request (`tests/ViewImageTests` needs a display, for example `xvfb-run`).
+
+The fonts in `Assets/Fonts` are built by `tools/fonts/merge_noto.py` (Noto Sans Thai + the Latin of Noto Sans + a few Noto symbols, so a Thai line never switches font for digits or Latin). If the program starts using a new symbol, add it to `SYMBOLS` there and rebuild both files; `tests/MenuBarTests` fails when a text in the Thai window is drawn with another font.
+
+The Windows build is `dotnet publish -c Release -r win-x64` (see [Building from source](README.md#building-from-source)). The app also runs on Linux for UI testing, but wallpaper mode only works on Windows (`tests/WallpaperTests` covers it with a fake desktop).
 
 ## Pull requests
 

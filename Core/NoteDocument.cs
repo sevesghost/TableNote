@@ -75,6 +75,9 @@ public sealed class NoteDocument
     public Dictionary<string, PartColor> PartColors { get; set; } = new(StringComparer.Ordinal);
     /// <summary>v2.6: pixel row height by row id ("rowHeights"). No entry = auto (the row grows with its text, at least 32 px). Only rows the user set are stored.</summary>
     public Dictionary<string, int> RowHeights { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>2.6.0: what changed in each row and when, plus progress notes ("rowHistory", by row id), written
+    /// while the table has a days counter column. Not part of undo: undoing a change is recorded as a change.</summary>
+    public Dictionary<string, List<RowEvent>> RowHistory { get; set; } = new(StringComparer.Ordinal);
     public List<List<string>> Rows { get; set; } = [];
     public WindowMemory Window { get; set; } = new();
     public bool LaunchAtLogin { get; set; }
@@ -245,6 +248,7 @@ public sealed class NoteDocument
         if (Rows.Count >= TableLimits.MaxRows) return false;
         Rows.Add(BlankRow(Columns.Count));
         RowIds.Add(Guid.NewGuid().ToString("N"));
+        DaysCounter.FillNewRow(this, Rows.Count - 1, DateTime.Now); // 2.6.0: a new row starts counting today
         return true;
     }
 

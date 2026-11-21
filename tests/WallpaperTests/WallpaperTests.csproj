@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 2.6.0 wallpaper mode: placement maths, the record that puts the user's wallpaper back, the raw
+       IDesktopWallpaper calls against a fake vtable, the composed picture, and the real window (headless). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>WallpaperTests</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="12.1.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../TableNote.csproj" />
+  </ItemGroup>
+</Project>

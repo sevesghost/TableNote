@@ -56,9 +56,14 @@ public partial class MainWindow
             if (res == null) return;
             column = doc.ColumnIds.IndexOf(id); // the table may have been rebuilt meanwhile → find the column again
             if (column < 0) { StatusText.Text = Localizer.T("colset.gone"); return; }
+            var wasDays = DaysCounter.IsDaysColumn(doc, column);
             if (!ColumnSettingsOps.Apply(doc, column, res.Name, res.Type, res.Width, res.Options)) return;
+            // 2.6.0: an empty column that becomes a days counter starts counting today (columns with text keep it).
+            var started = !wasDays && DaysCounter.StartToday(doc, column, DateTime.Now) > 0;
             Rebuild(); FlushSave();
-            StatusText.Text = Localizer.T("colset.done", doc.Columns[column], ColumnTypes.Label(ColumnSettingsOps.TypeOf(doc, column)));
+            StatusText.Text = started
+                ? Localizer.T("days.added_type", doc.Columns[column])
+                : Localizer.T("colset.done", doc.Columns[column], ColumnTypes.Label(ColumnSettingsOps.TypeOf(doc, column)));
             AppLog.Write("table", $"column settings {column + 1}: {ColumnSettingsOps.TypeOf(doc, column)}");
         }
         finally { _busy = false; }
@@ -88,6 +93,7 @@ public partial class MainWindow
             }
             case ColumnTypes.Choice: return MakeChoiceCell(row, column, bg, setting.Options);
             case ColumnTypes.Check: return MakeCheckCell(row, column, bg);
+            case ColumnTypes.Days: return MakeDaysCell(row, column, bg); // 2.6.0
             default: return null;
         }
     }

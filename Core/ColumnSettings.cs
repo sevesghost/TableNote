@@ -19,8 +19,11 @@ public static class ColumnTypes
     public const string Number = "number";
     public const string Choice = "choice";
     public const string Check = "check";
+    /// <summary>2.6.0: the cell holds the day the work came in (yyyy-MM-dd) and shows the days since then;
+    /// clicking it opens the row's history (<see cref="DaysCounter"/>, <see cref="RowHistoryOps"/>).</summary>
+    public const string Days = "days";
 
-    public static readonly string[] All = [Text, Number, Choice, Check];
+    public static readonly string[] All = [Text, Number, Choice, Check, Days];
 
     public static string Normalize(string? type)
     {

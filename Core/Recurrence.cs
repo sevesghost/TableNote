@@ -161,6 +161,8 @@ public static class Recurrence
             clone[statusCol] = TaskStatuses.TodoCode;
         if (dueCol >= 0 && dueCol < clone.Count)
             clone[dueCol] = DueDates.HasTime(doc.GetCell(row, dueCol)) ? DueDates.Format(nextDue) : DueDates.FormatDate(nextDue); // R3
+        foreach (var dc in DaysCounter.ColumnIndexes(doc)) // 2.6.0: the next round is new work, counted from today
+            if (dc < clone.Count) clone[dc] = DaysCounter.TodayText(DateTime.Now);
 
         var insertAt = row + 1;
         doc.Rows.Insert(insertAt, clone);

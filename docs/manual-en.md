@@ -1,4 +1,4 @@
-# TableNote User Guide 2.4.0
+# TableNote User Guide 2.6.0
 
 TableNote is a spreadsheet-style task list, similar to Excel, that reminds you when a task is due and can remind you in advance.
 
@@ -6,28 +6,44 @@ TableNote is a spreadsheet-style task list, similar to Excel, that reminds you w
 
 ## 1. Getting started
 
-1. Double-click `TableNote.exe`. You will see a light-yellow table with 4 columns: **Title, Details, Status, Due**. The interface is in English by default; switch to Thai with the **EN/TH** button (see section 11).
+1. Double-click `TableNote.exe`. You will see a light-yellow table with 4 columns: **Title, Details, Status, Due**. The interface is in English by default; switch to Thai in **View → Language** (see section 11).
 2. Click any cell and start typing. TableNote **saves automatically** about 1.5 seconds after you stop typing, so you never need to save by hand.
 3. Only one TableNote window can be open at a time. If you launch it again, the existing window is used.
-4. While you edit the table, TableNote has an icon on the taskbar and a **TableNote** icon in the system tray in the corner of the screen. When it is attached to the desktop background, only the tray icon remains.
+4. While you edit the table, TableNote has an icon on the taskbar and a **TableNote** icon in the system tray in the corner of the screen. In wallpaper mode (section 8) only the tray icon remains.
+5. The toolbar has one row of everyday buttons: **+ Row**, **− Row**, **+ Column**, **Colors**, **Hide done rows**, **Sort by due**, **A−** / **100%** / **A+**, **Export** and **Wallpaper**. Everything else is in the menu bar: **File** (copy, export, export image, print, set as wallpaper), **Table** (colours, rows, columns, sort, add alert box), **Column**, **Row**, **View** (hide done, sort, zoom, language, and **System**: always on top, lock position, launch at sign-in, mute reminders) and **Help** (help, change log).
 
 > **Reminders work only while TableNote is running**
 >
 > - Clicking the main window's close button (X) does **not** quit TableNote. It minimizes to the tray icon and keeps reminding you. A message explains this the first time.
 > - If there is no TableNote icon in the tray (for example, the system could not create it), clicking X really quits, and you won't get reminders until you open it again.
 > - To bring the window back, click the tray icon or choose **Edit table**.
-> - To really quit, right-click the tray icon and choose **Exit**. You won't get reminders until you open TableNote again.
-> - We recommend ticking **Launch at sign-in**. TableNote then starts hidden in the tray every time you sign in. If you last used Pin to desktop mode, it starts in that mode instead.
-> - For in-app help, click the **?** button on the toolbar or choose **Help** from the tray menu.
+> - To really quit, choose **File → Exit TableNote**, or right-click the tray icon and choose **Quit**. You won't get reminders until you open TableNote again. (**File → Close window** does the same as X.)
+
+**Activity bar (2.6.0).** The slim bar at the bottom of the window tells you what TableNote is doing: a moving progress bar while it exports, saves a picture, prepares pages to print or draws the wallpaper; "Saving in a moment…" right after an edit; otherwise the last thing it did and when, plus the time it last saved note.json. The dot is green when all is well, yellow while it works, orange for something worth knowing (for example "did not respond for 3.2 s while saving note.json") and red when something failed. **History** lists what it did lately, newest first, and **Open folder** opens the folder with `tablenote.log`. Click **✕** to hide the bar; **View → Activity bar** shows it again.
+> - We recommend turning on **View → System → Launch at sign-in**. TableNote then starts hidden in the tray every time you sign in. If you last used wallpaper mode, it puts the table on the wallpaper again instead.
+> - For in-app help, choose **Help → Help** in the menu bar or **Help** from the tray menu.
 
 ## 2. Adding tasks
 
-| To do this | Toolbar button | Shortcut |
+| To do this | Button or menu | Shortcut |
 |---|---|---|
 | Add a row | `+ Row` | F5 |
 | Delete a row (asks first if it has text) | `− Row` | F6 |
 | Add a column | `+ Column` | F7 |
-| Delete a column (asks first if it has text; the Due column can't be deleted) | `− Column` | F8 |
+| Delete a column (asks first if it has text; the Due column can't be deleted) | **Table → − Column** | F8 |
+
+**Working with cells (like Excel, 2.6.0)**
+- A click **selects** a cell: it turns gold and the formula bar above the table shows its address (B3) and its whole text. Typing **replaces** what is in the cell. To change the text that is there, **double-click** the cell or press **F2**; the caret is at the end. **Esc** puts the text back, **Enter** keeps it and moves down, **Tab** moves right.
+- **Drag** across cells (or Shift+click, or Shift+arrows) to select a block. **Delete** clears it, **Ctrl+C** copies it, **Ctrl+X** cuts it, **Ctrl+V** pastes. **Ctrl+A** or a click on the top-left corner of the table selects every cell; a click on an empty spot clears the selection. Right-click a cell for the same commands.
+- The **formula bar** is for reading and editing long text: click it, change the text, press Enter (Esc puts it back, Alt+Enter adds a line). It does not calculate.
+- **Ctrl+F** (or **Table → Find…**) finds text: every cell that has it turns yellow, the current one is selected; Enter / Shift+Enter (or F3 / Shift+F3) go to the next / previous one; Esc closes the find bar.
+
+**Whole rows and columns (2.6.0)**
+- Click a **row number** to select the whole row, or a **column header** to select the whole column. Drag along the numbers or headers, or Shift+click, to select several.
+- **Right-click** the selected row numbers: **Insert N rows above / below**, **Delete N rows**, **Insert copied rows**. On column headers: **Insert N columns left / right**, **Delete N columns**, **Insert copied columns**. On a cell: **Insert ▸** and **Delete ▸** for its rows or columns, and **Insert copied cells**. N is how many are selected. Deleting asks first when there is text; F6 and F8 delete every selected row or column.
+- **Insert copied**: copy whole rows (or columns) with Ctrl+C, select where they should go, right-click → Insert copied. Rows come back with their row colour, highlight, repeat and advance reminders; columns with their name, type, choices and width. A copied status or reminder-date column becomes a plain text column (the table keeps one of each). Text copied from Excel goes in as new rows.
+- **Move rows**: drag the faint **⋮⋮** grip at the left of a row number. When several rows are selected, they move together.
+- **Rename a column**: double-click its header (or select it and press F2), type the name, press Enter. Esc keeps the old name.
 
 Steps
 1. Click **+ Row** or press F5.
@@ -122,9 +138,11 @@ At the bottom of the window are buttons that apply to every task still in the wi
 >
 > If you change a task to `Done` in the table while the reminder window is open, it disappears from the reminder window within a few seconds.
 
-To turn off the sound, tick **Mute reminders** on the toolbar. The reminder window still appears as usual.
+To turn off the sound, choose **View → System → Mute reminders**. The reminder window still appears as usual.
 
 The yellow reminder window appears even when Windows notifications are turned off (for example, in Focus mode).
+
+**Reminder sound** (2.6.0): **View → System → Reminder sound…** sets the sound and how loud it is. Pick the Windows warning sound (as before), another Windows sound (calendar, alarm 1–10, ring 1–6, chimes…) or your own .wav file with **Choose .wav…**, move the volume slider (50 % unless you change it) and press **▶ Test** to hear it. Above 50 % TableNote asks whether you are sure, because a loud reminder can startle people nearby; **No** puts it back to 50 %. **Mute reminder sounds** turns the sound off; the reminder window still opens.
 
 ## 5. What the colors mean
 
@@ -144,18 +162,19 @@ Tick **Hide done** to hide rows that are done, and untick it to show them again.
 - **Paste from Excel**: copy a range from Excel or Google Sheets, click the cell where pasting should start, then press Ctrl+V. The data spreads across cells for you. Up to 256 KB can be pasted at a time. Pasted data is plain text, and formulas are not calculated. When **Hide done** is on, pasted lines go into the rows you can see; hidden done tasks are skipped.
 - **Copy table** copies every cell without the column headers.
 - **Copy with headers** copies the whole table with the headers as the first row.
-- **Ctrl+C** copies only the selected cells. Shift+click to select several cells.
+- **Ctrl+C** copies only the selected cells (drag or Shift+click to select several, Ctrl+A for all). A status is copied as its label, as you see it.
+- **Ctrl+V** with one cell selected pastes from that cell; a single value copied from anywhere fills every selected cell.
 - Copied data is plain text, ready to paste into Excel.
 
 ## 7. Undo
 
-Press **Ctrl+Z** to undo, and **Ctrl+Y** or **Ctrl+Shift+Z** to redo. Up to 100 steps are kept.
+Press **Ctrl+Z** to undo, and **Ctrl+Y** or **Ctrl+Shift+Z** to redo — or use **Table → Undo / Redo**, which also shows what will be undone ("Undo: Delete rows"). Up to 100 steps are kept.
 
 Each of these is undone one step at a time:
 - Typing in a cell (one step per edit, counted when you press Enter or click out of the cell)
 - Editing a column header
 - Pasting from Excel (the whole paste is one step)
-- Adding or deleting rows and columns (F5 to F8), including delete-column from the header menu
+- Adding or deleting rows and columns (F5 to F8), including several at once and Insert copied, from any menu
 - Moving a column or a row
 - Column settings, and a row's colour or highlight
 - Changing the status, including clicking **Done** when it creates the next occurrence (one step)
@@ -167,39 +186,56 @@ Undo is tied to the row itself, not its position, so it stays correct even after
 
 **Not undoable**: snoozes, acknowledgements, hiding done tasks, muting, and the window position.
 
-## 8. Window modes and Pin to desktop
+## 8. Window modes and wallpaper mode
 
-- **Always on top** keeps the window above all others.
-- **Lock position** stops the window from being dragged. Unlock it first to move it.
-- **Pin to desktop** (Windows only) attaches the table to the desktop. It is display-only, clicks pass through it, and Win+D doesn't hide it.
+- **Always on top** (View → System) keeps the window above all others.
+- **Lock position** (View → System) stops the window from being dragged. Unlock it first to move it.
+- **Wallpaper** (toolbar, or File → Set as wallpaper; Windows only) puts the table on your desktop wallpaper, full screen. Your own wallpaper stays, with a card on it holding the alert boxes and the table, where the window was and at the window's size at most (rows that don't fit are counted as "+ N more rows"). Only the monitor the window is on changes. The editor goes to the tray, and the picture is redrawn when the table changes, when a task turns overdue or due today, and on a new day. This replaces Pin to desktop from earlier versions.
 
-**4 ways to get back to editing from Pin to desktop mode**
-1. Right-click the **TableNote** tray icon and choose **Edit table**.
-2. Press **Ctrl+Shift+E**. If another program already uses this shortcut, a message tells you.
-3. Launch TableNote again.
-4. Run `TableNote.exe --edit`.
+**5 ways to get back to editing from wallpaper mode** (your own wallpaper comes back at once)
+1. Click the **TableNote** tray icon.
+2. Right-click it and choose **Edit table**.
+3. Press **Ctrl+Shift+E**.
+4. Launch TableNote again.
+5. Run `TableNote.exe --edit`.
 
-The tray menu has **Edit table**, **Help**, **Log**, **Move to center** and **Exit**. If the window ends up off-screen, choose **Move to center**. Closing the main window minimizes it to the tray; the only way to really quit is **Exit**.
+Good to know
+- **Quit** in the tray menu puts your own wallpaper back too; wallpaper mode stays on, and the next start draws the table again. Signing out with **Launch at sign-in** on keeps the table on the wallpaper (it is redrawn at sign-in); with it off, your wallpaper is put back.
+- A slideshow is started again when you leave wallpaper mode. **Windows spotlight** can't be turned back on by a program, so TableNote asks first; when you leave, today's spotlight picture stays as a fixed picture (turn spotlight on again in Settings › Personalization › Background).
+- If you pick another wallpaper while the table is on it, TableNote keeps yours. A wallpaper fixed by your organization is not changed.
+- TableNote keeps a copy of your wallpaper in `%LOCALAPPDATA%\TableNote\wallpaper\` before it changes anything, so it can put it back even after a crash.
+
+The tray menu has **Edit table**, **Help**, **Log**, **Export…**, **Language**, zoom, **Move to center** and **Quit**. If the window ends up off-screen, choose **Move to center**. Closing the main window minimizes it to the tray; the only way to really quit is **Quit**.
 
 ## 9. Keyboard shortcuts
 
 | Key | What it does |
 |---|---|
 | F5 | Add a row |
-| F6 | Delete a row |
+| F6 | Delete the selected rows |
 | F7 | Add a column |
-| F8 | Delete a column |
+| F8 | Delete the selected columns |
+| Click a row number / header | Select the whole row / column (drag or Shift+click for several) |
+| Double-click a header / F2 | Rename the column |
 | Alt+Shift+← / → | Move the active column left / right |
 | Alt+Shift+↑ / ↓ | Move the active row up / down (skips hidden rows when Hide done is on) |
-| Enter | Move to the cell below |
+| Click / drag | Select a cell / a block |
+| Typing | Replace the selected cell's text |
+| Double-click / F2 | Edit the cell's text (Esc puts it back) |
+| Arrows / Tab / Shift+Tab | Move to the next cell (Shift+arrows grow the block) |
+| Enter | Keep the edit and move to the cell below |
 | Shift+Enter | Move to the cell above |
+| Delete | Clear the selected cells |
+| Ctrl+A | Select every cell (also: the top-left corner) |
 | Ctrl+C | Copy the selected cells, without headers |
+| Ctrl+X | Cut the selected cells |
 | Ctrl+V | Paste text or a table from Excel |
+| Ctrl+F / F3 / Shift+F3 | Find / next / previous |
 | Ctrl+Z | Undo (see section 7) |
 | Ctrl+Y or Ctrl+Shift+Z | Redo |
 | Shift+click | Select several cells |
 | Shift+click 📅 | Set the due time to tomorrow at 09:00 |
-| Ctrl+Shift+E | Back to editing from Pin to desktop mode (Windows) |
+| Ctrl+Shift+E | Back to editing from wallpaper mode (Windows) |
 | Ctrl++ / Ctrl+− / Ctrl+0 | Zoom in / zoom out / back to 100% (see section 12) |
 | Ctrl+mouse wheel | Zoom in or out (see section 12) |
 | Ctrl+Home / Ctrl+End | Go to the first cell / the last cell of the last row |
@@ -229,7 +265,7 @@ Your data is still there. If TableNote opened a file larger than 8 MB (raised fr
 - If a file has more rows than the limit, TableNote first copies the full file to `note.overlimit-<time>.bak` in the same folder (for example `note.overlimit-20261109153000.bak`; never deleted automatically), then opens the first 1,000 rows and shows a message.
 
 **How do I restore from a .bak file?**
-1. Right-click the tray icon and choose **Exit** to close TableNote completely.
+1. Right-click the tray icon and choose **Quit** to close TableNote completely.
 2. Open the `%APPDATA%\TableNote` folder.
 3. Find `note.json.bak`, a file with a date and time in its name such as `note.json.20261109153000.bak`, `note.v2.bak` (data from 1.x/2.0), `note.v3.bak` (data from 2.1.0) or `note.v4.bak` (data from 2.2–2.3), and pick the one you want.
 4. Rename the current `note.json` to something else to keep it, for example `note-new.json`.
@@ -256,21 +292,21 @@ Yes. Deleting a row (F6), deleting a column (F8) and clearing text in a cell can
 That's expected: that phrase means not done (from 2.3.0 it is converted to the not-done status when the file is opened). When the task is finished, choose `Done` from the list.
 
 **Where can I see the version?**
-Click the **?** button on the toolbar, or right-click the tray icon and choose **Help** or **Log**. The version is shown at the top, for example TableNote 2.3.0.
+Choose **Help → Help** in the menu bar, or right-click the tray icon and choose **Help** or **Log**. The version is shown at the top, for example TableNote 2.3.0.
 
 **Why is TableNote still running after I close the window?**
-That's by design, so reminders keep working. TableNote stays in the tray. To really quit, right-click the tray icon and choose **Exit**.
+That's by design, so reminders keep working. TableNote stays in the tray. To really quit, right-click the tray icon and choose **Quit**.
 
 **I switched the language or zoom and it's back to English / 100%. Why?**
 Language and zoom are saved in `settings.json` next to `note.json` (on Windows, `%APPDATA%\TableNote\settings.json`). If that file is damaged or missing, TableNote goes back to English and 100% zoom. Your tasks in `note.json` aren't affected; just choose the language and zoom again.
 
 **Can I export the table to a txt or Excel file?**
-Yes: use **Export** and choose .txt, .csv or .xlsx (see section 13). You can also use **Copy with headers** and paste into Excel.
+Yes: use **Export** and choose .txt, .csv or .xlsx (see section 13). You can also use **File → Copy with headers** and paste into Excel.
 
 ## 11. Changing the language
 
 - The interface is in **English** by default for everyone, including people upgrading from an older version. Once you choose a language, TableNote remembers it.
-- To switch, click the **EN/TH** button at the end of the toolbar, or open **Language / ภาษา** in the tray menu and choose **English** or **ไทย**.
+- To switch, open **View → Language** in the menu bar, or **Language / ภาษา** in the tray menu, and choose **English** or **ไทย**.
 - The change applies right away, without restarting TableNote. A reminder window that is already open stays in the old language until you close it.
 - The language you choose is saved in `settings.json`, next to `note.json`, so TableNote remembers it next time. Switching the language doesn't change `note.json`.
 - Changing the language changes only the interface text. Your table data, statuses and repeat settings don't change: statuses and repeat settings are stored as codes and only their labels are translated (see section 2). Text you typed yourself, including column headers you renamed, stays as you typed it.
@@ -279,10 +315,10 @@ Yes: use **Export** and choose .txt, .csv or .xlsx (see section 13). You can als
 
 ## 12. Resizing the display (zoom)
 
-- Use the **A−**, **100%** and **A+** buttons on the toolbar (next to the language button) or in the tray menu.
+- Use the **A−**, **100%** and **A+** buttons on the toolbar, **View** in the menu bar, or the tray menu.
 - Or press **Ctrl++** to zoom in, **Ctrl+−** to zoom out, and **Ctrl+0** to go back to 100%. You can also hold **Ctrl** and turn the mouse wheel.
 - The zoom goes from 80% to 200% in steps of 10%. The status bar shows the current size each time you change it.
-- Zoom doesn't work while the table is pinned to the desktop.
+- Zoom scales the alert boxes and the table; the menu, the toolbar and the status bar keep their size (from 2.6.0). The table on the wallpaper uses the same zoom.
 - The zoom level is saved in `settings.json`, next to `note.json`, so TableNote remembers it next time. If `settings.json` is damaged or missing, the zoom goes back to 100%.
 
 ## 13. Exporting the table
@@ -303,7 +339,7 @@ Click **Export** on the toolbar and choose a format:
 - When **Hide done** is ticked, only the rows you can see are exported. To export the done tasks too, tick **Include completed tasks** in the export window.
 - Due dates are written as text in the format `yyyy-MM-dd`, or `yyyy-MM-dd HH:mm` when the task has a time, with a Western (CE) year.
 - The first row of the file is the column headers, followed by your rows in the order shown on screen.
-- The suggested file name is `TableNote-YYYY-MM-DD`. You choose the folder in the save dialog. The default format in the dialog is Excel (.xlsx). Export works only while you are editing the table, not while it is pinned to the desktop.
+- The suggested file name is `TableNote-YYYY-MM-DD`. You choose the folder in the save dialog. The default format in the dialog is Excel (.xlsx). **Export…** in the tray menu opens the editor first (in wallpaper mode, your own wallpaper comes back).
 
 
 ## 14. Moving columns and rows, column settings, row colours
@@ -312,9 +348,17 @@ Click **Export** on the toolbar and choose a format:
 - Drag the **⋮⋮** grip on the left of a column header to move that column, or right-click the header and choose Move left / right / to first / to last, or press **Alt+Shift+←** / **Alt+Shift+→**.
 - Right-click the header and choose **Delete this column…** to remove it. TableNote always asks for confirmation. The Due column cannot be deleted.
 - Right-click the header and choose **Column settings…** to change the name, width, and type:
-  - **Text** (default), **Number**, **Choice** (a drop-down; type one option per line), or **Check** (✓).
-  - Changing the type does not change the text already in the cells.
+  - **Text** (default), **Number**, **Choice** (a drop-down; type one option per line), **Check** (✓), or **Days counter**.
+  - Changing the type does not change the text already in the cells. (An empty column that becomes a days counter starts counting today in the rows that are not done.)
   - Status and Due columns can only change name and width.
+
+**Days counter (2.6.0)**
+- **Table → Add days counter column** adds a "Days" column just before the status column. Each cell keeps the day the work came in and shows how many days ago that was: "Today", "1 day", "150 days". Rows that are not done start today; a row you add later starts on the day you add it.
+- A row set to **Done** stops counting and shows how long it took, for example "42 days ✓".
+- Click a days cell (or press **Space**) to open its pop-up. It shows how long the work has been open, from which date to which, the **Start date** (pick another day, or **Today**), the status and since when, and the last update.
+- Below that is the row's history, newest first: status changes, edits of the row, and progress notes, each with its date, time and the day since the start ("141 days after the start"). Type a note such as "called the client, documents come Friday" and press **Enter** (or **Add note**). To change a note, click **Edit** next to it (or double-click the note), change the text and press **Enter** or **Save**; **Esc** or **Cancel** puts the old text back. The note keeps the date and time it was written and shows when it was edited ("Edited 21/11/2026 08:05"). If you edit another note, add a note or close the pop-up while a note is open, the change you typed is kept. To delete a note, click **✕**, then **Delete?**.
+- History starts on the day the table gets a days column. Changes to one cell within 10 minutes count as one entry, and typing a new row's first values is not listed (its status changes are). Undoing an edit with Ctrl+Z is listed as another change; notes are not part of Ctrl+Z.
+- Exports and Copy give the start date (`yyyy-MM-dd`). Image export, print and the wallpaper show the days.
 
 **Rows**
 - Drag the **row number** to move the row, or right-click it and choose Move up / down / to top / to bottom, or press **Alt+Shift+↑** / **Alt+Shift+↓**. When **Hide done** is on, these moves skip hidden rows.
@@ -324,16 +368,16 @@ Moving columns or rows, deleting a column, changing column settings, and changin
 
 ## 15. Alert boxes
 
-Above the table, **+ Alert** adds a box. Each box has a title and a text you can edit. **Delete** asks for confirmation, then removes that box. This can't be undone. Drag the **⋮⋮** grip to change the order, or use **Up** and **Down** — those buttons work without dragging and can be reached with the keyboard. The boxes and their order are saved in `note.json` and are still there after you close and open TableNote. They are separate from due-date reminders. Ctrl+Z does not undo alert-box changes.
+**Table → Add alert box** adds a box. The alert panel above the table is hidden while there are no boxes and appears with the first one; its **+ Alert** adds more. Each box has a title and a text you can edit. **Delete** asks for confirmation, then removes that box. This can't be undone. Drag the **⋮⋮** grip to change the order, or use **Up** and **Down** — those buttons work without dragging and can be reached with the keyboard. The boxes and their order are saved in `note.json` and are still there after you close and open TableNote. They are separate from due-date reminders. Ctrl+Z does not undo alert-box changes.
 
 ## 16. Exporting an image and printing
 
 **Export an image**
-1. Click **Export image** on the toolbar.
+1. Choose **File → Export image**.
 2. Choose **PNG (.png)** or **JPEG (.jpg)** and pick a folder. The suggested file name is `TableNote-YYYY-MM-DD`.
 
 **Print** (sending to a printer works on Windows only)
-1. Click **Print** on the toolbar. A **Print preview** window opens.
+1. Choose **File → Print**. A **Print preview** window opens.
 2. Click **Print** to send it to the printer, or **Close** to cancel.
 
 **Good to know**
@@ -344,7 +388,7 @@ Above the table, **+ Alert** adds a box. Each box has a title and a text you can
 - A table wider than the page is scaled down to fit the page width. A long table continues on the next page, breaking between rows, and the column headers repeat on every page.
 - When there are several pages, they are combined into one file and printed in one job.
 - Text in the print preview can look slightly blurrier than the real printout. The printed page is sharper.
-- Zoom does not change the image. Export image and Print work only while you are editing the table, not while it is pinned to the desktop, and they do not change `note.json`.
+- Zoom does not change the image. Export image and Print work while you are editing the table, and they do not change `note.json`.
 
 **Limitations in this version**
 - Only A4 paper is supported. Set margins and colour or black-and-white printing in the Windows print dialog.
@@ -357,4 +401,4 @@ Above the table, **+ Alert** adds a box. Each box has a title and a text you can
 - The text colour of row numbers and the background colour of the whole table are not included in the image or printout yet.
 
 ---
-*This guide is based on the TableNote 2.4.0 code as of 11 Nov 2026 (Thailand time, UTC+7).*
+*This guide is based on the TableNote 2.6.0 code as of 21 Nov 2026 (Thailand time, UTC+7).*

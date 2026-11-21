@@ -17,7 +17,7 @@ public partial class MainWindow
             _session.Doc.PartColors.TryGetValue(key, out var c) ? c : null;
         _colorButton = new Button { Classes = { "tool" } };
         _colorButton.Click += async (_, _) => await OpenColorDialog();
-        TableEditTools.Children.Insert(0, _colorButton);
+        EditTools.Children.Insert(EditTools.Children.IndexOf(AddColumnButton) + 1, _colorButton);
         ApplyChromeColors();
     }
 
@@ -157,7 +157,7 @@ public partial class MainWindow
         return (LabelBrushFor(row, RowNumberBackground(row)), fg ?? TextFg);
     }
 
-    /// <summary>Toolbar buttons sit inside group borders now, so the colour has to walk the tree.</summary>
+    /// <summary>Paints every button and check box of the toolbar row (the separators keep their own colour).</summary>
     private static void PaintToolbar(Control root, IBrush? barBg, IBrush? barFg)
     {
         if (root is TemplatedControl control)
@@ -167,8 +167,6 @@ public partial class MainWindow
             if (barFg != null) control.Foreground = barFg;
             else control.ClearValue(TemplatedControl.ForegroundProperty);
         }
-        if (root is Border group && group.Classes.Contains("toolgroup") && barBg != null)
-            group.Background = barBg;
         if (root is Panel panel)
         {
             foreach (var child in panel.Children)

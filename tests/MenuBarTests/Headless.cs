@@ -1,3 +1,4 @@
+using System.Text;
 using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
@@ -22,6 +23,7 @@ static class MenuBarHeadless
         AppBuilder.Configure<App>()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+            .With(AppFonts.ManagerOptions) // as Program.BuildAvaloniaApp
             .SetupWithoutStarting();
 
         var window = new MainWindow { Width = 980, Height = 640 };
@@ -33,13 +35,23 @@ static class MenuBarHeadless
         ok("thai menu titles",
             titles.SequenceEqual(["ไฟล์", "ตาราง", "คอลัมน์", "แถว", "มุมมอง", "ช่วยเหลือ"]),
             string.Join(" | ", titles));
-        ok("toolbar group แก้ตาราง", window.FindControl<TextBlock>("GroupTableLabel")?.Text == "แก้ตาราง",
-            window.FindControl<TextBlock>("GroupTableLabel")?.Text ?? "");
-        ok("toolbar group คัดลอก", window.FindControl<TextBlock>("GroupCopyLabel")?.Text == "คัดลอก / ส่งออก",
-            window.FindControl<TextBlock>("GroupCopyLabel")?.Text ?? "");
-        ok("toolbar group มุมมอง", window.FindControl<TextBlock>("GroupViewLabel")?.Text == "มุมมอง", "");
-        ok("toolbar group ระบบ", window.FindControl<TextBlock>("GroupSystemLabel")?.Text == "ตั้งค่าระบบ", "");
-        ok("toolbar group ช่วยเหลือ", window.FindControl<TextBlock>("GroupHelpLabel")?.Text == "ช่วยเหลือ", "");
+        // 2.6.0: one row of everyday commands, no group labels; the rest is in the menu bar.
+        var tools = window.FindControl<WrapPanel>("EditTools") ?? throw new Exception("toolbar missing");
+        var commands = tools.Children.Where(c => c.IsVisible && c is Button or CheckBox).ToList();
+        var labels0 = commands.Select(c => c is ContentControl cc ? cc.Content?.ToString() ?? "" : "").ToList();
+        ok("toolbar has the everyday commands in order",
+            labels0.SequenceEqual(["+ แถว", "− แถว", "+ คอลัมน์", "สี", "ซ่อนงานเสร็จ", "เรียงตามกำหนด", "A−", "100%", "A+", "ส่งออก", "วอลเปเปอร์"]),
+            string.Join(" | ", labels0));
+        var middles = commands.Select(c => c.Bounds.Center.Y).ToList();
+        ok("toolbar is one row in a 980 px window",
+            middles.Max() - middles.Min() < 8,
+            string.Join(",", middles.Select(y => y.ToString("0"))));
+        ok("no toolbar group labels any more", window.FindControl<TextBlock>("GroupTableLabel") == null, "");
+        ok("no empty alert panel", window.FindControl<Border>("AlertHost")?.IsVisible == false, "");
+        // 2.6.0: Thai, digits, Latin and symbols in one font (no fallback to Segoe UI / DejaVu for "17/11", "A+", "✓").
+        var foreign = ForeignRuns([window]);
+        ok("every text in the Thai window uses the bundled font", foreign.Count == 0 && TextRunCount([window]) > 20,
+            string.Join(" | ", foreign.Take(8)) + $" ({TextRunCount([window])} runs)");
 
         var table = Item(menu, "ตาราง");
         table.Open();
@@ -51,6 +63,9 @@ static class MenuBarHeadless
             spots[1].Header?.ToString() == "เพิ่มคอลัมน์สถานะ",
             string.Join(" | ", spots.Select(s => $"{s.Header} enabled={s.IsEnabled}")));
         Save(window, "menu-table-th");
+        var menuForeign = ForeignRuns(table.Items.OfType<MenuItem>());
+        ok("menu items use the bundled font too", menuForeign.Count == 0 && TextRunCount(table.Items.OfType<MenuItem>()) > 5,
+            string.Join(" | ", menuForeign.Take(8)));
         table.Close();
         Pump(window);
 
@@ -59,17 +74,12 @@ static class MenuBarHeadless
         window.Width = 480;
         Pump(window);
         var scroll = window.FindControl<ScrollViewer>("ToolScroll") ?? throw new Exception("toolbar scroll missing");
-        ok("toolbar stays within its band", scroll.Bounds.Height <= 221, scroll.Bounds.Height.ToString("0"));
+        ok("toolbar stays within its band", scroll.Bounds.Height <= 97, scroll.Bounds.Height.ToString("0"));
         ok("narrow window keeps add-row inside the toolbar", Fits(scroll, window.FindControl<Button>("AddRowButton")), "");
-        ok("narrow window keeps print inside the toolbar", Fits(scroll, window.FindControl<Button>("PrintButton")), "");
+        ok("narrow window wraps the toolbar and keeps the wallpaper button",
+            Fits(scroll, window.FindControl<Button>("WallpaperButton")) && Fits(scroll, window.FindControl<Button>("ExportButton")),
+            scroll.Extent.Height.ToString("0"));
         Save(window, "toolbar-menu-th-narrow");
-        scroll.Offset = scroll.Offset.WithY(scroll.Extent.Height);
-        Pump(window);
-        ok("narrow window scrolls help into view", Fits(scroll, window.FindControl<Button>("HelpButton")), "");
-        ok("narrow window scrolls pin into view", Fits(scroll, window.FindControl<Button>("BackgroundButton")), "");
-        Save(window, "toolbar-menu-th-narrow-scrolled");
-        scroll.Offset = scroll.Offset.WithY(0);
-        Pump(window);
 
         window.Width = 980;
         Pump(window);
@@ -120,16 +130,35 @@ static class MenuBarHeadless
         Save(window, "menu-row-th");
         row.Close();
 
-        Click(window, window.FindControl<Button>("LanguageButton")!);
+        // The EN/TH button left the toolbar: View → Language → English.
+        var view = Item(menu, "มุมมอง");
+        view.Open();
+        Pump(window);
+        var language = view.Items.OfType<MenuItem>().First(i => i.Header?.ToString() == "ภาษา");
+        language.Open();
+        Pump(window);
+        language.Items.OfType<MenuItem>().First(i => i.Header?.ToString() == "English")
+            .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(MenuItem.ClickEvent));
+        view.Close();
         Pump(window);
         var english = Headers(menu.Items);
-        ok("EN/TH updates the menu bar",
+        ok("View → Language updates the menu bar",
             english.SequenceEqual(["File", "Table", "Column", "Row", "View", "Help"]),
             string.Join(" | ", english));
-        ok("EN/TH updates the toolbar groups",
-            window.FindControl<TextBlock>("GroupTableLabel")?.Text == "Edit table" &&
-            window.FindControl<TextBlock>("GroupSystemLabel")?.Text == "System",
-            window.FindControl<TextBlock>("GroupTableLabel")?.Text ?? "");
+        ok("View → Language updates the toolbar",
+            window.FindControl<Button>("WallpaperButton")?.Content?.ToString() == "Wallpaper" &&
+            window.FindControl<CheckBox>("HideDoneBox")?.Content?.ToString() == "Hide done rows",
+            window.FindControl<Button>("WallpaperButton")?.Content?.ToString() ?? "");
+        var file = Item(menu, "File");
+        file.Open();
+        Pump(window);
+        var fileLabels = Headers(file.Items);
+        ok("File menu keeps copy, image export, print and the wallpaper command",
+            fileLabels.Contains("Copy table") && fileLabels.Contains("Copy with headers") && fileLabels.Contains("Export image") &&
+            fileLabels.Contains("Print") && fileLabels.Contains("Set as wallpaper"),
+            string.Join(" | ", fileLabels));
+        file.Close();
+        Pump(window);
         Save(window, "toolbar-menu-en");
 
         var session = typeof(MainWindow).GetField("_session", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
@@ -155,6 +184,39 @@ static class MenuBarHeadless
             string.Join(" | ", editSpots.Select(s => $"{s.Tag} enabled={s.IsEnabled}")));
         tableEn.Close();
     }
+
+    /// <summary>Text runs drawn with another font than the bundled one (colour emoji excepted).</summary>
+    static List<string> ForeignRuns(IEnumerable<Visual> roots)
+    {
+        var bad = new List<string>();
+        foreach (var (family, text, owner) in Runs(roots))
+            if (family != "Noto Sans Thai" && !EmojiOnly(text)) bad.Add($"{family}[{text}] in {owner}");
+        return bad;
+    }
+
+    static int TextRunCount(IEnumerable<Visual> roots) => Runs(roots).Count();
+
+    static IEnumerable<(string family, string text, string owner)> Runs(IEnumerable<Visual> roots)
+    {
+        foreach (var v in roots.SelectMany(r => r.GetVisualDescendants().Prepend(r)))
+        {
+            if (!v.IsEffectivelyVisible) continue;
+            var layout = v switch
+            {
+                TextBlock tb when !string.IsNullOrEmpty(tb.Text) => tb.TextLayout,
+                Avalonia.Controls.Presenters.TextPresenter tp when !string.IsNullOrEmpty(tp.Text) => tp.TextLayout,
+                _ => null
+            };
+            if (layout == null) continue;
+            foreach (var line in layout.TextLines)
+                foreach (var run in line.TextRuns)
+                    if (run is Avalonia.Media.TextFormatting.ShapedTextRun sr)
+                        yield return (sr.GlyphRun.GlyphTypeface.FamilyName, new string(sr.Text.Span), v.GetType().Name);
+        }
+    }
+
+    static bool EmojiOnly(string text) =>
+        text.EnumerateRunes().All(r => Rune.IsWhiteSpace(r) || r.Value >= 0x1F000 || r.Value is 0x23F0 or 0xFE0F or 0x200D);
 
     static MenuItem Item(Menu menu, string header) =>
         menu.Items.OfType<MenuItem>().First(i => i.Header?.ToString() == header);

@@ -131,9 +131,24 @@ public partial class MainWindow
         return wrap;
     }
 
-    /// <summary>Header menu: cut/copy/paste of the header text, move, delete (always confirmed), plus other teams' items.</summary>
-    private ContextMenu BuildColumnMenu(int column, TextBox? box) =>
-        new() { ItemsSource = BuildColumnMenuItems(column, box) };
+    /// <summary>Header menu: cut/copy/paste (the column's cells; the name while it is being renamed), insert, move, delete
+    /// (always confirmed), plus other teams' items. Built when it opens, so the counts match the selected columns.</summary>
+    private ContextMenu BuildColumnMenu(int column, TextBox? box)
+    {
+        var menu = new ContextMenu { FontFamily = AppFonts.Thai };
+        void Fill()
+        {
+            menu.Items.Clear();
+            foreach (var item in BuildColumnMenuItems(column, box)) menu.Items.Add(item);
+        }
+        menu.Opening += (_, _) =>
+        {
+            if (box is not { IsReadOnly: false } && !(WholeColumnsSelected() && ColumnSelected(column))) SelectColumns(column, column);
+            Fill();
+        };
+        Fill();
+        return menu;
+    }
 
     /// <summary>
     /// Items for the header menu and for the top Column menu. <paramref name="keepClipboardSlot"/>
@@ -153,11 +168,19 @@ public partial class MainWindow
             var paste = new MenuItem { Header = Localizer.T("col.paste"), InputGesture = new KeyGesture(Key.V, KeyModifiers.Control), IsEnabled = clip };
             if (box != null)
             {
-                cut.Click += (_, _) => box.Cut();
-                copy.Click += (_, _) => box.Copy();
-                paste.Click += (_, _) => box.Paste();
+                // 2.6.0: the column's cells, like Excel; while the name is being edited, the name's text.
+                cut.Click += (_, _) => { if (!box.IsReadOnly) box.Cut(); else { EnsureColumnsSelected(column); _ = CutAsync(); } };
+                copy.Click += (_, _) => { if (!box.IsReadOnly) box.Copy(); else { EnsureColumnsSelected(column); _ = CopySelectionAsync(); } };
+                paste.Click += (_, _) => { if (!box.IsReadOnly) box.Paste(); else { EnsureColumnsSelected(column); _ = PasteIntoSelectionAsync(); } };
             }
-            items.AddRange([cut, copy, paste, new Separator()]);
+            items.AddRange([cut, copy, paste]);
+            items.AddRange(ColumnEditMenuItems(column)); // 2.6.0: insert copied, insert left / right, clear
+            items.Add(new Separator());
+        }
+        else
+        {
+            items.AddRange(ColumnEditMenuItems(column));
+            items.Add(new Separator());
         }
         MenuItem Item(string text, bool enabled, Action act, KeyGesture? g = null)
         {
@@ -181,9 +204,10 @@ public partial class MainWindow
         items.AddRange(BuildColumnGroupMenuItems(column, edit));
         items.Add(new Separator());
         // Status and the reminder column use the same delete item as every other column.
-        items.Add(Item(Localizer.T("col.delete"),
-            MenuCommandRules.DeleteColumn(edit, column, count, isDue: false),
-            () => RequestDeleteColumn(column)));
+        var selected = ColumnsFor(column).Count; // 2.6.0: every selected column
+        items.Add(Item(selected > 1 ? Localizer.T("cols.delete", selected) : Localizer.T("col.delete"),
+            MenuCommandRules.DeleteColumn(edit, column, count, isDue: false) && selected < count,
+            () => { if (selected > 1) _ = RunStructureAsync(() => DeleteColumnsAsync(column)); else RequestDeleteColumn(column); }));
         return items;
     }
 

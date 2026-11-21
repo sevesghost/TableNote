@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 
 namespace TableNote;
 
@@ -26,7 +27,11 @@ public partial class MainWindow
     private MenuItem _exportItem = null!;
     private MenuItem _exportImageItem = null!;
     private MenuItem _printItem = null!;
-    private MenuItem _pinItem = null!;
+    private MenuItem _pinItem = null!; // File → Set as wallpaper
+    private MenuItem _closeWindowItem = null!; // 2.6.0: File → Close window (TableNote stays in the tray)
+    private MenuItem _exitItem = null!; // 2.6.0: File → Exit TableNote
+    private MenuItem _undoItem = null!; // 2.6.0: Table → Undo (Ctrl+Z)
+    private MenuItem _redoItem = null!; // 2.6.0: Table → Redo (Ctrl+Y)
     private MenuItem _colorItem = null!;
     private MenuItem _addRowItem = null!;
     private MenuItem _deleteRowItem = null!;
@@ -34,7 +39,11 @@ public partial class MainWindow
     private MenuItem _deleteColumnItem = null!;
     private MenuItem _sortItem = null!;
     private MenuItem _viewSortItem = null!;
-    private MenuItem _systemPinItem = null!;
+    private MenuItem _systemPinItem = null!; // View → System → Set as wallpaper
+    private MenuItem _addAlertItem = null!;
+    private MenuItem _addDaysItem = null!; // 2.6.0: Table → Add days counter column
+    private MenuItem _findItem = null!; // 2.6.0: Table → Find… (Ctrl+F)
+    private MenuItem _selectAllItem = null!; // 2.6.0: Table → Select all (Ctrl+A)
     private MenuItem _hideDoneItem = null!;
     private MenuItem _zoomOutItem = null!;
     private MenuItem _zoomResetItem = null!;
@@ -43,6 +52,8 @@ public partial class MainWindow
     private MenuItem _lockItem = null!;
     private MenuItem _launchItem = null!;
     private MenuItem _muteItem = null!;
+    private MenuItem _soundItem = null!; // 2.6.0: View → System → Reminder sound…
+    private MenuItem _activityItem = null!; // 2.6.0: View → Activity bar
     private MenuItem _helpItem = null!;
     private MenuItem _logItem = null!;
 
@@ -65,7 +76,7 @@ public partial class MainWindow
         _exportItem = Act("toolbar.export", () => _ = ExportAsync());
         _exportImageItem = Act("toolbar.export_image", () => _ = ExportImageAsync());
         _printItem = Act("toolbar.print", () => _ = PrintViewAsync());
-        _pinItem = Act("toolbar.background", OnBackgroundClick);
+        _pinItem = Act("menu.wallpaper", () => _ = OnWallpaperClickAsync());
         _fileMenu.Items.Add(_copyAllItem);
         _fileMenu.Items.Add(_copyHeadersItem);
         _fileMenu.Items.Add(_exportItem);
@@ -73,9 +84,18 @@ public partial class MainWindow
         _fileMenu.Items.Add(_printItem);
         _fileMenu.Items.Add(new Separator());
         _fileMenu.Items.Add(_pinItem);
+        // 2.6.0: two ways out. Close: the window goes, TableNote keeps reminding from the tray. Exit: TableNote ends.
+        _closeWindowItem = Act("menu.close_to_tray", () => Close());
+        _closeWindowItem.InputGesture = new KeyGesture(Key.F4, KeyModifiers.Alt);
+        _exitItem = Act("menu.exit", QuitApp);
+        _fileMenu.Items.Add(new Separator());
+        _fileMenu.Items.Add(_closeWindowItem);
+        _fileMenu.Items.Add(_exitItem);
         _fileMenu.SubmenuOpened += (_, _) =>
         {
             var edit = _view == ViewMode.Edit;
+            _closeWindowItem.Header = Localizer.T(_trayReady ? "menu.close_to_tray" : "menu.close_window");
+            ToolTip.SetTip(_closeWindowItem, _trayReady ? Localizer.T("tip.close_to_tray") : Localizer.T("tip.exit"));
             _copyAllItem.IsEnabled = edit;
             _copyHeadersItem.IsEnabled = edit;
             _exportItem.IsEnabled = edit && !_exporting;
@@ -87,34 +107,61 @@ public partial class MainWindow
         _tableMenu = new MenuItem();
         _colorItem = Act("color.button", () => _ = OpenColorDialog());
         _addRowItem = Act("toolbar.add_row", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_row"), AddRowAsync)));
-        _deleteRowItem = Act("toolbar.delete_row", () => _ = RunStructureAsync(DeleteRowAsync));
+        _deleteRowItem = Act("toolbar.delete_row", () => _ = RunStructureAsync(() => DeleteRowsAsync(-1)));
         _addColumnItem = Act("toolbar.add_column", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), AddColumnAsync)));
-        _deleteColumnItem = Act("toolbar.delete_column", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("delete.undo_column"), DeleteColumnAsync)));
+        _deleteColumnItem = Act("toolbar.delete_column", () => _ = RunStructureAsync(() => DeleteColumnsAsync(-1)));
+        _undoItem = Act("menu.undo", () => { CommitFocusedEdit(); DoUndo(); });
+        _undoItem.InputGesture = new KeyGesture(Key.Z, KeyModifiers.Control);
+        _redoItem = Act("menu.redo", () => { CommitFocusedEdit(); DoRedo(); });
+        _redoItem.InputGesture = new KeyGesture(Key.Y, KeyModifiers.Control);
         _sortItem = Act("toolbar.sort_due", SortByDue);
+        _addAlertItem = Act("menu.add_alert", AddAlert);
+        _addDaysItem = Act("menu.add_days", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("menu.add_days"), AddDaysColumnAsync)));
         _spotAddDueItem = new MenuItem { Tag = "spot:add-alert-date" };
         _spotAddDueItem.Click += async (_, _) =>
             await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), () => AddSystemColumnAsync(ColumnRoles.Due)));
         _spotAddStatusItem = new MenuItem { Tag = "spot:add-status" };
         _spotAddStatusItem.Click += async (_, _) =>
             await RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), () => AddSystemColumnAsync(ColumnRoles.Status)));
+        _findItem = Act("menu.find", OpenFind);
+        _findItem.InputGesture = new KeyGesture(Key.F, KeyModifiers.Control);
+        _selectAllItem = Act("menu.select_all", SelectAll);
+        _selectAllItem.InputGesture = new KeyGesture(Key.A, KeyModifiers.Control);
+        _tableMenu.Items.Add(_undoItem);
+        _tableMenu.Items.Add(_redoItem);
+        _tableMenu.Items.Add(new Separator());
+        _tableMenu.Items.Add(_findItem);
+        _tableMenu.Items.Add(_selectAllItem);
+        _tableMenu.Items.Add(new Separator());
         _tableMenu.Items.Add(_colorItem);
         _tableMenu.Items.Add(_addRowItem);
         _tableMenu.Items.Add(_deleteRowItem);
         _tableMenu.Items.Add(_addColumnItem);
         _tableMenu.Items.Add(_deleteColumnItem);
         _tableMenu.Items.Add(_sortItem);
+        _tableMenu.Items.Add(_addAlertItem);
         _tableMenu.Items.Add(new Separator());
         _tableMenu.Items.Add(_spotAddDueItem);
         _tableMenu.Items.Add(_spotAddStatusItem);
+        _tableMenu.Items.Add(_addDaysItem);
         _tableMenu.SubmenuOpened += (_, _) =>
         {
             var edit = _view == ViewMode.Edit && !_busy;
+            CommitFocusedEdit(); // a cell being typed in is a step of its own (then Undo takes it back)
+            _undoItem.IsEnabled = edit && _undo.CanUndo;
+            _redoItem.IsEnabled = edit && _undo.CanRedo;
+            _undoItem.Header = _undo.LastUndoLabel is { } u ? Localizer.T("menu.undo_named", u) : Localizer.T("menu.undo");
+            _redoItem.Header = _undo.LastRedoLabel is { } r ? Localizer.T("menu.redo_named", r) : Localizer.T("menu.redo");
             _colorItem.IsEnabled = _view == ViewMode.Edit;
+            _findItem.IsEnabled = _view == ViewMode.Edit;
+            _selectAllItem.IsEnabled = _view == ViewMode.Edit && _visibleRows.Count > 0;
             _addRowItem.IsEnabled = edit;
             _deleteRowItem.IsEnabled = edit;
             _addColumnItem.IsEnabled = edit;
             _deleteColumnItem.IsEnabled = edit;
             _sortItem.IsEnabled = _view == ViewMode.Edit;
+            _addAlertItem.IsEnabled = _view == ViewMode.Edit && (_session.Doc.AlertBoxes?.Count ?? 0) < AlertBoxOps.MaxBoxes;
+            _addDaysItem.IsEnabled = edit && _session.Doc.Columns.Count < NoteDocument.MaxUserColumns;
             ApplySpecialColumnSpots();
         };
 
@@ -137,16 +184,19 @@ public partial class MainWindow
         _lockItem = CheckItem("toolbar.lock", LockBox);
         _launchItem = CheckItem("toolbar.launch_at_login", LaunchBox);
         _muteItem = CheckItem("toolbar.mute", MuteSoundBox);
-        _systemPinItem = Act("toolbar.background", OnBackgroundClick);
+        _soundItem = Act("menu.sound", () => _ = OpenSoundSettingsAsync());
+        _systemPinItem = Act("menu.wallpaper", () => _ = OnWallpaperClickAsync());
         _systemMenu.Items.Add(_topmostItem);
         _systemMenu.Items.Add(_lockItem);
         _systemMenu.Items.Add(_launchItem);
         _systemMenu.Items.Add(_muteItem);
+        _systemMenu.Items.Add(_soundItem);
         _systemMenu.Items.Add(_systemPinItem);
         _systemMenu.SubmenuOpened += (_, _) =>
         {
             RefreshChecks();
             _systemPinItem.IsEnabled = _view == ViewMode.Edit;
+            _soundItem.IsEnabled = _view == ViewMode.Edit;
         };
 
         _viewMenu = new MenuItem();
@@ -157,6 +207,9 @@ public partial class MainWindow
         _viewMenu.Items.Add(_zoomResetItem);
         _viewMenu.Items.Add(_zoomInItem);
         _viewMenu.Items.Add(_languageMenu);
+        _activityItem = CheckItem("menu.activity", ActivityBox);
+        ToolTip.SetTip(_activityItem, Localizer.T("activity.tip"));
+        _viewMenu.Items.Add(_activityItem);
         _viewMenu.Items.Add(new Separator());
         _viewMenu.Items.Add(_systemMenu);
         _viewMenu.SubmenuOpened += (_, _) =>
@@ -167,6 +220,7 @@ public partial class MainWindow
             _zoomOutItem.IsEnabled = edit;
             _zoomResetItem.IsEnabled = edit;
             _zoomInItem.IsEnabled = edit;
+            _activityItem.IsEnabled = edit;
             RefreshChecks();
         };
 
@@ -266,26 +320,39 @@ public partial class MainWindow
         _systemMenu.Header = Localizer.T("menu.system");
         _languageMenu.Header = Localizer.T("menu.language");
 
-        GroupTableLabel.Text = Localizer.T("menu.group.table");
-        GroupCopyLabel.Text = Localizer.T("menu.group.copy");
-        GroupViewLabel.Text = Localizer.T("menu.group.view");
-        GroupSystemLabel.Text = Localizer.T("menu.group.system");
-        GroupHelpLabel.Text = Localizer.T("menu.group.help");
-
         _copyAllItem.Header = Localizer.T("toolbar.copy_all");
         _copyHeadersItem.Header = Localizer.T("toolbar.copy_headers");
         _exportItem.Header = Localizer.T("toolbar.export");
         _exportImageItem.Header = Localizer.T("toolbar.export_image");
+        ToolTip.SetTip(_exportImageItem, Localizer.T("tip.export_image"));
         _printItem.Header = Localizer.T("toolbar.print");
-        _pinItem.Header = Localizer.T("toolbar.background");
+        ToolTip.SetTip(_printItem, Localizer.T("tip.print"));
+        _pinItem.Header = Localizer.T("menu.wallpaper");
+        ToolTip.SetTip(_pinItem, Localizer.T("tip.wallpaper"));
+        _closeWindowItem.Header = Localizer.T(_trayReady ? "menu.close_to_tray" : "menu.close_window");
+        _exitItem.Header = Localizer.T("menu.exit");
+        ToolTip.SetTip(_exitItem, Localizer.T("tip.exit"));
+        _undoItem.Header = Localizer.T("menu.undo");
+        _redoItem.Header = Localizer.T("menu.redo");
         _colorItem.Header = Localizer.T("color.button");
         _addRowItem.Header = Localizer.T("toolbar.add_row");
         _deleteRowItem.Header = Localizer.T("toolbar.delete_row");
         _addColumnItem.Header = Localizer.T("toolbar.add_column");
         _deleteColumnItem.Header = Localizer.T("toolbar.delete_column");
         _sortItem.Header = Localizer.T("toolbar.sort_due");
+        _addAlertItem.Header = Localizer.T("menu.add_alert");
+        _addDaysItem.Header = Localizer.T("menu.add_days");
+        _findItem.Header = Localizer.T("menu.find");
+        _selectAllItem.Header = Localizer.T("menu.select_all");
+        ToolTip.SetTip(_addDaysItem, Localizer.T("tip.add_days"));
         _viewSortItem.Header = Localizer.T("toolbar.sort_due");
-        _systemPinItem.Header = Localizer.T("toolbar.background");
+        _systemPinItem.Header = Localizer.T("menu.wallpaper");
+        ToolTip.SetTip(_systemPinItem, Localizer.T("tip.wallpaper"));
+        ToolTip.SetTip(_topmostItem, Localizer.T("tip.topmost"));
+        ToolTip.SetTip(_lockItem, Localizer.T("tip.lock"));
+        ToolTip.SetTip(_muteItem, Localizer.T("tip.mute"));
+        _soundItem.Header = Localizer.T("menu.sound");
+        ToolTip.SetTip(_activityItem, Localizer.T("activity.tip"));
         _helpItem.Header = Localizer.T("tray.help");
         _logItem.Header = Localizer.T("tray.log");
         _zoomOutItem.Header = Localizer.T("tray.zoom_out");
