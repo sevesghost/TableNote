@@ -17,8 +17,9 @@ namespace TableNote;
 public sealed class SplashWindow : Window
 {
     public const string LogoUri = "avares://TableNote/Assets/Brand/splash-logo.png";
-    /// <summary>Shown at least this long, so a fast start doesn't just flicker.</summary>
-    public static TimeSpan MinimumTime { get; set; } = TimeSpan.FromMilliseconds(1200);
+    /// <summary>Shown at least this long, so a fast start doesn't just flicker. 2.6.1: 0.3 s (was 1.2 s, which made
+    /// every start wait for the splash even when the table was ready long before).</summary>
+    public static TimeSpan MinimumTime { get; set; } = TimeSpan.FromMilliseconds(300);
     /// <summary>Longest wait for the first frame before the editor is built anyway.</summary>
     public static TimeSpan FirstFrameTimeout { get; set; } = TimeSpan.FromMilliseconds(700);
 
@@ -83,6 +84,7 @@ public sealed class SplashWindow : Window
         {
             if (done) return;
             done = true;
+            StartClock.Mark("splash drawn");
             Dispatcher.UIThread.Post(next, DispatcherPriority.Background);
         }
         try { RequestAnimationFrame(_ => RequestAnimationFrame(_ => Go())); }

@@ -85,7 +85,9 @@ public partial class MainWindow
             if (!(WholeRowsSelected() && IsRowSelected(rowIndex))) SelectRows(rowIndex, rowIndex, focus: false);
             Fill();
         };
-        Fill();
+        // 2.6.1: the items are made when the menu opens, not for every row on screen (each row carried about 26 menu
+        // items it seldom showed). Opening comes with a right-click or the menu key; a menu opened from code gets them here.
+        menu.Opened += (_, _) => { if (menu.Items.Count == 0) Fill(); };
         return menu;
     }
 

@@ -19,10 +19,10 @@
     <ApplicationIcon>Assets\Brand\TableNote.ico</ApplicationIcon>
     <RootNamespace>TableNote</RootNamespace>
     <AssemblyName>TableNote</AssemblyName>
-    <Version>2.6.0</Version>
-    <AssemblyVersion>2.6.0.0</AssemblyVersion>
-    <FileVersion>2.6.0.0</FileVersion>
-    <InformationalVersion>2.6.0</InformationalVersion>
+    <Version>2.6.1</Version>
+    <AssemblyVersion>2.6.1.0</AssemblyVersion>
+    <FileVersion>2.6.1.0</FileVersion>
+    <InformationalVersion>2.6.1</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
@@ -30,15 +30,25 @@
   </PropertyGroup>
 
   <!-- P9: the Windows publish is win-x64 only, single file, no other platforms' native files.
-       Trimmed, partial mode: unused code of .NET and Avalonia is removed, TableNote.dll itself is kept whole
-       (about 24 MB instead of 56 MB with the toast stack). -->
+       Trimmed, partial mode: unused code of .NET and Avalonia is removed, TableNote.dll itself is kept whole.
+       2.6.1, start-up and memory (measured: docs/performance.md):
+       - ReadyToRun: the code is compiled ahead of time into the exe (one composite image for .NET, Avalonia and
+         TableNote). Trimming had removed the precompiled code that .NET ships, so every start compiled all of it again;
+         the table now opens about 3-4 times sooner.
+       - No compression inside the exe: the code is used straight from the file instead of being unpacked into memory
+         at every start (less memory in use; the zip download is about the same size either way).
+       - Tiered compilation off: the precompiled code is used as it is, instead of being compiled a second time in the
+         background during the first half minute (far less CPU after a start; also a little less memory). -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
+    <TieredCompilation>false</TieredCompilation>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>

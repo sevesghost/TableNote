@@ -4,7 +4,7 @@
 
 A lightweight, Excel-like task table for Windows with due-date and advance reminders, built with Avalonia on .NET 10.
 
-Current version: **2.6.0** (21 November 2026). The interface is English by default; switch to Thai in **View → Language**. English manual: [`docs/manual-en.md`](docs/manual-en.md).
+Current version: **2.6.1** (22 November 2026). The interface is English by default; switch to Thai in **View → Language**. English manual: [`docs/manual-en.md`](docs/manual-en.md).
 
 ## What is TableNote?
 
@@ -12,6 +12,7 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
 
 ## Features
 
+- **Faster start (2.6.1):** the exe carries its code compiled ahead of time, so TableNote opens about 3 to 4 times sooner and uses less CPU and memory after it starts; table cells are lighter. `tablenote.log` records how long each step of a start took. See [docs/performance.md](docs/performance.md).
 - **Wallpaper mode (2.6.0, Windows):** **Wallpaper** on the toolbar draws the table over your own wallpaper, full screen, where the window was. The editor goes to the tray. Click the tray icon or press Ctrl+Shift+E to edit again, and your own wallpaper comes back. See [Wallpaper mode](#wallpaper-mode).
 - **Activity bar (2.6.0):** a slim bar at the bottom shows what TableNote is doing now — a progress bar while it exports, saves a picture, prepares pages to print or draws the wallpaper; "Saving in a moment…" after an edit — and otherwise the last thing it did with the time, plus when it last saved. **History** lists recent work (opened, saved, reminders, undo, exports, warnings such as "did not respond for 3 s while saving note.json") and opens the folder with `tablenote.log`. ✕ hides it; **View → Activity bar** brings it back (kept in `settings.json`).
 - **Whole rows and columns (2.6.0):** click a row number or a column header to select the whole row or column; drag or Shift+click for several. Right-click: insert as many rows (above / below) or columns (left / right) as are selected, delete them, or **Insert copied** — copied rows come back with their row color, repeat and advance reminders, copied columns with their type and width; text from Excel goes in as new rows. Drag the ⋮⋮ grip beside a row number to move the selected rows. Double-click a header to rename it.
@@ -200,7 +201,7 @@ dotnet restore
 dotnet build -c Release
 ```
 
-Publish for Windows (win-x64, self-contained, single file, trimmed; about 24 MB).
+Publish for Windows (win-x64, self-contained, single file, trimmed, code compiled ahead of time; about 69 MB, 29 MB zipped). The settings are in `TableNote.csproj`; [docs/performance.md](docs/performance.md) explains them.
 
 ```bash
 dotnet publish -c Release -r win-x64 --self-contained true \

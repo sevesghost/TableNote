@@ -12,6 +12,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
 using Avalonia.Threading;
 
 namespace TableNote;
@@ -179,6 +180,7 @@ public partial class MainWindow : Window
         // return added another window hook and Screens handler. Start-up runs once.
         if (_startedUp) return;
         _startedUp = true;
+        StartClock.Mark("editor opened");
         LogStart(); // 2.6.0: one line per start in tablenote.log
         NoteStart(); // 2.6.0: "opened the table: N rows (x s)" — the first line of the activity bar's History
         if (Screens != null)
@@ -238,6 +240,7 @@ public partial class MainWindow : Window
         var kick = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         kick.Tick += (_, _) => { kick.Stop(); _reminders.CheckNow(); };
         kick.Start();
+        StartClock.Mark("editor ready");
     }
 
     private bool _quitting;
@@ -1625,6 +1628,10 @@ public partial class MainWindow : Window
         _reminders.CheckNow();
     }
 
+    private ControlTheme? _cellTheme;
+    /// <summary>2.6.1: the lighter cell template (MainWindow.axaml, TnCellTextBox); null keeps the standard one.</summary>
+    private ControlTheme? CellTheme => _cellTheme ??= this.FindResource("TnCellTextBox") as ControlTheme;
+
     private TextBox MakeTextBox(string text, bool header, int row, int column, IBrush bg)
     {
         var statusCol = !header ? _session.Doc.StatusColumnIndex() : -1;
@@ -1632,6 +1639,7 @@ public partial class MainWindow : Window
 
         var box = new TextBox
         {
+            Theme = CellTheme,
             Text = text,
             FontFamily = AppFonts.Thai,
             FontSize = 14,

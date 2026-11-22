@@ -31,7 +31,10 @@ public partial class MainWindow
             RequestAnimationFrame(_ =>
             {
                 drawn = true;
-                if (logFirstFrame) AppLog.Write("start", $"{what} drawn {clock.ElapsedMilliseconds} ms after it was shown");
+                if (!logFirstFrame) return;
+                AppLog.Write("start", $"{what} drawn {clock.ElapsedMilliseconds} ms after it was shown");
+                StartClock.Mark("editor drawn");
+                StartClock.ReportOnce();
             });
         }
         catch (Exception ex)

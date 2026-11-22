@@ -77,6 +77,60 @@
       <Setter Property="Padding" Value="9,4"/>
     </Style>
   </Window.Styles>
+  <Window.Resources>
+    <!-- 2.6.1: lighter table cells. A cell is a TextBox; the standard template also carries validation marks, a floating
+         placeholder, left/right content slots and two scroll bars that a cell never shows (about 20 parts per cell).
+         Cells use this one instead: the same border (PART_BorderElement, so the selected / found / focus colours above
+         still apply), the same padding and text, and a ScrollViewer without bars (it still keeps the caret in view). -->
+    <ControlTheme x:Key="TnCellScroller" TargetType="ScrollViewer">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <ScrollContentPresenter Name="PART_ContentPresenter" Cursor="IBeam"
+                                  Background="{TemplateBinding Background}"
+                                  Padding="{TemplateBinding Padding}"/>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+    <ControlTheme x:Key="TnCellTextBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Panel>
+            <Border Name="PART_BorderElement"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    MinWidth="{TemplateBinding MinWidth}"
+                    MinHeight="{TemplateBinding MinHeight}"/>
+            <Border Margin="{TemplateBinding BorderThickness}">
+              <ScrollViewer Name="PART_ScrollViewer" Theme="{StaticResource TnCellScroller}"
+                            Margin="{TemplateBinding Padding}"
+                            HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"
+                            VerticalScrollBarVisibility="{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}"
+                            IsScrollChainingEnabled="{TemplateBinding (ScrollViewer.IsScrollChainingEnabled)}"
+                            BringIntoViewOnFocusChange="{TemplateBinding (ScrollViewer.BringIntoViewOnFocusChange)}">
+                <TextPresenter Name="PART_TextPresenter"
+                               Text="{TemplateBinding Text, Mode=TwoWay}"
+                               CaretBlinkInterval="{TemplateBinding CaretBlinkInterval}"
+                               CaretIndex="{TemplateBinding CaretIndex}"
+                               SelectionStart="{TemplateBinding SelectionStart}"
+                               SelectionEnd="{TemplateBinding SelectionEnd}"
+                               TextAlignment="{TemplateBinding TextAlignment}"
+                               TextWrapping="{TemplateBinding TextWrapping}"
+                               LineHeight="{TemplateBinding LineHeight}"
+                               LetterSpacing="{TemplateBinding LetterSpacing}"
+                               SelectionBrush="{TemplateBinding SelectionBrush}"
+                               SelectionForegroundBrush="{TemplateBinding SelectionForegroundBrush}"
+                               CaretBrush="{TemplateBinding CaretBrush}"
+                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+              </ScrollViewer>
+            </Border>
+          </Panel>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+  </Window.Resources>
 
   <DockPanel Margin="10,6,10,6">
     <Menu x:Name="MainMenu" Classes="note" DockPanel.Dock="Top" Margin="0,0,0,4"/>

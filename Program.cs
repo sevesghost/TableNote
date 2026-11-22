@@ -20,6 +20,7 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        StartClock.Begin(); // 2.6.1: start timeline in tablenote.log
         DueDates.UseGregorianCalendar();
         ForceEdit = args.Any(a => string.Equals(a, "--edit", StringComparison.OrdinalIgnoreCase));
         StartHidden = !ForceEdit && args.Any(a => string.Equals(a, "--startup", StringComparison.OrdinalIgnoreCase));
