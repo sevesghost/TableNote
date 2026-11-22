@@ -251,6 +251,9 @@ The tray menu has **Edit table**, **Help**, **Log**, **Export…**, **Language**
 Yes. TableNote adds the Status and Due columns for you, and your existing data is kept. Tasks from an old file get on-time reminders only, until you add ⏰ reminders. Before the first save in a newer format, TableNote backs up the original file in the same folder, named after the file's version: `note.v2.bak` for 1.x/2.0, `note.v3.bak` for 2.1.0, and `note.v4.bak` for 2.2–2.3 files (format version 4). Existing backups are never overwritten; if the name is taken, a date and time is added, for example `note.v3.20261109141500.bak`. A 2.3.x build can still open a 2.4.0 (v5) file: it does not reject it or drop the new fields, but it will not show column settings or row colours.
 
 
+**How long does TableNote take to open on my PC?**
+The first line of **History** in the activity bar says how many rows were opened and how long the start took. `tablenote.log` (next to `note.json`) has the details since 2.6.1, one line per start, for example `start timeline (ms after the process started): code 90 ms · ui ready 300 ms · splash drawn 420 ms · table built 500 ms · editor shown 720 ms · editor opened 900 ms · editor ready 950 ms · editor drawn 960 ms`. If a start is slow, send that line with your question: it shows which step took the time.
+
 **If the reminder settings in my file are wrong, will TableNote delete my table?**
 No. If a value in `reminders` has the wrong type (for example, `"offsets": ["15"]`), TableNote drops only that value, keeps the rest of the table, and records it in `tablenote.log` next to `note.json`.
 

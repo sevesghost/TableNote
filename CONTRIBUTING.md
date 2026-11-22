@@ -35,6 +35,8 @@ The fonts in `Assets/Fonts` are built by `tools/fonts/merge_noto.py` (Noto Sans 
 
 The Windows build is `dotnet publish -c Release -r win-x64` (see [Building from source](README.md#building-from-source)). The app also runs on Linux for UI testing, but wallpaper mode only works on Windows (`tests/WallpaperTests` covers it with a fake desktop).
 
+The win-x64 settings in `TableNote.csproj` (ReadyToRun composite, no compression in the exe, tiered compilation off) and the light cell template are what make 2.6.1 start about 3–4 times sooner; [docs/performance.md](docs/performance.md) has the measurements. `tests/StartTests` checks those settings, the 0.3 s loading screen, the start timeline, the light cells and the menus that are made when they open. To compare a change, read the `start timeline` line in `tablenote.log`.
+
 ## Pull requests
 
 - Keep each pull request to one change, and say what you tested.

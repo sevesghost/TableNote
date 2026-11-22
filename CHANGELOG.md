@@ -2,6 +2,14 @@
 
 All notable changes to TableNote. [ภาษาไทย](CHANGELOG.th.md)
 
+- **2.6.1** (22 November 2026)
+  - Faster start: the Windows exe now carries its code compiled ahead of time (ReadyToRun, one composite image for .NET, Avalonia and TableNote). Trimming had dropped the precompiled code that .NET ships, so every start compiled the whole program again; TableNote now opens about 3 to 4 times sooner. Measurements and the reasons for each setting: [docs/performance.md](docs/performance.md).
+  - Lighter: the exe is no longer compressed inside, so its code is used straight from the file instead of being unpacked into memory at every start, and tiered compilation is off, so the precompiled code is not compiled a second time in the background during the first half minute (far less CPU after a start, and less memory).
+  - The loading screen waits at most 0.3 s (was 1.2 s) when the table is ready sooner.
+  - Lighter table cells: a cell (and a column header) uses a slim template with the same border, padding, text, caret and selection colours, but without the validation, placeholder, side slots and the two scroll bars of the standard text box (about 5 parts instead of about 20). Building the table takes less work and less memory. The scroll bar that showed inside a cell with long text — a thin grey line under the text, or a bar with arrows while editing — is gone; the text still scrolls to the caret.
+  - Row and column menus are made when they open, not for every row on screen.
+  - New: `tablenote.log` has one start-timeline line per start: when the program code started, the interface was ready, the loading screen was drawn, the table was built, and the editor was shown, opened and drawn (milliseconds after Windows started the process).
+  - The download is bigger: the zip is about 29 MB (was 18 MB) and `TableNote.exe` about 69 MB (was 23 MB). The precompiled code is what makes the start fast.
 - **2.6.0** (21 November 2026)
   - New: **wallpaper mode** replaces *Pin to desktop*. **Wallpaper** on the toolbar (or **File → Set as wallpaper**) draws the table over your own wallpaper, full screen, on the monitor the window is on: a card with the alert boxes and the table where the window was, at the window's size at most and at its zoom (rows that don't fit are counted as "+ N more rows"). The editor goes to the tray. The picture is redrawn when the table changes (for example a task marked done from a reminder), when a task turns overdue or due today, and on a new day.
   - Clicking the tray icon, **Edit table** in the tray menu, Ctrl+Shift+E or starting TableNote again brings the editor back and puts your own wallpaper back. **Quit** puts it back too; wallpaper mode stays on and the next start draws the table again. At sign-out with **Launch at sign-in** on, the table stays and is redrawn at sign-in.

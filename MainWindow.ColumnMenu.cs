@@ -146,7 +146,7 @@ public partial class MainWindow
             if (box is not { IsReadOnly: false } && !(WholeColumnsSelected() && ColumnSelected(column))) SelectColumns(column, column);
             Fill();
         };
-        Fill();
+        menu.Opened += (_, _) => { if (menu.Items.Count == 0) Fill(); }; // 2.6.1: made when it opens (see BuildRowMenu)
         return menu;
     }
 

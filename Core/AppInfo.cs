@@ -2,9 +2,9 @@ namespace TableNote;
 
 public static class AppInfo
 {
-    public const string Version = "2.6.0";
+    public const string Version = "2.6.1";
     public const string ConfirmedCommit = "rewrite-" + Version;
-    public const string BuildNote = "วันบิลด์: 21 พฤศจิกายน 2026 (เวลาไทย UTC+7) — โหมดวอลเปเปอร์ ช่องแบบ Excel นับวัน และแถบการทำงาน";
+    public const string BuildNote = "วันบิลด์: 22 พฤศจิกายน 2026 (เวลาไทย UTC+7) — เปิดเร็วขึ้น ใช้ CPU และหน่วยความจำน้อยลง ช่องตารางเบาลง";
 
     public static string HelpText => Localizer.Current == "th" ? HelpTextTh : HelpTextEn;
     public static string LogText => Localizer.Current == "th" ? LogTextTh : LogTextEn;
@@ -283,7 +283,13 @@ tablenote.log :: บันทึกการทำงานของโปรแ
 ").Replace("{VERSION}", Version);
 
     public static string LogTextEn { get; } =
-@"TableNote " + Version + @" — built 21 Nov 2026 (Bangkok time, UTC+7)
+@"TableNote " + Version + @" — built 22 Nov 2026 (Bangkok time, UTC+7)
+
+22 Nov 2026 — 2.6.1
+Faster and lighter: the program's code is now compiled ahead of time inside the exe, so TableNote opens about 3 to 4 times sooner and uses less CPU and memory after it starts. The loading screen no longer waits 1.2 s when the table is ready sooner (at most 0.3 s).
+Changed: table cells are lighter (far fewer parts each), so the table is built and scrolled with less work. The scroll bar that showed inside a cell with long text (a thin grey line, or a bar with arrows while editing) is gone; the text still scrolls with the caret.
+New: tablenote.log has a start timeline (program code started, loading screen drawn, table built, editor drawn), so a slow start can be measured on any PC.
+The download is bigger (zip about 29 MB, exe about 69 MB; was 18 and 23 MB): the precompiled code is what makes the start fast.
 
 21 Nov 2026 — 2.6.0
 New: Wallpaper (toolbar) puts the table on your desktop wallpaper, full screen, over your own picture and where the window was. The tray icon or Ctrl+Shift+E brings the editor back, and your own wallpaper with it. This replaces Pin to desktop.
@@ -348,6 +354,12 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 @"ตารางโน้ต
 รุ่นที่แสดง: " + Version + @"
 " + BuildNote + @"
+
+22 พ.ย. 2026 — 2.6.1
+เร็วขึ้นและเบาลง: โค้ดของโปรแกรมแปลงเป็นภาษาเครื่องไว้ล่วงหน้าในไฟล์ exe แล้ว โปรแกรมจึงเปิดเร็วขึ้นราว 3–4 เท่า และหลังเปิดใช้ CPU กับหน่วยความจำน้อยลง หน้าโหลดไม่ต้องรอครบ 1.2 วินาทีเมื่อตารางพร้อมก่อน (รอไม่เกิน 0.3 วินาที)
+เปลี่ยน: ช่องในตารางเบาลง (ชิ้นส่วนในแต่ละช่องน้อยลงมาก) สร้างและเลื่อนตารางได้โดยใช้แรงเครื่องน้อยลง แถบเลื่อนที่เคยขึ้นในช่องที่ข้อความยาว (เส้นเทาบาง ๆ หรือแถบมีลูกศรตอนแก้ไข) หายไปแล้ว ข้อความยังเลื่อนตามเคอร์เซอร์เหมือนเดิม
+ใหม่: tablenote.log บันทึกเวลาของแต่ละขั้นตอนตอนเปิดโปรแกรม (โค้ดเริ่มทำงาน หน้าโหลดขึ้น สร้างตารางเสร็จ หน้าแก้ไขขึ้น) ไว้ดูว่าเครื่องไหนเปิดช้าที่ขั้นตอนใด
+ไฟล์ดาวน์โหลดใหญ่ขึ้น (zip ราว 29 MB, exe ราว 69 MB เดิม 18 และ 23 MB) เพราะเก็บโค้ดที่แปลงไว้ล่วงหน้า ซึ่งเป็นสิ่งที่ทำให้เปิดเร็ว
 
 21 พ.ย. 2026 — 2.6.0
 ใหม่: ปุ่ม วอลเปเปอร์ ตั้งตารางเป็นวอลเปเปอร์เต็มจอ ทับภาพเดิมของคุณตรงตำแหน่งหน้าต่าง คลิกไอคอนที่ถาดหรือกด Ctrl+Shift+E เพื่อกลับมาแก้ไข แล้ววอลเปเปอร์เดิมจะกลับมา ใช้แทน วางแนบพื้นหลัง

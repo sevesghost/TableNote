@@ -12,6 +12,7 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        StartClock.Mark("ui ready");
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Quit only via the tray menu (explicit Shutdown); closing the window hides it to the tray.
@@ -49,6 +50,7 @@ public partial class App : Application
             {
                 using (UiActivity.Scope("start: build editor"))
                     main = new MainWindow();
+                StartClock.Mark("table built");
             }
             catch (Exception ex) when (show)
             {
@@ -75,6 +77,7 @@ public partial class App : Application
                     splash.CloseAfterFirstFrameOf(main, () => { if (main.IsVisible) main.Activate(); });
                 }
                 main.Opened += Ready;
+                StartClock.Mark("editor shown");
                 using (UiActivity.Scope("start: show editor"))
                     main.Show();
             });
