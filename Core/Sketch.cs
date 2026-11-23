@@ -5,8 +5,8 @@ using System.Text.Json.Serialization;
 namespace TableNote;
 
 /// <summary>
-/// 2.6.1.1: drawing pad (Table → Drawing pad…, or the Draw button). One stroke of the pen or the ruler: its colour,
-/// width, sharpness (0 = soft edge, 100 = crisp) and its points as x0,y0,x1,y1,… in the pad's coordinates.
+/// 2.6.1.1: drawing on the table (the Draw button). One stroke of the pen or the ruler: its colour, width, sharpness
+/// (0 = soft edge, 100 = crisp) and its points as x0,y0,x1,y1,… in table coordinates (scrolling moves them with the table).
 /// A stroke never changes once made; the eraser replaces it with the pieces that are left.
 /// </summary>
 public sealed class SketchStroke
@@ -30,37 +30,7 @@ public sealed class SketchStroke
     public SketchStroke WithPoints(double[] points) => new(Color, Width, Sharpness, points, Ruler);
 }
 
-/// <summary>One page of the drawing pad.</summary>
-public sealed class SketchPage
-{
-    public List<SketchStroke> Strokes { get; set; } = [];
-}
-
-/// <summary>Everything in sketch.json: the pages, the page shown, and the tool settings last used.</summary>
-public sealed class SketchDocument
-{
-    public List<SketchPage> Pages { get; set; } = [new SketchPage()];
-    public int Page { get; set; }
-    public bool Lined { get; set; } = true;
-    public string PenColor { get; set; } = SketchOps.DefaultColor;
-    public double PenWidth { get; set; } = SketchOps.DefaultPenWidth;
-    public int Sharpness { get; set; } = 100;
-    public double EraserWidth { get; set; } = SketchOps.DefaultEraserWidth;
-
-    public SketchPage Current
-    {
-        get
-        {
-            if (Pages.Count == 0) Pages.Add(new SketchPage());
-            Page = Math.Clamp(Page, 0, Pages.Count - 1);
-            return Pages[Page];
-        }
-    }
-
-    public int TotalPoints => Pages.Sum(p => p.Strokes.Sum(s => s.PointCount));
-}
-
-public enum SketchTool { Pen, Eraser, Ruler }
+public enum SketchTool { Pen, Eraser, Ruler, Move }
 
 /// <summary>Pure drawing-pad operations (no UI), so they can be tested.</summary>
 public static class SketchOps
@@ -70,9 +40,8 @@ public static class SketchOps
     public const double DefaultEraserWidth = 20;
     public const double MinWidth = 1;
     public const double MaxWidth = 60;
-    public const int MaxPages = 50;
     public const int MaxPointsPerStroke = 20_000;
-    /// <summary>All pages together; keeps sketch.json well under <see cref="SketchStore.MaxFileBytes"/>.</summary>
+    /// <summary>All layers together; keeps layers.json well under <see cref="InkStore.MaxFileBytes"/>.</summary>
     public const int MaxPointsTotal = 400_000;
     /// <summary>Angle step of the ruler while Shift is held.</summary>
     public const double SnapDegrees = 15;
@@ -239,32 +208,203 @@ public static class SketchOps
     }
 }
 
+/// <summary>A picture placed on a layer, in table coordinates. <see cref="File"/> is a name in the images folder.</summary>
+public sealed record SketchImage(string Id, string File, double X, double Y, double W, double H)
+{
+    public bool Contains(double x, double y) => x >= X && x <= X + W && y >= Y && y <= Y + H;
+}
+
+/// <summary>One layer over the table: its drawing and pictures. A hidden layer is kept but not drawn.</summary>
+public sealed class InkLayer
+{
+    public string Id { get; set; } = InkOps.NewId();
+    public string Name { get; set; } = "";
+    public bool Visible { get; set; } = true;
+    public List<SketchStroke> Strokes { get; set; } = [];
+    public List<SketchImage> Images { get; set; } = [];
+
+    /// <summary>A copy for undo (strokes and pictures never change, so the lists can be shallow copies).</summary>
+    public InkLayer Clone() => new() { Id = Id, Name = Name, Visible = Visible, Strokes = [.. Strokes], Images = [.. Images] };
+}
+
+/// <summary>A picture in a cell: the file in the images folder and whether the cell shows it open.</summary>
+public sealed record CellImage(string File, bool Open);
+
+/// <summary>Everything in layers.json: the layers over the table, the tool settings, and the pictures in cells.</summary>
+public sealed class InkDocument
+{
+    public List<InkLayer> Layers { get; set; } = [];
+    public int Active { get; set; }
+    public string PenColor { get; set; } = SketchOps.DefaultColor;
+    public double PenWidth { get; set; } = SketchOps.DefaultPenWidth;
+    public int Sharpness { get; set; } = 100;
+    public double EraserWidth { get; set; } = SketchOps.DefaultEraserWidth;
+    /// <summary>Pictures in cells, by <see cref="CellDetailOps.Key"/> (row id + column id).</summary>
+    public Dictionary<string, CellImage> CellImages { get; set; } = [];
+
+    /// <summary>The layer that is drawn on; made when there is none.</summary>
+    public InkLayer ActiveLayer
+    {
+        get
+        {
+            if (Layers.Count == 0) Layers.Add(new InkLayer { Name = InkOps.DefaultLayerName(1) });
+            Active = Math.Clamp(Active, 0, Layers.Count - 1);
+            return Layers[Active];
+        }
+    }
+
+    public int TotalPoints => Layers.Sum(l => l.Strokes.Sum(s => s.PointCount));
+    public int TotalImages => Layers.Sum(l => l.Images.Count);
+    public bool HasInk => Layers.Any(l => l.Strokes.Count > 0 || l.Images.Count > 0);
+}
+
+/// <summary>Layer, picture and cell-picture operations (no UI).</summary>
+public static class InkOps
+{
+    public const int MaxLayers = 10;
+    public const int MaxImages = 100;
+    public const int MaxLayerName = 40;
+    public const double MinImageSize = 16;
+    /// <summary>A new picture on a layer is at most this wide or tall at first.</summary>
+    public const double PlaceSize = 320;
+    public const double HandleSize = 12;
+
+    public static string NewId() => Guid.NewGuid().ToString("N")[..12];
+
+    public static string DefaultLayerName(int n) => Localizer.T("ink.layer_name", n);
+
+    /// <summary>Adds a layer above the active one and makes it active; null when there are already <see cref="MaxLayers"/>.</summary>
+    public static InkLayer? AddLayer(InkDocument doc, string? name = null)
+    {
+        if (doc.Layers.Count >= MaxLayers) return null;
+        var n = 1;
+        while (doc.Layers.Any(l => l.Name == DefaultLayerName(n))) n++;
+        var layer = new InkLayer { Name = CleanName(name) is { Length: > 0 } c ? c : DefaultLayerName(n) };
+        var at = doc.Layers.Count == 0 ? 0 : Math.Clamp(doc.Active + 1, 0, doc.Layers.Count);
+        doc.Layers.Insert(at, layer);
+        doc.Active = at;
+        return layer;
+    }
+
+    /// <summary>Removes the active layer; the one below becomes active. The last layer is emptied instead.</summary>
+    public static void DeleteActiveLayer(InkDocument doc)
+    {
+        _ = doc.ActiveLayer;
+        if (doc.Layers.Count == 1)
+        {
+            var only = doc.Layers[0];
+            doc.Layers[0] = new InkLayer { Id = only.Id, Name = only.Name, Visible = only.Visible };
+            return;
+        }
+        doc.Layers.RemoveAt(doc.Active);
+        doc.Active = Math.Clamp(doc.Active - 1, 0, doc.Layers.Count - 1);
+    }
+
+    public static string CleanName(string? name)
+    {
+        var s = string.Join(' ', (name ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return s.Length > MaxLayerName ? s[..MaxLayerName] : s;
+    }
+
+    /// <summary>Size of a new picture: its own size, made smaller (same shape) to fit <see cref="PlaceSize"/>.</summary>
+    public static (double W, double H) PlaceSizeFor(double pixelWidth, double pixelHeight)
+    {
+        if (pixelWidth <= 0 || pixelHeight <= 0) return (PlaceSize, PlaceSize);
+        var scale = Math.Min(1, PlaceSize / Math.Max(pixelWidth, pixelHeight));
+        return (Math.Max(MinImageSize, pixelWidth * scale), Math.Max(MinImageSize, pixelHeight * scale));
+    }
+
+    /// <summary>The topmost picture of the layer under the point, or -1.</summary>
+    public static int HitImage(InkLayer layer, double x, double y)
+    {
+        for (var i = layer.Images.Count - 1; i >= 0; i--)
+            if (layer.Images[i].Contains(x, y)) return i;
+        return -1;
+    }
+
+    /// <summary>True when the point is on the resize handle (bottom-right corner) of the picture.</summary>
+    public static bool OnHandle(SketchImage img, double x, double y) =>
+        Math.Abs(x - (img.X + img.W)) <= HandleSize && Math.Abs(y - (img.Y + img.H)) <= HandleSize;
+
+    /// <summary>The picture dragged by its bottom-right corner to (x, y): same shape unless <paramref name="free"/>.</summary>
+    public static SketchImage Resize(SketchImage img, double x, double y, bool free)
+    {
+        var w = Math.Max(MinImageSize, x - img.X);
+        var h = Math.Max(MinImageSize, y - img.Y);
+        if (!free && img.W > 0 && img.H > 0)
+        {
+            // Same shape, following the direction dragged further.
+            var ratio = img.W / img.H;
+            if (w / img.W >= h / img.H) h = w / ratio; else w = h * ratio;
+            if (w < MinImageSize) { w = MinImageSize; h = w / ratio; }
+            if (h < MinImageSize) { h = MinImageSize; w = h * ratio; }
+        }
+        return img with { W = Math.Round(w, 1), H = Math.Round(h, 1) };
+    }
+
+    /// <summary>Every picture file that is still used (on a layer or in a cell).</summary>
+    public static HashSet<string> UsedFiles(InkDocument doc) =>
+        new(doc.Layers.SelectMany(l => l.Images.Select(i => i.File)).Concat(doc.CellImages.Values.Select(c => c.File)), StringComparer.OrdinalIgnoreCase);
+
+    public static InkDocument CloneLayers(InkDocument doc) => new()
+    {
+        Layers = doc.Layers.Select(l => l.Clone()).ToList(),
+        Active = doc.Active
+    };
+}
+
 /// <summary>
-/// sketch.json next to note.json. Written to a .tmp file first and swapped in, keeping the one before as
-/// sketch.json.prev. A file that can't be read is kept aside as sketch.json.bad-yyyyMMdd-HHmmss and the pad starts empty.
+/// layers.json next to note.json, pictures in the images folder beside it. note.json itself is not changed.
+/// Written to a .tmp file first and swapped in, keeping the one before as layers.json.prev. A file that can't be read
+/// is kept aside as layers.json.bad-yyyyMMdd-HHmmss and the layers start empty.
 /// </summary>
-public static class SketchStore
+public static class InkStore
 {
     public const int FileVersion = 1;
     public const int MaxFileBytes = 16 * 1024 * 1024;
+    public const long MaxImageBytes = 20L * 1024 * 1024;
+    public static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"];
 
-    public static string PathFor(string notePath) => Path.Combine(Path.GetDirectoryName(notePath) ?? ".", "sketch.json");
+    public static string PathFor(string notePath) => Path.Combine(Path.GetDirectoryName(notePath) ?? ".", "layers.json");
+    public static string ImagesDir(string notePath) => Path.Combine(Path.GetDirectoryName(notePath) ?? ".", "images");
+    public static string ImagePath(string notePath, string file) => Path.Combine(ImagesDir(notePath), Path.GetFileName(file));
 
-    internal sealed class SketchFileDto
+    public static bool IsImageFile(string path) => ImageExtensions.Contains(Path.GetExtension(path).ToLowerInvariant());
+
+    /// <summary>Copies a picture into the images folder under a new name and returns that name.</summary>
+    public static string Import(string notePath, string source)
+    {
+        if (!IsImageFile(source)) throw new InvalidDataException(Localizer.T("ink.image_type"));
+        var info = new FileInfo(source);
+        if (!info.Exists) throw new FileNotFoundException(source);
+        if (info.Length > MaxImageBytes) throw new InvalidDataException(Localizer.T("ink.image_too_big", MaxImageBytes / 1024 / 1024));
+        var dir = ImagesDir(notePath);
+        Directory.CreateDirectory(dir);
+        var name = "img-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "-" + InkOps.NewId()[..6] +
+                   Path.GetExtension(source).ToLowerInvariant();
+        File.Copy(source, Path.Combine(dir, name));
+        return name;
+    }
+
+    internal sealed class InkFileDto
     {
         public int Version { get; set; } = FileVersion;
-        public int Page { get; set; }
-        public bool Lined { get; set; } = true;
+        public int Active { get; set; }
         public string? PenColor { get; set; }
         public double PenWidth { get; set; } = SketchOps.DefaultPenWidth;
         public int Sharpness { get; set; } = 100;
         public double EraserWidth { get; set; } = SketchOps.DefaultEraserWidth;
-        public List<PageDto>? Pages { get; set; }
+        public List<LayerDto>? Layers { get; set; }
+        public Dictionary<string, CellImageDto>? CellImages { get; set; }
     }
 
-    internal sealed class PageDto
+    internal sealed class LayerDto
     {
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public bool Visible { get; set; } = true;
         public List<StrokeDto>? Strokes { get; set; }
+        public List<ImageDto>? Images { get; set; }
     }
 
     internal sealed class StrokeDto
@@ -277,38 +417,54 @@ public static class SketchStore
         public double[]? Points { get; set; }
     }
 
+    internal sealed class ImageDto
+    {
+        public string? Id { get; set; }
+        public string? File { get; set; }
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double W { get; set; }
+        public double H { get; set; }
+    }
+
+    internal sealed class CellImageDto
+    {
+        public string? File { get; set; }
+        public bool Open { get; set; }
+    }
+
     private static readonly TableNoteJson Json = new(new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = false
     });
 
-    /// <summary>Reads sketch.json; a missing file is an empty pad. <paramref name="warning"/> is set when a broken file was put aside.</summary>
-    public static SketchDocument Load(string path, out string? warning)
+    /// <summary>Reads layers.json; a missing file is no layers. <paramref name="warning"/> is set when a broken file was put aside.</summary>
+    public static InkDocument Load(string path, out string? warning)
     {
         warning = null;
-        if (!File.Exists(path)) return new SketchDocument();
+        if (!File.Exists(path)) return new InkDocument();
         try
         {
-            if (new FileInfo(path).Length > MaxFileBytes) throw new InvalidDataException("sketch.json is larger than " + MaxFileBytes + " bytes");
-            var dto = JsonSerializer.Deserialize(File.ReadAllText(path), Json.SketchFileDto) ?? throw new InvalidDataException("empty");
+            if (new FileInfo(path).Length > MaxFileBytes) throw new InvalidDataException("layers.json is larger than " + MaxFileBytes + " bytes");
+            var dto = JsonSerializer.Deserialize(File.ReadAllText(path), Json.InkFileDto) ?? throw new InvalidDataException("empty");
             return FromDto(dto);
         }
         catch (Exception ex) when (ex is JsonException or InvalidDataException or NotSupportedException or IOException or UnauthorizedAccessException)
         {
             var bad = path + ".bad-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
             try { File.Move(path, bad, overwrite: true); } catch (Exception moveEx) when (moveEx is IOException or UnauthorizedAccessException) { bad = path; }
-            AppLog.Write("sketch", "could not read sketch.json (" + ex.Message + "); kept as " + Path.GetFileName(bad));
+            AppLog.Write("ink", "could not read layers.json (" + ex.Message + "); kept as " + Path.GetFileName(bad));
             warning = Path.GetFileName(bad);
-            return new SketchDocument();
+            return new InkDocument();
         }
     }
 
-    public static void Save(string path, SketchDocument doc)
+    public static void Save(string path, InkDocument doc)
     {
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        var text = JsonSerializer.Serialize(ToDto(doc), Json.SketchFileDto);
+        var text = JsonSerializer.Serialize(ToDto(doc), Json.InkFileDto);
         var tmp = path + ".tmp";
         File.WriteAllText(tmp, text);
         if (File.Exists(path))
@@ -316,54 +472,66 @@ public static class SketchStore
             try { File.Replace(tmp, path, path + ".prev", ignoreMetadataErrors: true); return; }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
             {
-                AppLog.Write("sketch", "File.Replace failed (" + ex.Message + ") → move");
+                AppLog.Write("ink", "File.Replace failed (" + ex.Message + ") → move");
             }
         }
         File.Move(tmp, path, overwrite: true);
     }
 
-    internal static SketchFileDto ToDto(SketchDocument doc) => new()
+    internal static InkFileDto ToDto(InkDocument doc) => new()
     {
         Version = FileVersion,
-        Page = doc.Page,
-        Lined = doc.Lined,
+        Active = doc.Active,
         PenColor = doc.PenColor,
         PenWidth = doc.PenWidth,
         Sharpness = doc.Sharpness,
         EraserWidth = doc.EraserWidth,
-        Pages = doc.Pages.Select(p => new PageDto
+        Layers = doc.Layers.Select(l => new LayerDto
         {
-            Strokes = p.Strokes.Select(s => new StrokeDto
+            Id = l.Id,
+            Name = l.Name,
+            Visible = l.Visible,
+            Strokes = l.Strokes.Select(s => new StrokeDto
             {
-                Color = s.Color,
-                Width = s.Width,
-                Sharpness = s.Sharpness,
-                Ruler = s.Ruler,
+                Color = s.Color, Width = s.Width, Sharpness = s.Sharpness, Ruler = s.Ruler,
                 Points = s.Points.Select(v => Math.Round(v, 1)).ToArray()
-            }).ToList()
-        }).ToList()
+            }).ToList(),
+            Images = l.Images.Select(i => new ImageDto { Id = i.Id, File = i.File, X = Math.Round(i.X, 1), Y = Math.Round(i.Y, 1), W = i.W, H = i.H }).ToList()
+        }).ToList(),
+        CellImages = doc.CellImages.ToDictionary(kv => kv.Key, kv => new CellImageDto { File = kv.Value.File, Open = kv.Value.Open })
     };
 
-    internal static SketchDocument FromDto(SketchFileDto dto)
+    private static bool GoodFile(string? f) => !string.IsNullOrWhiteSpace(f) && Path.GetFileName(f) == f && IsImageFile(f);
+
+    internal static InkDocument FromDto(InkFileDto dto)
     {
-        var pages = (dto.Pages ?? []).Take(SketchOps.MaxPages).Select(p => new SketchPage
+        var layers = (dto.Layers ?? []).Take(InkOps.MaxLayers).Select((l, n) => new InkLayer
         {
-            Strokes = (p.Strokes ?? [])
+            Id = string.IsNullOrWhiteSpace(l.Id) ? InkOps.NewId() : l.Id!,
+            Name = InkOps.CleanName(l.Name) is { Length: > 0 } name ? name : InkOps.DefaultLayerName(n + 1),
+            Visible = l.Visible,
+            Strokes = (l.Strokes ?? [])
                 .Where(s => s.Points is { Length: >= 2 } && s.Points.All(double.IsFinite))
                 .Select(s => new SketchStroke(s.Color ?? SketchOps.DefaultColor, s.Width, s.Sharpness,
                     s.Points!.Length > 2 * SketchOps.MaxPointsPerStroke ? s.Points[..(2 * SketchOps.MaxPointsPerStroke)] : s.Points, s.Ruler))
+                .ToList(),
+            Images = (l.Images ?? [])
+                .Where(i => GoodFile(i.File) && double.IsFinite(i.X) && double.IsFinite(i.Y) && double.IsFinite(i.W) && double.IsFinite(i.H))
+                .Select(i => new SketchImage(string.IsNullOrWhiteSpace(i.Id) ? InkOps.NewId() : i.Id!, i.File!, i.X, i.Y,
+                    Math.Max(InkOps.MinImageSize, i.W), Math.Max(InkOps.MinImageSize, i.H)))
                 .ToList()
         }).ToList();
-        if (pages.Count == 0) pages.Add(new SketchPage());
-        return new SketchDocument
+        return new InkDocument
         {
-            Pages = pages,
-            Page = Math.Clamp(dto.Page, 0, pages.Count - 1),
-            Lined = dto.Lined,
+            Layers = layers,
+            Active = layers.Count == 0 ? 0 : Math.Clamp(dto.Active, 0, layers.Count - 1),
             PenColor = SketchOps.NormalizeColor(dto.PenColor),
             PenWidth = SketchOps.ClampWidth(dto.PenWidth),
             Sharpness = SketchOps.ClampSharpness(dto.Sharpness),
-            EraserWidth = SketchOps.ClampWidth(dto.EraserWidth)
+            EraserWidth = SketchOps.ClampWidth(dto.EraserWidth),
+            CellImages = (dto.CellImages ?? [])
+                .Where(kv => CellDetailOps.TrySplit(kv.Key, out _, out _) && GoodFile(kv.Value?.File))
+                .ToDictionary(kv => kv.Key, kv => new CellImage(kv.Value.File!, kv.Value.Open))
         };
     }
 }

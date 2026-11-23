@@ -6,9 +6,10 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using TableNote;
 
-// 2.6.1.1 drawing pad.
+// 2.6.1.1 drawing and pictures on the table in layers, pictures in cells.
 var fail = 0;
 void Ok(bool cond, string name, string detail = "")
 {
@@ -16,6 +17,9 @@ void Ok(bool cond, string name, string detail = "")
     if (!cond) fail++;
 }
 var dir = Directory.CreateTempSubdirectory("tn-sketch").FullName;
+var note = Path.Combine(dir, "note.json");
+Environment.SetEnvironmentVariable("TABLENOTE_DATA", note);
+File.WriteAllText(Path.Combine(dir, "settings.json"), "{ \"language\": \"th\", \"uiScale\": 100 }");
 AppLog.PathOverride = Path.Combine(dir, "tablenote.log");
 Localizer.SetLanguage("th");
 
@@ -57,196 +61,241 @@ Ok(ruledLeft is { Count: 2 } && ruledLeft.All(s => s.Ruler), "a ruler line (two 
 Ok(SketchOps.Erase([new SketchStroke("#000000", 20, 100, [0, 0, 100, 0])], 50, 14, 50, 14, 5) is { Count: 2 },
     "a thick line is hit at its edge, not only at its centre");
 
-// ── sketch.json ──
-var file = Path.Combine(dir, "sketch.json");
-var doc0 = SketchStore.Load(file, out var w0);
-Ok(w0 == null && doc0.Pages.Count == 1 && doc0.Current.Strokes.Count == 0 && doc0.Lined, "no file: one empty lined page");
-doc0.PenColor = "#DC2626"; doc0.PenWidth = 7; doc0.Sharpness = 40; doc0.EraserWidth = 30; doc0.Lined = false;
-doc0.Current.Strokes.Add(new SketchStroke("#16A34A", 5, 35, [1.04, 2.06, 30, 40, 55, 60]));
-doc0.Pages.Add(new SketchPage { Strokes = [new SketchStroke("#000000", 2, 100, [0, 0, 80, 80], ruler: true)] });
-doc0.Page = 1;
-SketchStore.Save(file, doc0);
-SketchStore.Save(file, doc0); // second save swaps in and keeps .prev
-var doc1 = SketchStore.Load(file, out var w1);
-Ok(w1 == null && doc1.Pages.Count == 2 && doc1.Page == 1 && !doc1.Lined && doc1.PenColor == "#DC2626" && doc1.PenWidth == 7 &&
-   doc1.Sharpness == 40 && doc1.EraserWidth == 30, "settings and pages come back");
-var s0 = doc1.Pages[0].Strokes.Single();
-Ok(s0.Color == "#16A34A" && s0.Width == 5 && s0.Sharpness == 35 && s0.Points.SequenceEqual([1.0, 2.1, 30, 40, 55, 60]) && !s0.Ruler &&
-   doc1.Pages[1].Strokes.Single().Ruler, "strokes come back (points to 0.1 px), ruler lines marked");
-Ok(File.Exists(file + ".prev") && !File.Exists(file + ".tmp"), "the file before is kept as sketch.json.prev, no .tmp left");
-File.WriteAllText(file, "{ not json");
-var doc2 = SketchStore.Load(file, out var w2);
-Ok(w2 != null && w2.StartsWith("sketch.json.bad-", StringComparison.Ordinal) && File.Exists(Path.Combine(dir, w2)) && !File.Exists(file) &&
-   doc2.Current.Strokes.Count == 0, "a broken file is kept aside and the pad starts empty", w2 ?? "");
-File.WriteAllText(file, "{\"version\":1,\"page\":9,\"penWidth\":-3,\"sharpness\":400,\"penColor\":\"nope\",\"pages\":[{\"strokes\":[{\"color\":\"#000\",\"width\":2,\"points\":[1]}," +
-                        "{\"color\":\"#000\",\"width\":2,\"points\":[1,2,3,4]}]}]}");
-var doc3 = SketchStore.Load(file, out _);
-Ok(doc3.Page == 0 && doc3.PenWidth == SketchOps.MinWidth && doc3.Sharpness == 100 && doc3.PenColor == SketchOps.DefaultColor &&
-   doc3.Current.Strokes.Count == 1 && doc3.Current.Strokes[0].Color == "#000000", "odd values are put right, a stroke without a point is dropped");
-Ok(SketchStore.PathFor(Path.Combine(dir, "note.json")) == file, "sketch.json lives next to note.json");
+// ── layers ──
+var ink = new InkDocument();
+Ok(ink.ActiveLayer.Name == "เลเยอร์ 1" && ink.Layers.Count == 1, "the first layer is made when needed");
+var l2 = InkOps.AddLayer(ink);
+Ok(l2 != null && ink.Layers.Count == 2 && ink.Active == 1 && l2.Name == "เลเยอร์ 2", "+ Layer adds one above the active one and makes it active");
+ink.Active = 0;
+InkOps.AddLayer(ink, "  ลายมือ   หัวหน้า ");
+Ok(ink.Layers[1].Name == "ลายมือ หัวหน้า" && ink.Active == 1 && ink.Layers[2].Name == "เลเยอร์ 2", "a named layer goes right above the active one; spaces tidied");
+while (InkOps.AddLayer(ink) != null) { }
+Ok(ink.Layers.Count == InkOps.MaxLayers, "at most 10 layers");
+ink.Active = 3;
+InkOps.DeleteActiveLayer(ink);
+Ok(ink.Layers.Count == InkOps.MaxLayers - 1 && ink.Active == 2, "deleting a layer makes the one below active");
+var single = new InkDocument();
+single.ActiveLayer.Strokes.Add(new SketchStroke("#000000", 2, 100, [0, 0, 5, 5]));
+var keepId = single.ActiveLayer.Id;
+InkOps.DeleteActiveLayer(single);
+Ok(single.Layers.Count == 1 && single.ActiveLayer.Strokes.Count == 0 && single.ActiveLayer.Id == keepId, "deleting the only layer empties it");
+
+// ── pictures on a layer ──
+Ok(InkOps.PlaceSizeFor(1600, 800) == (320, 160) && InkOps.PlaceSizeFor(100, 50) == (100, 50), "a new picture keeps its shape, at most 320 px");
+var pic = new SketchImage("a", "x.png", 10, 20, 200, 100);
+var layer = new InkLayer { Images = [pic, new SketchImage("b", "y.png", 100, 50, 50, 50)] };
+Ok(InkOps.HitImage(layer, 120, 60) == 1 && InkOps.HitImage(layer, 20, 30) == 0 && InkOps.HitImage(layer, 500, 500) == -1, "the topmost picture under the point is picked");
+Ok(InkOps.OnHandle(pic, 210, 120) && !InkOps.OnHandle(pic, 100, 60), "the resize handle is the bottom-right corner");
+var bigger = InkOps.Resize(pic, 410, 140, free: false);
+Ok(bigger.W == 400 && bigger.H == 200 && bigger.X == 10 && bigger.Y == 20, "resizing keeps the shape, following the longer drag", $"{bigger.W}x{bigger.H}");
+var free = InkOps.Resize(pic, 110, 400, free: true);
+Ok(free.W == 100 && free.H == 380, "with Shift any shape");
+Ok(InkOps.Resize(pic, 0, 0, false).W >= InkOps.MinImageSize, "never smaller than 16 px");
+
+// ── layers.json ──
+var file = Path.Combine(dir, "layers.json");
+Ok(InkStore.PathFor(note) == file && InkStore.ImagesDir(note) == Path.Combine(dir, "images"), "layers.json and images/ live next to note.json");
+var d0 = InkStore.Load(file, out var w0);
+Ok(w0 == null && d0.Layers.Count == 0 && d0.CellImages.Count == 0, "no file: no layers yet");
+var d1 = new InkDocument { PenColor = "#DC2626", PenWidth = 7, Sharpness = 40, EraserWidth = 30 };
+d1.ActiveLayer.Strokes.Add(new SketchStroke("#16A34A", 5, 35, [1.04, 2.06, 30, 40, 55, 60]));
+InkOps.AddLayer(d1, "ภาพ");
+d1.ActiveLayer.Visible = false;
+d1.ActiveLayer.Images.Add(new SketchImage("img1", "img-1.png", 5, 6, 70, 80));
+d1.ActiveLayer.Strokes.Add(new SketchStroke("#000000", 2, 100, [0, 0, 80, 80], ruler: true));
+d1.CellImages[CellDetailOps.Key("r1", "c1")] = new CellImage("img-2.jpg", true);
+InkStore.Save(file, d1);
+InkStore.Save(file, d1);
+var d2 = InkStore.Load(file, out var w2);
+Ok(w2 == null && d2.Layers.Count == 2 && d2.Active == 1 && d2.PenColor == "#DC2626" && d2.PenWidth == 7 && d2.Sharpness == 40 && d2.EraserWidth == 30,
+    "layers and settings come back");
+Ok(d2.Layers[0].Visible && !d2.Layers[1].Visible && d2.Layers[1].Name == "ภาพ" && d2.Layers[0].Id == d1.Layers[0].Id, "names, ids and shown / hidden come back");
+Ok(d2.Layers[0].Strokes.Single().Points.SequenceEqual([1.0, 2.1, 30, 40, 55, 60]) && d2.Layers[1].Strokes.Single().Ruler &&
+   d2.Layers[1].Images.Single() == new SketchImage("img1", "img-1.png", 5, 6, 70, 80), "strokes (to 0.1 px) and pictures come back");
+Ok(d2.CellImages.Single().Value == new CellImage("img-2.jpg", true), "pictures in cells come back");
+Ok(File.Exists(file + ".prev") && !File.Exists(file + ".tmp"), "the file before is kept as layers.json.prev");
+File.WriteAllText(file, "{ broken");
+var d3 = InkStore.Load(file, out var w3);
+Ok(w3 != null && w3.StartsWith("layers.json.bad-", StringComparison.Ordinal) && !File.Exists(file) && d3.Layers.Count == 0, "a broken file is kept aside", w3 ?? "");
+File.WriteAllText(file, "{\"layers\":[{\"name\":\"\",\"images\":[{\"file\":\"../evil.png\",\"w\":5,\"h\":5},{\"file\":\"a.txt\"},{\"file\":\"ok.png\",\"w\":2,\"h\":2}]}]," +
+                        "\"cellImages\":{\"nokey\":{\"file\":\"a.png\"},\"r|c\":{\"file\":\"..\\\\x.png\"}}}");
+var d4 = InkStore.Load(file, out _);
+Ok(d4.Layers[0].Name == "เลเยอร์ 1" && d4.Layers[0].Images.Single().File == "ok.png" && d4.Layers[0].Images[0].W == InkOps.MinImageSize && d4.CellImages.Count == 0,
+    "pictures outside the images folder, other file types and bad cell keys are dropped",
+    string.Join(",", d4.Layers[0].Images.Select(i => i.File)) + " / " + string.Join(",", d4.CellImages.Keys));
 File.Delete(file);
 
-// ── the window ──
+// ── on the table ──
+var seed = new NoteDocument { Columns = ["หัวข้อ", "รายละเอียด", "สถานะ"], ColumnRolesList = ["title", "", "status"], DueColumnOmitted = true, TrayNoticeShown = true };
+for (var i = 0; i < 30; i++) seed.Rows.Add([$"งาน {i + 1}", "", ""]);
+seed.EnsureRowIds();
+seed.EnsureColumnIds();
+NoteStore.Save(note, seed);
 AppBuilder.Configure<App>()
     .UseSkia()
     .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
     .With(AppFonts.ManagerOptions)
     .SetupWithoutStarting();
-var pad = new SketchWindow(file) { Width = 980, Height = 680 };
-pad.Show();
-Pump(pad, 50);
-var labels = pad.GetLogicalDescendants().OfType<ContentControl>().Select(c => c.Content as string ?? "").Where(s => s.Length > 0).ToList();
-Ok(new[] { "ปากกา", "ยางลบ", "ไม้บรรทัด", "ลบทั้งหมด", "กระดาษมีเส้น", "+ หน้า", "ลบหน้า" }.All(labels.Contains), "Thai tool names", string.Join(" | ", labels));
-var texts = pad.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
-Ok(texts.Contains("ความคมชัด") && texts.Contains("สี") && texts.Contains("ขนาด") && texts.Contains("หน้า 1/1"), "colour, size, sharpness and page labels", string.Join(" | ", texts));
 
-var canvas = pad.Canvas;
-Point At(double x, double y) => canvas.TranslatePoint(new Point(x, y), pad)!.Value;
-void Drag(double x0, double y0, double x1, double y1, RawInputModifiers mods = RawInputModifiers.None, int steps = 12)
+// a picture to insert: 200 × 100, blue
+var png = Path.Combine(dir, "blue.png");
 {
-    pad.MouseMove(At(x0, y0), mods);
-    pad.MouseDown(At(x0, y0), MouseButton.Left, mods);
-    for (var i = 1; i <= steps; i++) pad.MouseMove(At(x0 + (x1 - x0) * i / steps, y0 + (y1 - y0) * i / steps), mods);
-    pad.MouseUp(At(x1, y1), MouseButton.Left, mods);
-    Pump(pad, 10);
+    var wb = new Avalonia.Media.Imaging.WriteableBitmap(new PixelSize(200, 100), new Vector(96, 96), Avalonia.Platform.PixelFormat.Bgra8888, Avalonia.Platform.AlphaFormat.Premul);
+    using (var fb = wb.Lock())
+        unsafe { for (var i = 0; i < 200 * 100; i++) ((uint*)fb.Address)[i] = 0xFF2563EB; }
+    wb.Save(png);
 }
 
-pad.SetColor("#2563EB");
-pad.SetSize(6);
-pad.SetSharpness(100);
-Drag(100, 100, 400, 160);
-var strokes = pad.Document.Current.Strokes;
-Ok(strokes.Count == 1 && strokes[0].Color == "#2563EB" && strokes[0].Width == 6 && strokes[0].Sharpness == 100 && strokes[0].PointCount >= 10 && !strokes[0].Ruler,
-    "the pen draws a stroke with the chosen colour, size and sharpness", strokes.Count == 0 ? "none" : $"{strokes[0].Color} {strokes[0].Width} {strokes[0].PointCount}");
-Ok(pad.CanUndo, "a stroke is an undo step");
+var window = new MainWindow { Width = 980, Height = 640 };
+ToolTip.SetServiceEnabled(window, false);
+window.Show();
+Pump(window, 300);
+var overlay = window.InkLayerControl;
+var draw = window.FindControl<Button>("SketchButton")!;
+Ok(draw.Content as string == "วาดเขียน" && !overlay.IsHitTestVisible && !window.InkOn, "Draw button; the table takes the mouse while drawing is off");
+Click(window, draw);
+Pump(window, 50);
+var bar = window.FindControl<Border>("InkBar")!;
+Ok(window.InkOn && bar.IsVisible && overlay.IsHitTestVisible, "Draw turns drawing on: the bar shows and the layers take the mouse");
+var barTexts = bar.GetLogicalDescendants().OfType<ContentControl>().Select(c => c.Content as string ?? "").Where(s => s.Length > 0)
+    .Concat(bar.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text ?? "")).ToList();
+Ok(new[] { "ปากกา", "ยางลบ", "ไม้บรรทัด", "ย้าย", "ลบทั้งหมด", "+ รูปภาพ", "+ เลเยอร์", "เสร็จ", "ความคมชัด", "เลเยอร์ 1" }.All(barTexts.Contains),
+    "Thai tool names, sharpness and the first layer in the bar", string.Join(" | ", barTexts.Distinct()));
 
-pad.SetSharpness(20);
-pad.SetTool(SketchTool.Ruler);
-Drag(100, 300, 500, 318, RawInputModifiers.Shift, steps: 6);
-var ruler = pad.Document.Current.Strokes.Last();
-Ok(ruler.Ruler && ruler.PointCount == 2 && Math.Abs(ruler.Points[1] - ruler.Points[3]) < 0.01 && ruler.Sharpness == 20,
-    "the ruler with Shift draws a level straight line", string.Join(",", ruler.Points.Select(v => v.ToString("0.#"))));
-pad.SetTool(SketchTool.Ruler);
-Drag(100, 400, 300, 470, steps: 4);
-var free = pad.Document.Current.Strokes.Last();
-Ok(free.Ruler && Math.Abs(free.Points[2] - 300) < 0.5 && Math.Abs(free.Points[3] - 470) < 0.5, "without Shift the ruler goes where it is dragged");
-
-pad.SetTool(SketchTool.Eraser);
-pad.SetSize(24);
-Ok(pad.Document.EraserWidth == 24 && pad.Document.PenWidth == 6, "the eraser keeps its own size");
-var before = pad.Document.Current.Strokes.Count;
-Drag(300, 250, 300, 340, steps: 10); // across the level ruler line
-Ok(pad.Document.Current.Strokes.Count == before + 1 && pad.Document.Current.Strokes.Count(s => s.Ruler && Math.Abs(s.Points[1] - 300) < 1) == 2,
-    "the eraser cuts the ruler line in two", pad.Document.Current.Strokes.Count.ToString());
-pad.Undo();
-Ok(pad.Document.Current.Strokes.Count == before && pad.CanRedo, "Undo brings the erased part back");
-pad.Redo();
-Ok(pad.Document.Current.Strokes.Count == before + 1, "Redo erases it again");
-pad.SetTool(SketchTool.Pen);
-Ok(pad.Document.Current.Strokes.Count > 0, "still drawn before Clear all");
-Shot(pad, "sketch-drawn");
-
-pad.AddPage();
-Ok(pad.Document.Pages.Count == 2 && pad.Document.Page == 1 && pad.Document.Current.Strokes.Count == 0 &&
-   pad.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "หน้า 2/2"), "+ Page adds an empty page after this one and shows it");
-Drag(80, 80, 200, 200);
-pad.GoToPage(0);
-Ok(pad.Document.Current.Strokes.Count == before + 1, "the first page keeps its drawing");
-
-pad.ClearAllNow();
-Ok(pad.Document.Current.Strokes.Count == 0 && pad.Document.Pages[1].Strokes.Count == 1, "Clear all empties this page only");
-pad.Undo();
-Ok(pad.Document.Current.Strokes.Count == before + 1, "Undo brings a cleared page back");
-
-// Clear all through the button asks first.
-var clearButton = pad.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == "ลบทั้งหมด");
-clearButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-Pump(pad, 80);
-var ask = pad.OwnedWindows.FirstOrDefault(w => w.IsVisible);
-Ok(ask != null, "Clear all asks first");
-if (ask != null)
+Point At(double x, double y) => overlay.TranslatePoint(new Point(x, y), window)!.Value;
+void Drag(double x0, double y0, double x1, double y1, RawInputModifiers mods = RawInputModifiers.None, int steps = 10)
 {
-    ask.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == "ยกเลิก").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-    Pump(pad, 80);
+    window.MouseMove(At(x0, y0), mods);
+    window.MouseDown(At(x0, y0), MouseButton.Left, mods);
+    for (var i = 1; i <= steps; i++) window.MouseMove(At(x0 + (x1 - x0) * i / steps, y0 + (y1 - y0) * i / steps), mods);
+    window.MouseUp(At(x1, y1), MouseButton.Left, mods);
+    Pump(window, 10);
 }
-Ok(pad.Document.Current.Strokes.Count == before + 1, "Cancel keeps the drawing");
 
-pad.SetHex("#7c3aed");
-Ok(pad.Document.PenColor == "#7C3AED", "a colour typed as #RRGGBB is used");
-pad.SetHex("purple");
-Ok(pad.Document.PenColor == "#7C3AED" && pad.StatusText.Contains("#RRGGBB"), "a colour that can't be read is refused with a hint", pad.StatusText);
+var cellsBefore = string.Join("|", Doc(window).Rows.Select(r => string.Join(",", r)));
+window.SetInkColor("#DC2626");
+window.SetInkSize(5);
+window.SetInkSharpness(100);
+Drag(150, 80, 450, 140);
+var strokes = window.Ink.ActiveLayer.Strokes;
+Ok(strokes.Count == 1 && strokes[0].Color == "#DC2626" && strokes[0].Width == 5 && strokes[0].PointCount >= 8, "the pen writes on the table (layer 1)");
+Ok(string.Join("|", Doc(window).Rows.Select(r => string.Join(",", r))) == cellsBefore, "drawing does not touch the cells");
 
-// Keys
-pad.KeyPress(Key.E, RawInputModifiers.None, PhysicalKey.E, "e");
-Ok(pad.Canvas.Tool == SketchTool.Eraser, "E picks the eraser");
-pad.KeyPress(Key.R, RawInputModifiers.None, PhysicalKey.R, "r");
-Ok(pad.Canvas.Tool == SketchTool.Ruler, "R picks the ruler");
-pad.KeyPress(Key.P, RawInputModifiers.None, PhysicalKey.P, "p");
-Ok(pad.Canvas.Tool == SketchTool.Pen, "P picks the pen");
-var n = pad.Document.Current.Strokes.Count;
-Drag(600, 100, 700, 150);
-pad.KeyPress(Key.Z, RawInputModifiers.Control, PhysicalKey.Z, "z");
-Ok(pad.Document.Current.Strokes.Count == n, "Ctrl+Z undoes the last stroke");
-pad.KeyPress(Key.Y, RawInputModifiers.Control, PhysicalKey.Y, "y");
-Ok(pad.Document.Current.Strokes.Count == n + 1, "Ctrl+Y redoes it");
+// scrolling: the drawing moves with the table
+var rows = RowsScroll(window);
+rows.Offset = new Vector(0, 120);
+Pump(window, 30);
+Drag(150, 80, 450, 80, steps: 4);
+var second = window.Ink.ActiveLayer.Strokes.Last();
+Ok(Math.Abs(second.Points[1] - 200) < 1, "points are kept in table coordinates (scrolled 120 px → y 80 is 200)", second.Points[1].ToString("0.#"));
+rows.Offset = new Vector(0, 0);
+Pump(window, 30);
 
-pad.Close();
-Pump(pad, 30);
-var saved = SketchStore.Load(file, out _);
-Ok(saved.Pages.Count == 2 && saved.Pages[0].Strokes.Count == n + 1 && saved.Pages[1].Strokes.Count == 1 && saved.PenColor == "#7C3AED",
-    "closing the window saves sketch.json", $"{saved.Pages.Count} pages, {saved.Pages[0].Strokes.Count} strokes");
+window.SetInkTool(SketchTool.Ruler);
+Drag(150, 300, 500, 312, RawInputModifiers.Shift, steps: 5);
+var ruler = window.Ink.ActiveLayer.Strokes.Last();
+Ok(ruler.Ruler && Math.Abs(ruler.Points[1] - ruler.Points[3]) < 0.01, "the ruler with Shift draws a level line");
 
-var again = new SketchWindow(file);
-again.Show();
-Pump(again, 30);
-Ok(again.Document.Current.Strokes.Count == n + 1 && !again.CanUndo, "opening again shows the drawing (undo starts fresh)");
-again.DeletePage();
-Ok(again.Document.Pages.Count == 1, "Delete page removes it");
-again.DeletePage();
-Ok(again.Document.Pages.Count == 1 && again.Document.Current.Strokes.Count == 0, "deleting the last page leaves one empty page");
-again.Undo(); again.Undo();
-Ok(again.Document.Pages.Count == 2, "page deletes can be undone");
-again.Close();
+window.SetInkTool(SketchTool.Eraser);
+window.SetInkSize(20);
+var n = window.Ink.ActiveLayer.Strokes.Count;
+Drag(300, 280, 300, 330, steps: 8);
+Ok(window.Ink.ActiveLayer.Strokes.Count == n + 1, "the eraser cuts the ruler line in two");
+window.KeyPress(Key.Z, RawInputModifiers.Control, PhysicalKey.Z, "z");
+Ok(window.Ink.ActiveLayer.Strokes.Count == n, "Ctrl+Z while drawing undoes the drawing (not the table)");
+window.KeyPress(Key.Y, RawInputModifiers.Control, PhysicalKey.Y, "y");
+Ok(window.Ink.ActiveLayer.Strokes.Count == n + 1, "Ctrl+Y redoes it");
 
-// Soft lines (sharpness 0) render and look different from crisp ones.
-var softPad = new SketchWindow(Path.Combine(dir, "soft.json")) { Width = 700, Height = 420 };
-softPad.Show();
-Pump(softPad, 20);
-softPad.SetSize(10);
-softPad.SetSharpness(0);
-softPad.Canvas.Document.Lined = false;
-var c2 = softPad.Canvas;
-Point At2(double x, double y) => c2.TranslatePoint(new Point(x, y), softPad)!.Value;
-softPad.MouseDown(At2(60, 100), MouseButton.Left);
-for (var i = 1; i <= 10; i++) softPad.MouseMove(At2(60 + 50 * i, 100));
-softPad.MouseUp(At2(560, 100), MouseButton.Left);
-softPad.SetSharpness(100);
-softPad.MouseDown(At2(60, 200), MouseButton.Left);
-for (var i = 1; i <= 10; i++) softPad.MouseMove(At2(60 + 50 * i, 200));
-softPad.MouseUp(At2(560, 200), MouseButton.Left);
-Pump(softPad, 20);
-var frame = Shot(softPad, "sketch-soft-vs-crisp");
-if (frame != null)
+// a second layer with a picture
+window.AddInkLayer();
+Ok(window.Ink.Layers.Count == 2 && window.Ink.Active == 1, "+ Layer makes layer 2 and draws on it");
+Ok(window.InsertLayerImage(png), "+ Picture puts a picture on the layer", window.InkInfo);
+var img = window.Ink.ActiveLayer.Images.Single();
+Ok(img.W == 200 && img.H == 100 && File.Exists(InkStore.ImagePath(note, img.File)) && overlay.Tool == SketchTool.Move && overlay.Selected == img.Id,
+    "the picture is copied into images/, keeps its size, and is picked for moving", $"{img.W}x{img.H} {img.File}");
+var c = img.X + 50; var r = img.Y + 50;
+Drag(c, r, c + 100, r + 60, steps: 5);
+var moved = window.Ink.ActiveLayer.Images.Single();
+Ok(Math.Abs(moved.X - (img.X + 100)) < 1 && Math.Abs(moved.Y - (img.Y + 60)) < 1, "Move drags the picture", $"{moved.X},{moved.Y}");
+Drag(moved.X + moved.W, moved.Y + moved.H, moved.X + moved.W + 200, moved.Y + moved.H + 20, steps: 5);
+var sized = window.Ink.ActiveLayer.Images.Single();
+Ok(sized.W > 300 && Math.Abs(sized.W / sized.H - 2) < 0.02, "dragging the corner resizes it, same shape", $"{sized.W}x{sized.H}");
+Shot(window, "ink-on-table");
+var redAt = At(300, 110);
+
+// layers on and off (layer 2 with the picture hidden first, so only layer 1 is checked)
+window.SetLayerVisible(1, false);
+window.SetLayerVisible(0, false);
+Pump(window, 20);
+Ok(!window.Ink.Layers[0].Visible && window.Ink.Layers[0].Strokes.Count > 0, "hiding layer 1 keeps its drawing");
+var frameHidden = Shot(window, "ink-layer1-hidden");
+window.SetLayerVisible(0, true);
+Pump(window, 20);
+var frameShown = Shot(window, "ink-layer1-shown");
+if (frameHidden != null && frameShown != null)
 {
-    int Ink(double y0)
-    {
-        var count = 0;
-        for (var y = (int)y0 - 20; y <= y0 + 20; y++)
-        {
-            var p = c2.TranslatePoint(new Point(300, y), softPad)!.Value;
-            var px = Pixel(frame, (int)p.X, (int)p.Y);
-            if (px.R < 245 || px.G < 245) count++;
-        }
-        return count;
-    }
-    var softInk = Ink(100);
-    var crispInk = Ink(200);
-    Ok(softInk > crispInk && crispInk >= 8, "a soft line spreads wider than a crisp one of the same size", $"soft {softInk} px, crisp {crispInk} px");
+    var hidden = Pixel(frameHidden, (int)redAt.X, (int)redAt.Y);
+    var shown = Pixel(frameShown, (int)redAt.X, (int)redAt.Y);
+    Ok(shown.R > 150 && shown.G < 120 && !(hidden.R > 150 && hidden.G < 120), "the red line shows only while its layer is on", $"shown {shown}, hidden {hidden}");
 }
-softPad.Close();
+window.SetLayerVisible(1, true);
+Pump(window, 20);
+Shot(window, "ink-both-layers");
+
+// Esc: done; the table works again, the layers stay
+window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
+Pump(window, 30);
+Ok(!window.InkOn && !bar.IsVisible && !overlay.IsHitTestVisible && File.Exists(file), "Esc stops drawing and saves layers.json");
+Ok(draw.Content as string == "วาดเขียน" && draw.Foreground is Avalonia.Media.ISolidColorBrush { Color.R: < 120 }, "the Draw button looks as before again", draw.Foreground?.ToString() ?? "null");
+window.SetLayerVisible(1, false);
+Ok(!window.Ink.Layers[1].Visible, "layers can be shown or hidden while drawing is off (View → Note layers)");
+
+// ── a picture in a cell ──
+Ok(window.SetCellImage(2, 1, png), "a picture goes into cell B3");
+Pump(window, 50);
+var toggle = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "CellImageToggle");
+var cellImage = window.GetVisualDescendants().OfType<Image>().FirstOrDefault(i => i.Name == "CellImage");
+Ok(toggle?.Content as string == "ภาพ ▾" && cellImage != null && cellImage.Bounds.Height > 50, "the cell shows the picture with a toggle", toggle?.Content?.ToString() ?? "no toggle");
+Shot(window, "cell-image-open");
+Click(window, toggle!);
+Pump(window, 50);
+toggle = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "CellImageToggle");
+Ok(toggle?.Content as string == "ภาพ ▸" && !window.GetVisualDescendants().OfType<Image>().Any(i => i.Name == "CellImage"),
+    "the toggle hides the picture; the cell keeps it", toggle?.Content?.ToString() ?? "");
+Shot(window, "cell-image-closed");
+var key = CellDetailOps.Key(Doc(window).RowIdAt(2), Doc(window).ColumnIdAt(1));
+Ok(window.Ink.CellImages.TryGetValue(key, out var ci) && !ci.Open, "open / closed is kept per cell");
+Click(window, toggle!);
+Pump(window, 50);
+Ok(window.Ink.CellImages[key].Open, "and opens again");
+
+window.SaveInkNow();
+var saved = InkStore.Load(file, out _);
+Ok(saved.Layers.Count == 2 && saved.Layers[0].Strokes.Count == n + 1 && saved.Layers[1].Images.Count == 1 && !saved.Layers[1].Visible &&
+   saved.CellImages.ContainsKey(key), "layers, pictures and the cell picture are saved");
+window.RemoveCellImage(2, 1);
+Pump(window, 30);
+Ok(!window.Ink.CellImages.ContainsKey(key) && !window.GetVisualDescendants().OfType<Button>().Any(b => b.Name == "CellImageToggle"), "Remove picture takes it out of the cell");
 
 Console.WriteLine(fail == 0 ? "SketchTests: all passed" : $"SketchTests: {fail} failed");
 return fail;
+
+static NoteDocument Doc(MainWindow w)
+{
+    var session = typeof(MainWindow).GetField("_session", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(w)!;
+    return (NoteDocument)session.GetType().GetProperty("Doc")!.GetValue(session)!;
+}
+
+static ScrollViewer RowsScroll(MainWindow w) =>
+    w.FindControl<ItemsControl>("RowsList")!.GetVisualDescendants().OfType<ScrollViewer>().First();
+
+static void Click(Window window, Control control)
+{
+    var p = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
+    window.MouseMove(p);
+    window.MouseDown(p, MouseButton.Left);
+    window.MouseUp(p, MouseButton.Left);
+}
 
 static void Pump(Window w, int ms)
 {

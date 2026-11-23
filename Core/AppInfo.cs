@@ -4,7 +4,7 @@ public static class AppInfo
 {
     public const string Version = "2.6.1.1";
     public const string ConfirmedCommit = "rewrite-" + Version;
-    public const string BuildNote = "วันบิลด์: 23 พฤศจิกายน 2026 (เวลาไทย UTC+7) — กระดานวาดเขียน: ปากกา ยางลบ ไม้บรรทัด สี ความคมชัด";
+    public const string BuildNote = "วันบิลด์: 23 พฤศจิกายน 2026 (เวลาไทย UTC+7) — วาดเขียนบนตารางเป็นเลเยอร์ รูปภาพ และภาพในช่อง";
 
     public static string HelpText => Localizer.Current == "th" ? HelpTextTh : HelpTextEn;
     public static string LogText => Localizer.Current == "th" ? LogTextTh : LogTextEn;
@@ -121,15 +121,21 @@ History :: what TableNote did lately (opened the table, saved, reminders, undo, 
 ✕ :: hides the bar; View → Activity bar shows it again (kept in settings.json)
 If TableNote stops responding for more than 2 seconds, an orange line says for how long and what it was doing.
 
-# Drawing pad (handwritten notes)
-Draw button or Table → Drawing pad… :: a page to write and draw on with the mouse, a pen or a finger
-Pen / Eraser / Ruler (P / E / R) :: draw freehand / erase what the eraser passes over / draw a straight line (Shift: 15° steps)
+# Drawing on the table (layers)
+Draw button or Table → Draw on the table :: turns drawing on; Done or Esc turns it off (the layers stay on the table)
+Pen / Eraser / Ruler / Move (P / E / R / M) :: write freehand / erase lines on the active layer / straight line (Shift: 15° steps) / move a picture
 Colour :: pick a swatch or type #RRGGBB and press Enter
 Size and Sharpness :: line width; sharpness 0–100 (100 a crisp line, lower a softer, blurred edge)
-Clear all :: erases this page after asking; Ctrl+Z brings it back
-Ctrl+Z / Ctrl+Y :: undo / redo (up to 100 steps while the pad is open)
-Pages :: ◀ ▶ (Page Up / Page Down), + Page, Delete page; Lined paper shows or hides the lines
-sketch.json :: next to note.json, saved by itself
+Clear all :: empties the active layer after asking
+Ctrl+Z / Ctrl+Y while drawing :: undo / redo the drawing (not the table)
+Layers :: tick to show / hide, click a name to draw on it; + Layer, Rename, Delete layer (up to 10); View → Note layers shows or hides them anytime
++ Picture :: puts a picture on the layer; with Move drag it, drag its corner to resize (Shift: any shape), Delete removes it
+The wheel :: still scrolls the table while drawing; the drawing moves with the table
+
+# Pictures in cells
+Right-click a cell → Insert picture in cell… :: or Table → Picture in the selected cell…
+Picture ▾ / ▸ in the cell :: shows or hides the picture under the cell's text; click the picture to see it whole
+Right-click again :: Change picture…, Show / Hide picture, Remove picture…
 
 # Wallpaper mode (Windows)
 Wallpaper button or File → Set as wallpaper :: the table is drawn over your own wallpaper, full screen; the editor goes to the tray
@@ -151,7 +157,7 @@ Windows :: %APPDATA%\TableNote\note.json
 Linux :: ~/.local/share/TableNote/note.json
 TableNote saves by itself about 1.5 seconds after you stop typing.
 settings.json :: language, zoom and sound, next to note.json
-sketch.json :: the drawing pad, next to note.json
+layers.json and images/ :: the note layers, pictures and pictures in cells, next to note.json
 tablenote.log :: what the program did; 2 files, at most 512 KB in all
 Backups :: older formats as note.v2.bak, note.v3.bak, note.v4.bak …; broken files as note.json*.bak (the newest 5)
 Limits :: 1000 rows, 30 columns, 2,000 characters per cell, note.json up to 8 MB
@@ -268,15 +274,21 @@ X (มุมหน้าต่าง) :: เลื่อน 10 นาทีท�
 ✕ :: ซ่อนแถบ เปิดอีกครั้งที่ มุมมอง → แถบการทำงาน (จำไว้ใน settings.json)
 ถ้าโปรแกรมไม่ตอบสนองเกิน 2 วินาที จะมีบรรทัดสีส้มบอกว่าค้างกี่วินาที และขณะทำอะไรอยู่
 
-# กระดานวาดเขียน (จดโน้ตด้วยลายมือ)
-ปุ่ม วาดเขียน หรือ ตาราง → กระดานวาดเขียน… :: หน้ากระดาษสำหรับเขียนและวาดด้วยเมาส์ ปากกาสไตลัส หรือนิ้ว
-ปากกา / ยางลบ / ไม้บรรทัด (P / E / R) :: เขียนอิสระ / ลบเส้นที่ยางลบผ่าน / ลากเส้นตรง (กด Shift ล็อกมุมทีละ 15°)
+# วาดเขียนบนตาราง (เลเยอร์)
+ปุ่ม วาดเขียน หรือ ตาราง → วาดเขียนบนตาราง :: เปิดโหมดวาด กด เสร็จ หรือ Esc เพื่อหยุด (เลเยอร์ยังแสดงบนตาราง)
+ปากกา / ยางลบ / ไม้บรรทัด / ย้าย (P / E / R / M) :: เขียนอิสระ / ลบเส้นในเลเยอร์ที่เลือก / เส้นตรง (Shift ล็อกมุมทีละ 15°) / ย้ายรูปภาพ
 สี :: คลิกเลือกสี หรือพิมพ์ #RRGGBB แล้วกด Enter
 ขนาดและความคมชัด :: ความหนาของเส้น ความคมชัด 0–100 (100 = เส้นคม ค่าน้อยลง = ขอบนุ่มฟุ้ง)
-ลบทั้งหมด :: ถามก่อนแล้วลบทุกอย่างในหน้านี้ กด Ctrl+Z เพื่อเอากลับมา
-Ctrl+Z / Ctrl+Y :: ย้อนกลับ / ทำซ้ำ (สูงสุด 100 ขั้นระหว่างเปิดกระดาน)
-หน้า :: ◀ ▶ (Page Up / Page Down), + หน้า, ลบหน้า ส่วน กระดาษมีเส้น เปิดหรือปิดเส้นบรรทัด
-sketch.json :: อยู่ข้าง note.json บันทึกอัตโนมัติ
+ลบทั้งหมด :: ถามก่อนแล้วล้างเลเยอร์ที่เลือก
+Ctrl+Z / Ctrl+Y ระหว่างวาด :: ย้อนกลับ / ทำซ้ำภาพวาด (ไม่ใช่ตาราง)
+เลเยอร์ :: ติ๊กเพื่อเปิด/ปิด คลิกชื่อเพื่อวาดบนเลเยอร์นั้น + เลเยอร์ เปลี่ยนชื่อ ลบเลเยอร์ (สูงสุด 10) มุมมอง → เลเยอร์โน้ต เปิด/ปิดได้ทุกเวลา
++ รูปภาพ :: วางภาพบนเลเยอร์ ใช้ ย้าย ลากเพื่อย้าย ลากมุมเพื่อย่อ/ขยาย (Shift ไม่คงสัดส่วน) Delete ลบ
+ล้อเมาส์ :: ยังเลื่อนตารางได้ระหว่างวาด ภาพวาดเลื่อนตามตาราง
+
+# ภาพในช่อง
+คลิกขวาที่ช่อง → ใส่ภาพในช่อง… :: หรือ ตาราง → ภาพในช่องที่เลือก…
+ปุ่ม ภาพ ▾ / ▸ ในช่อง :: เปิดหรือปิดภาพใต้ข้อความในช่อง คลิกภาพเพื่อดูเต็ม
+คลิกขวาอีกครั้ง :: เปลี่ยนภาพ… แสดง / ซ่อนภาพ เอาภาพออก…
 
 # โหมดวอลเปเปอร์ (Windows)
 ปุ่ม วอลเปเปอร์ หรือ ไฟล์ → ตั้งเป็นวอลเปเปอร์ :: วาดตารางทับวอลเปเปอร์ของคุณแบบเต็มจอ แล้วหน้าแก้ไขไปอยู่ที่ถาด
@@ -298,7 +310,7 @@ Windows :: %APPDATA%\TableNote\note.json
 Linux :: ~/.local/share/TableNote/note.json
 บันทึกอัตโนมัติหลังหยุดพิมพ์ประมาณ 1.5 วินาที
 settings.json :: ภาษา ขนาด และเสียง อยู่ข้าง note.json
-sketch.json :: กระดานวาดเขียน อยู่ข้าง note.json
+layers.json และ images/ :: เลเยอร์โน้ต รูปภาพ และภาพในช่อง อยู่ข้าง note.json
 tablenote.log :: บันทึกการทำงานของโปรแกรม เก็บ 2 ไฟล์ รวมไม่เกิน 512 KB
 ไฟล์สำรอง :: รูปแบบเก่าเป็น note.v2.bak, note.v3.bak, note.v4.bak … ไฟล์เสียเก็บเป็น note.json*.bak ล่าสุด 5 ไฟล์
 ขีดจำกัด :: 1000 แถว 30 คอลัมน์ ช่องละ 2,000 ตัวอักษร note.json ไม่เกิน 8 MB
@@ -308,7 +320,8 @@ tablenote.log :: บันทึกการทำงานของโปรแ
 @"TableNote " + Version + @" — built 23 Nov 2026 (Bangkok time, UTC+7)
 
 23 Nov 2026 — 2.6.1.1
-New: drawing pad for handwritten notes (Draw on the toolbar, or Table → Drawing pad…): pen, eraser, ruler (Shift keeps 15° steps), Clear all, pen colour (11 swatches or any #RRGGBB), size, and sharpness 0–100 (100 crisp, lower a softer edge). Undo / redo, several pages, lined paper. Saved by itself in sketch.json next to note.json.
+New: draw on the table in layers (Draw on the toolbar): pen, eraser, ruler (Shift keeps 15° steps), Clear all, pen colour (11 swatches or any #RRGGBB), size, sharpness 0–100 (100 crisp, lower a softer edge), undo / redo, and pictures you can move and resize. Up to 10 layers, each shown or hidden with a tick, also from View → Note layers.
+New: pictures in cells: right-click a cell → Insert picture in cell…; the Picture ▾ / ▸ button in the cell shows or hides it. Kept in layers.json and the images folder next to note.json.
 
 22 Nov 2026 — 2.6.1
 Faster and lighter: the program's code is now compiled ahead of time inside the exe, so TableNote opens about 3 to 4 times sooner and uses less CPU and memory after it starts. The loading screen no longer waits 1.2 s when the table is ready sooner (at most 0.3 s).
@@ -381,7 +394,8 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 " + BuildNote + @"
 
 23 พ.ย. 2026 — 2.6.1.1
-ใหม่: กระดานวาดเขียนจดโน้ตด้วยลายมือ (ปุ่ม วาดเขียน บนแถบเครื่องมือ หรือ ตาราง → กระดานวาดเขียน…): ปากกา ยางลบ ไม้บรรทัด (กด Shift ล็อกมุมทีละ 15°) ลบทั้งหมด สีปากกา (11 สี หรือพิมพ์ #RRGGBB) ขนาด และความคมชัด 0–100 (100 = คม ค่าน้อยลง = ขอบนุ่มฟุ้ง) ย้อนกลับ / ทำซ้ำ หลายหน้า กระดาษมีเส้น บันทึกอัตโนมัติใน sketch.json ข้าง note.json
+ใหม่: วาดเขียนบนตารางเป็นเลเยอร์ (ปุ่ม วาดเขียน): ปากกา ยางลบ ไม้บรรทัด (กด Shift ล็อกมุมทีละ 15°) ลบทั้งหมด สีปากกา (11 สี หรือพิมพ์ #RRGGBB) ขนาด ความคมชัด 0–100 (100 = คม ค่าน้อยลง = ขอบนุ่มฟุ้ง) ย้อนกลับ / ทำซ้ำ และรูปภาพที่ย้ายและย่อ/ขยายได้ สูงสุด 10 เลเยอร์ เปิด/ปิดแต่ละเลเยอร์ด้วยช่องติ๊ก หรือที่ มุมมอง → เลเยอร์โน้ต
+ใหม่: ภาพในช่อง: คลิกขวาที่ช่อง → ใส่ภาพในช่อง… แล้วกดปุ่ม ภาพ ▾ / ▸ ในช่องเพื่อเปิด/ปิดภาพ เก็บใน layers.json และโฟลเดอร์ images ข้าง note.json
 
 22 พ.ย. 2026 — 2.6.1
 เร็วขึ้นและเบาลง: โค้ดของโปรแกรมแปลงเป็นภาษาเครื่องไว้ล่วงหน้าในไฟล์ exe แล้ว โปรแกรมจึงเปิดเร็วขึ้นราว 3–4 เท่า และหลังเปิดใช้ CPU กับหน่วยความจำน้อยลง หน้าโหลดไม่ต้องรอครบ 1.2 วินาทีเมื่อตารางพร้อมก่อน (รอไม่เกิน 0.3 วินาที)

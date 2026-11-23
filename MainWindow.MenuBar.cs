@@ -41,7 +41,9 @@ public partial class MainWindow
     private MenuItem _viewSortItem = null!;
     private MenuItem _systemPinItem = null!; // View → System → Set as wallpaper
     private MenuItem _addAlertItem = null!;
-    private MenuItem _sketchItem = null!; // 2.6.1.1: Table → Drawing pad…
+    private MenuItem _sketchItem = null!; // 2.6.1.1: Table → Draw on the table
+    private MenuItem _cellImageItem = null!; // 2.6.1.1: Table → Picture in the selected cell…
+    private MenuItem _inkLayersMenu = null!; // 2.6.1.1: View → Note layers
     private MenuItem _addDaysItem = null!; // 2.6.0: Table → Add days counter column
     private MenuItem _findItem = null!; // 2.6.0: Table → Find… (Ctrl+F)
     private MenuItem _selectAllItem = null!; // 2.6.0: Table → Select all (Ctrl+A)
@@ -117,7 +119,8 @@ public partial class MainWindow
         _redoItem.InputGesture = new KeyGesture(Key.Y, KeyModifiers.Control);
         _sortItem = Act("toolbar.sort_due", SortByDue);
         _addAlertItem = Act("menu.add_alert", AddAlert);
-        _sketchItem = Act("menu.sketch", OpenSketch);
+        _sketchItem = Act("menu.sketch", () => SetDrawMode(!_inkOn));
+        _cellImageItem = Act("menu.cell_image", () => { MenuCell(out var r, out var c); if (r >= 0) _ = PickCellImageAsync(r, c); });
         _addDaysItem = Act("menu.add_days", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("menu.add_days"), AddDaysColumnAsync)));
         _spotAddDueItem = new MenuItem { Tag = "spot:add-alert-date" };
         _spotAddDueItem.Click += async (_, _) =>
@@ -143,6 +146,7 @@ public partial class MainWindow
         _tableMenu.Items.Add(_sortItem);
         _tableMenu.Items.Add(_addAlertItem);
         _tableMenu.Items.Add(_sketchItem);
+        _tableMenu.Items.Add(_cellImageItem);
         _tableMenu.Items.Add(new Separator());
         _tableMenu.Items.Add(_spotAddDueItem);
         _tableMenu.Items.Add(_spotAddStatusItem);
@@ -165,6 +169,9 @@ public partial class MainWindow
             _sortItem.IsEnabled = _view == ViewMode.Edit;
             _addAlertItem.IsEnabled = _view == ViewMode.Edit && (_session.Doc.AlertBoxes?.Count ?? 0) < AlertBoxOps.MaxBoxes;
             _sketchItem.IsEnabled = _view == ViewMode.Edit;
+            _sketchItem.Header = (_inkOn ? "✓ " : "") + Localizer.T("menu.sketch");
+            MenuCell(out var imgRow, out _);
+            _cellImageItem.IsEnabled = _view == ViewMode.Edit && imgRow >= 0;
             _addDaysItem.IsEnabled = edit && _session.Doc.Columns.Count < NoteDocument.MaxUserColumns;
             ApplySpecialColumnSpots();
         };
@@ -214,6 +221,10 @@ public partial class MainWindow
         _activityItem = CheckItem("menu.activity", ActivityBox);
         ToolTip.SetTip(_activityItem, Localizer.T("activity.tip"));
         _viewMenu.Items.Add(_activityItem);
+        _inkLayersMenu = new MenuItem();
+        _inkLayersMenu.Items.Add(new MenuItem()); // filled when it opens
+        _inkLayersMenu.SubmenuOpened += (_, _) => FillInkLayerMenu(_inkLayersMenu);
+        _viewMenu.Items.Add(_inkLayersMenu);
         _viewMenu.Items.Add(new Separator());
         _viewMenu.Items.Add(_systemMenu);
         _viewMenu.SubmenuOpened += (_, _) =>
@@ -347,6 +358,9 @@ public partial class MainWindow
         _addAlertItem.Header = Localizer.T("menu.add_alert");
         _sketchItem.Header = Localizer.T("menu.sketch");
         ToolTip.SetTip(_sketchItem, Localizer.T("tip.sketch"));
+        _cellImageItem.Header = Localizer.T("menu.cell_image");
+        _inkLayersMenu.Header = Localizer.T("menu.ink_layers");
+        ToolTip.SetTip(_inkLayersMenu, Localizer.T("tip.ink_layers"));
         _addDaysItem.Header = Localizer.T("menu.add_days");
         _findItem.Header = Localizer.T("menu.find");
         _selectAllItem.Header = Localizer.T("menu.select_all");

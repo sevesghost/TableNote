@@ -128,7 +128,7 @@ public partial class MainWindow : Window
         SortDueButton.Click += (_, _) => SortByDue();
         ExportButton.Click += async (_, _) => await ExportAsync();
         InitWallpaper();
-        InitSketch(); // 2.6.1.1
+        InitInk(); // 2.6.1.1: drawing and pictures in layers over the table, pictures in cells
         ZoomOutButton.Click += (_, _) => SetZoom(_settings.Scale - AppSettings.ScaleStep);
         ZoomInButton.Click += (_, _) => SetZoom(_settings.Scale + AppSettings.ScaleStep);
         ZoomResetButton.Click += (_, _) => SetZoom(100);
@@ -321,7 +321,7 @@ public partial class MainWindow : Window
         // Signing out / shutting down in wallpaper mode: with "launch at sign-in" TableNote redraws the table at the
         // next sign-in, so the picture stays; otherwise the user's wallpaper goes back now.
         if (systemClose && _view == ViewMode.Background && !_session.Doc.LaunchAtLogin) RestoreWallpaperOnExit();
-        CloseSketch(); // 2.6.1.1: the drawing pad is saved and closes with TableNote
+        SaveInkNow(); // 2.6.1.1: layers.json
         _wallpaperTimer?.Stop();
         WindowsHotkey.Unregister(WindowHandle());
         _reminders.Dispose();
@@ -463,6 +463,7 @@ public partial class MainWindow : Window
         if (_view == ViewMode.Background) return; // v2.3.1: _busy now only blocks the F5–F8 structure keys
         if (e.Key is Key.Home or Key.End && e.KeyModifiers.HasFlag(KeyModifiers.Control)) { OnGridKeyTunnel(sender, e); return; }
         if (HandleZoomKey(e)) return;
+        if (HandleInkKey(e)) return; // 2.6.1.1: while drawing, Ctrl+Z / Y, Esc, Delete and the tool keys are the drawing's
         if (HandleFindKey(e)) return; // 2.6.0: Ctrl+F, F3, Esc closes the find bar
         if (HandleRowMoveKey(e)) return; // v2.4.0: Alt+Shift+↑/↓ moves the selected row
         if (e.Key == Key.C && e.KeyModifiers.HasFlag(KeyModifiers.Control) && !e.KeyModifiers.HasFlag(KeyModifiers.Alt))
@@ -1321,7 +1322,7 @@ public partial class MainWindow : Window
         var statusCol = _session.Doc.StatusColumnIndex();
         if (statusCol >= 0 && TaskStatuses.IsDone(_session.Doc.GetCell(row, statusCol)))
             control = WithStrikethrough(control);
-        return AttachDetailButton(row, column, control);
+        return AttachCellImage(row, column, AttachDetailButton(row, column, control), bg); // 2.6.1.1: picture in the cell
     }
 
     private static Control WithStrikethrough(Control inner)
