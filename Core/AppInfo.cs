@@ -2,9 +2,9 @@ namespace TableNote;
 
 public static class AppInfo
 {
-    public const string Version = "2.6.1";
+    public const string Version = "2.6.1.1";
     public const string ConfirmedCommit = "rewrite-" + Version;
-    public const string BuildNote = "วันบิลด์: 22 พฤศจิกายน 2026 (เวลาไทย UTC+7) — เปิดเร็วขึ้น ใช้ CPU และหน่วยความจำน้อยลง ช่องตารางเบาลง";
+    public const string BuildNote = "วันบิลด์: 23 พฤศจิกายน 2026 (เวลาไทย UTC+7) — กระดานวาดเขียน: ปากกา ยางลบ ไม้บรรทัด สี ความคมชัด";
 
     public static string HelpText => Localizer.Current == "th" ? HelpTextTh : HelpTextEn;
     public static string LogText => Localizer.Current == "th" ? LogTextTh : LogTextEn;
@@ -121,6 +121,16 @@ History :: what TableNote did lately (opened the table, saved, reminders, undo, 
 ✕ :: hides the bar; View → Activity bar shows it again (kept in settings.json)
 If TableNote stops responding for more than 2 seconds, an orange line says for how long and what it was doing.
 
+# Drawing pad (handwritten notes)
+Draw button or Table → Drawing pad… :: a page to write and draw on with the mouse, a pen or a finger
+Pen / Eraser / Ruler (P / E / R) :: draw freehand / erase what the eraser passes over / draw a straight line (Shift: 15° steps)
+Colour :: pick a swatch or type #RRGGBB and press Enter
+Size and Sharpness :: line width; sharpness 0–100 (100 a crisp line, lower a softer, blurred edge)
+Clear all :: erases this page after asking; Ctrl+Z brings it back
+Ctrl+Z / Ctrl+Y :: undo / redo (up to 100 steps while the pad is open)
+Pages :: ◀ ▶ (Page Up / Page Down), + Page, Delete page; Lined paper shows or hides the lines
+sketch.json :: next to note.json, saved by itself
+
 # Wallpaper mode (Windows)
 Wallpaper button or File → Set as wallpaper :: the table is drawn over your own wallpaper, full screen; the editor goes to the tray
 The picture follows the table :: tasks marked done, tasks turning overdue, a new day
@@ -141,6 +151,7 @@ Windows :: %APPDATA%\TableNote\note.json
 Linux :: ~/.local/share/TableNote/note.json
 TableNote saves by itself about 1.5 seconds after you stop typing.
 settings.json :: language, zoom and sound, next to note.json
+sketch.json :: the drawing pad, next to note.json
 tablenote.log :: what the program did; 2 files, at most 512 KB in all
 Backups :: older formats as note.v2.bak, note.v3.bak, note.v4.bak …; broken files as note.json*.bak (the newest 5)
 Limits :: 1000 rows, 30 columns, 2,000 characters per cell, note.json up to 8 MB
@@ -257,6 +268,16 @@ X (มุมหน้าต่าง) :: เลื่อน 10 นาทีท�
 ✕ :: ซ่อนแถบ เปิดอีกครั้งที่ มุมมอง → แถบการทำงาน (จำไว้ใน settings.json)
 ถ้าโปรแกรมไม่ตอบสนองเกิน 2 วินาที จะมีบรรทัดสีส้มบอกว่าค้างกี่วินาที และขณะทำอะไรอยู่
 
+# กระดานวาดเขียน (จดโน้ตด้วยลายมือ)
+ปุ่ม วาดเขียน หรือ ตาราง → กระดานวาดเขียน… :: หน้ากระดาษสำหรับเขียนและวาดด้วยเมาส์ ปากกาสไตลัส หรือนิ้ว
+ปากกา / ยางลบ / ไม้บรรทัด (P / E / R) :: เขียนอิสระ / ลบเส้นที่ยางลบผ่าน / ลากเส้นตรง (กด Shift ล็อกมุมทีละ 15°)
+สี :: คลิกเลือกสี หรือพิมพ์ #RRGGBB แล้วกด Enter
+ขนาดและความคมชัด :: ความหนาของเส้น ความคมชัด 0–100 (100 = เส้นคม ค่าน้อยลง = ขอบนุ่มฟุ้ง)
+ลบทั้งหมด :: ถามก่อนแล้วลบทุกอย่างในหน้านี้ กด Ctrl+Z เพื่อเอากลับมา
+Ctrl+Z / Ctrl+Y :: ย้อนกลับ / ทำซ้ำ (สูงสุด 100 ขั้นระหว่างเปิดกระดาน)
+หน้า :: ◀ ▶ (Page Up / Page Down), + หน้า, ลบหน้า ส่วน กระดาษมีเส้น เปิดหรือปิดเส้นบรรทัด
+sketch.json :: อยู่ข้าง note.json บันทึกอัตโนมัติ
+
 # โหมดวอลเปเปอร์ (Windows)
 ปุ่ม วอลเปเปอร์ หรือ ไฟล์ → ตั้งเป็นวอลเปเปอร์ :: วาดตารางทับวอลเปเปอร์ของคุณแบบเต็มจอ แล้วหน้าแก้ไขไปอยู่ที่ถาด
 ภาพอัปเดตตามตาราง :: งานที่เสร็จ งานที่เลยกำหนด และวันใหม่
@@ -277,13 +298,17 @@ Windows :: %APPDATA%\TableNote\note.json
 Linux :: ~/.local/share/TableNote/note.json
 บันทึกอัตโนมัติหลังหยุดพิมพ์ประมาณ 1.5 วินาที
 settings.json :: ภาษา ขนาด และเสียง อยู่ข้าง note.json
+sketch.json :: กระดานวาดเขียน อยู่ข้าง note.json
 tablenote.log :: บันทึกการทำงานของโปรแกรม เก็บ 2 ไฟล์ รวมไม่เกิน 512 KB
 ไฟล์สำรอง :: รูปแบบเก่าเป็น note.v2.bak, note.v3.bak, note.v4.bak … ไฟล์เสียเก็บเป็น note.json*.bak ล่าสุด 5 ไฟล์
 ขีดจำกัด :: 1000 แถว 30 คอลัมน์ ช่องละ 2,000 ตัวอักษร note.json ไม่เกิน 8 MB
 ").Replace("{VERSION}", Version);
 
     public static string LogTextEn { get; } =
-@"TableNote " + Version + @" — built 22 Nov 2026 (Bangkok time, UTC+7)
+@"TableNote " + Version + @" — built 23 Nov 2026 (Bangkok time, UTC+7)
+
+23 Nov 2026 — 2.6.1.1
+New: drawing pad for handwritten notes (Draw on the toolbar, or Table → Drawing pad…): pen, eraser, ruler (Shift keeps 15° steps), Clear all, pen colour (11 swatches or any #RRGGBB), size, and sharpness 0–100 (100 crisp, lower a softer edge). Undo / redo, several pages, lined paper. Saved by itself in sketch.json next to note.json.
 
 22 Nov 2026 — 2.6.1
 Faster and lighter: the program's code is now compiled ahead of time inside the exe, so TableNote opens about 3 to 4 times sooner and uses less CPU and memory after it starts. The loading screen no longer waits 1.2 s when the table is ready sooner (at most 0.3 s).
@@ -354,6 +379,9 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 @"ตารางโน้ต
 รุ่นที่แสดง: " + Version + @"
 " + BuildNote + @"
+
+23 พ.ย. 2026 — 2.6.1.1
+ใหม่: กระดานวาดเขียนจดโน้ตด้วยลายมือ (ปุ่ม วาดเขียน บนแถบเครื่องมือ หรือ ตาราง → กระดานวาดเขียน…): ปากกา ยางลบ ไม้บรรทัด (กด Shift ล็อกมุมทีละ 15°) ลบทั้งหมด สีปากกา (11 สี หรือพิมพ์ #RRGGBB) ขนาด และความคมชัด 0–100 (100 = คม ค่าน้อยลง = ขอบนุ่มฟุ้ง) ย้อนกลับ / ทำซ้ำ หลายหน้า กระดาษมีเส้น บันทึกอัตโนมัติใน sketch.json ข้าง note.json
 
 22 พ.ย. 2026 — 2.6.1
 เร็วขึ้นและเบาลง: โค้ดของโปรแกรมแปลงเป็นภาษาเครื่องไว้ล่วงหน้าในไฟล์ exe แล้ว โปรแกรมจึงเปิดเร็วขึ้นราว 3–4 เท่า และหลังเปิดใช้ CPU กับหน่วยความจำน้อยลง หน้าโหลดไม่ต้องรอครบ 1.2 วินาทีเมื่อตารางพร้อมก่อน (รอไม่เกิน 0.3 วินาที)

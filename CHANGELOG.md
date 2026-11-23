@@ -2,6 +2,13 @@
 
 All notable changes to TableNote. [ภาษาไทย](CHANGELOG.th.md)
 
+- **2.6.1.1** (23 November 2026)
+  - New: **drawing pad** for handwritten notes: **Draw** on the toolbar, or **Table → Drawing pad…**. It opens in its own window (not owned by the editor, so it stays when the editor goes to the tray or to wallpaper mode; one at a time).
+  - Tools: **Pen** (P), **Eraser** (E) — cuts what it passes over, so a line erased in the middle leaves two pieces; a stylus's eraser end erases too — and **Ruler** (R) for straight lines, with a guide and the length and angle while dragging; Shift keeps the angle on 15° steps.
+  - **Clear all** erases the page after asking (one undo step). **Colour**: 11 swatches or any `#RRGGBB`. **Size** 1–60 (the eraser keeps its own size). **Sharpness 0–100**: 100 is a crisp line; lower values give a thinner core with a softer, wider edge that fades out, still readable at 0.
+  - Undo / redo (Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z; up to 100 steps while the pad is open), several pages (◀ ▶, Page Up / Page Down, **+ Page**, **Delete page**; at most 50), **Lined paper** on or off.
+  - Saved by itself 0.6 s after a change, when the pad closes and when TableNote exits, in `sketch.json` next to `note.json` (written to a .tmp file and swapped in; the file before is kept as `sketch.json.prev`). A file that can't be read is kept as `sketch.json.bad-…` and the pad starts empty. `note.json` is not changed.
+  - Tests: `tests/SketchTests` (eraser, ruler, sharpness, sketch.json, and the window driven with the mouse and keys, headless).
 - **2.6.1** (22 November 2026)
   - Faster start: the Windows exe now carries its code compiled ahead of time (ReadyToRun, one composite image for .NET, Avalonia and TableNote). Trimming had dropped the precompiled code that .NET ships, so every start compiled the whole program again; TableNote now opens about 3 to 4 times sooner. Measurements and the reasons for each setting: [docs/performance.md](docs/performance.md).
   - Lighter: the exe is no longer compressed inside, so its code is used straight from the file instead of being unpacked into memory at every start, and tiered compilation is off, so the precompiled code is not compiled a second time in the background during the first half minute (far less CPU after a start, and less memory).

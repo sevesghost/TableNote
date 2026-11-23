@@ -162,6 +162,8 @@
         <Border Classes="toolsep"/>
         <Button x:Name="ExportButton" Classes="tool" Content="Export" ToolTip.Tip="Save the table as .txt / .csv / .xlsx"/>
         <Button x:Name="WallpaperButton" Classes="tool" Content="Wallpaper"/>
+        <!-- 2.6.1.1: drawing pad for handwritten notes (MainWindow.Sketch.cs, SketchWindow.cs). -->
+        <Button x:Name="SketchButton" Classes="tool" Content="Draw"/>
       </WrapPanel>
     </ScrollViewer>
 

@@ -403,5 +403,25 @@ Moving columns or rows, deleting a column, changing column settings, and changin
 - The exported image has screen resolution. For a sharp printout, use **Print** in TableNote.
 - The text colour of row numbers and the background colour of the whole table are not included in the image or printout yet.
 
+## 17. Drawing pad (handwritten notes)
+
+Click **Draw** on the toolbar, or choose **Table → Drawing pad…**. A page opens in its own window; write or draw on it with the mouse, a pen or a finger.
+
+| Tool | Key | What it does |
+|---|---|---|
+| **Pen** | P | Draws freehand. |
+| **Eraser** | E | Erases what it passes over (a line erased in the middle leaves two pieces). The eraser end of a stylus erases too. |
+| **Ruler** | R | Drag from the start to the end for a straight line. While you drag, a guide and the length and angle are shown. Hold **Shift** to keep the angle on 15° steps (level, upright, 45°…). |
+
+- **Colour:** click a swatch, or type any colour as `#RRGGBB` in the box and press Enter.
+- **Size:** the width of the line (1–60). The eraser has its own size.
+- **Sharpness 0–100:** 100 draws a crisp line; lower values draw a thinner core with a softer edge that fades out. It applies to the next lines you draw.
+- **Clear all** erases everything on the page after asking. **Ctrl+Z** brings it back.
+- **↩ / ↪** (Ctrl+Z / Ctrl+Y): undo and redo, up to 100 steps while the pad is open.
+- **Pages:** ◀ ▶ (or Page Up / Page Down) to move between pages, **+ Page** adds one after this page, **Delete page** removes it (asks when something is drawn on it). At most 50 pages.
+- **Lined paper** shows or hides the notebook lines.
+
+The drawing is saved by itself in `sketch.json` next to `note.json`, and when the pad or TableNote closes.
+
 ---
 *This guide is based on the TableNote 2.6.0 code as of 21 Nov 2026 (Thailand time, UTC+7).*

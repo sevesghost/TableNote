@@ -128,6 +128,7 @@ public partial class MainWindow : Window
         SortDueButton.Click += (_, _) => SortByDue();
         ExportButton.Click += async (_, _) => await ExportAsync();
         InitWallpaper();
+        InitSketch(); // 2.6.1.1
         ZoomOutButton.Click += (_, _) => SetZoom(_settings.Scale - AppSettings.ScaleStep);
         ZoomInButton.Click += (_, _) => SetZoom(_settings.Scale + AppSettings.ScaleStep);
         ZoomResetButton.Click += (_, _) => SetZoom(100);
@@ -320,6 +321,7 @@ public partial class MainWindow : Window
         // Signing out / shutting down in wallpaper mode: with "launch at sign-in" TableNote redraws the table at the
         // next sign-in, so the picture stays; otherwise the user's wallpaper goes back now.
         if (systemClose && _view == ViewMode.Background && !_session.Doc.LaunchAtLogin) RestoreWallpaperOnExit();
+        CloseSketch(); // 2.6.1.1: the drawing pad is saved and closes with TableNote
         _wallpaperTimer?.Stop();
         WindowsHotkey.Unregister(WindowHandle());
         _reminders.Dispose();
@@ -945,6 +947,7 @@ public partial class MainWindow : Window
         ToolTip.SetTip(ZoomResetButton, T("tip.zoom_reset"));
         ToolTip.SetTip(ZoomInButton, T("tip.zoom_in"));
         ApplyWallpaperTexts();
+        ApplySketchTexts();
         RenderAlertBoxes();
         ApplyColorButtonText();
         ApplyMenuBarTexts();

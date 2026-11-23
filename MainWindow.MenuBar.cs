@@ -41,6 +41,7 @@ public partial class MainWindow
     private MenuItem _viewSortItem = null!;
     private MenuItem _systemPinItem = null!; // View → System → Set as wallpaper
     private MenuItem _addAlertItem = null!;
+    private MenuItem _sketchItem = null!; // 2.6.1.1: Table → Drawing pad…
     private MenuItem _addDaysItem = null!; // 2.6.0: Table → Add days counter column
     private MenuItem _findItem = null!; // 2.6.0: Table → Find… (Ctrl+F)
     private MenuItem _selectAllItem = null!; // 2.6.0: Table → Select all (Ctrl+A)
@@ -116,6 +117,7 @@ public partial class MainWindow
         _redoItem.InputGesture = new KeyGesture(Key.Y, KeyModifiers.Control);
         _sortItem = Act("toolbar.sort_due", SortByDue);
         _addAlertItem = Act("menu.add_alert", AddAlert);
+        _sketchItem = Act("menu.sketch", OpenSketch);
         _addDaysItem = Act("menu.add_days", () => _ = RunStructureAsync(() => SnapshotStep(Localizer.T("menu.add_days"), AddDaysColumnAsync)));
         _spotAddDueItem = new MenuItem { Tag = "spot:add-alert-date" };
         _spotAddDueItem.Click += async (_, _) =>
@@ -140,6 +142,7 @@ public partial class MainWindow
         _tableMenu.Items.Add(_deleteColumnItem);
         _tableMenu.Items.Add(_sortItem);
         _tableMenu.Items.Add(_addAlertItem);
+        _tableMenu.Items.Add(_sketchItem);
         _tableMenu.Items.Add(new Separator());
         _tableMenu.Items.Add(_spotAddDueItem);
         _tableMenu.Items.Add(_spotAddStatusItem);
@@ -161,6 +164,7 @@ public partial class MainWindow
             _deleteColumnItem.IsEnabled = edit;
             _sortItem.IsEnabled = _view == ViewMode.Edit;
             _addAlertItem.IsEnabled = _view == ViewMode.Edit && (_session.Doc.AlertBoxes?.Count ?? 0) < AlertBoxOps.MaxBoxes;
+            _sketchItem.IsEnabled = _view == ViewMode.Edit;
             _addDaysItem.IsEnabled = edit && _session.Doc.Columns.Count < NoteDocument.MaxUserColumns;
             ApplySpecialColumnSpots();
         };
@@ -341,6 +345,8 @@ public partial class MainWindow
         _deleteColumnItem.Header = Localizer.T("toolbar.delete_column");
         _sortItem.Header = Localizer.T("toolbar.sort_due");
         _addAlertItem.Header = Localizer.T("menu.add_alert");
+        _sketchItem.Header = Localizer.T("menu.sketch");
+        ToolTip.SetTip(_sketchItem, Localizer.T("tip.sketch"));
         _addDaysItem.Header = Localizer.T("menu.add_days");
         _findItem.Header = Localizer.T("menu.find");
         _selectAllItem.Header = Localizer.T("menu.select_all");
