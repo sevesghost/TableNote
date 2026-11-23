@@ -267,12 +267,12 @@ public sealed class InkOverlay : Control
         _drawing = false;
         SketchStroke? stroke = null;
         if (_gestureTool == SketchTool.Pen && _live.Count >= 2)
-            stroke = new SketchStroke(Document.PenColor, Document.PenWidth, Document.Sharpness, [.. _live]);
+            stroke = new SketchStroke(Document.PenColor, Document.PenWidth, 100, [.. _live]);
         else if (_gestureTool == SketchTool.Ruler)
         {
             var (x, y) = SketchOps.RulerEnd(_start.X, _start.Y, _last.X, _last.Y, _snap);
             if (SketchOps.Length(_start.X, _start.Y, x, y) >= 1)
-                stroke = new SketchStroke(Document.PenColor, Document.PenWidth, Document.Sharpness, [_start.X, _start.Y, x, y], ruler: true);
+                stroke = new SketchStroke(Document.PenColor, Document.PenWidth, 100, [_start.X, _start.Y, x, y], ruler: true);
             Info?.Invoke("");
         }
         _live.Clear();
@@ -302,6 +302,7 @@ public sealed class InkOverlay : Control
             foreach (var layer in Document.Layers)
             {
                 if (!layer.Visible) continue;
+                using var faded = context.PushOpacity(layer.Opacity / 100.0); // the layer's clarity, 0–100 %
                 foreach (var img in layer.Images)
                 {
                     var rect = new Rect(img.X, img.Y, img.W, img.H);
@@ -315,14 +316,15 @@ public sealed class InkOverlay : Control
                 }
             }
 
+            using var activeFaded = context.PushOpacity(Document.ActiveLayer.Opacity / 100.0); // a line being drawn looks as it will
             if (_drawing && _gestureTool == SketchTool.Pen && _live.Count >= 2)
-                DrawStroke(context, BuildGeometry([.. _live], false), Document.PenColor, Document.PenWidth, Document.Sharpness);
+                DrawStroke(context, BuildGeometry([.. _live], false), Document.PenColor, Document.PenWidth, 100);
 
             if (_drawing && _gestureTool == SketchTool.Ruler)
             {
                 var (x, y) = SketchOps.RulerEnd(_start.X, _start.Y, _last.X, _last.Y, _snap);
                 DrawRulerGuide(context, new Point(x, y), bounds.Size);
-                DrawStroke(context, BuildGeometry([_start.X, _start.Y, x, y], true), Document.PenColor, Document.PenWidth, Document.Sharpness);
+                DrawStroke(context, BuildGeometry([_start.X, _start.Y, x, y], true), Document.PenColor, Document.PenWidth, 100);
                 DrawRulerLabel(context, new Point(x, y));
             }
 

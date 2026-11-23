@@ -220,11 +220,13 @@ public sealed class InkLayer
     public string Id { get; set; } = InkOps.NewId();
     public string Name { get; set; } = "";
     public bool Visible { get; set; } = true;
+    /// <summary>How clear the layer is drawn, 0–100 % (100 clear, lower more faded); the drawing itself is unchanged.</summary>
+    public int Opacity { get; set; } = 100;
     public List<SketchStroke> Strokes { get; set; } = [];
     public List<SketchImage> Images { get; set; } = [];
 
     /// <summary>A copy for undo (strokes and pictures never change, so the lists can be shallow copies).</summary>
-    public InkLayer Clone() => new() { Id = Id, Name = Name, Visible = Visible, Strokes = [.. Strokes], Images = [.. Images] };
+    public InkLayer Clone() => new() { Id = Id, Name = Name, Visible = Visible, Opacity = Opacity, Strokes = [.. Strokes], Images = [.. Images] };
 }
 
 /// <summary>A picture in a cell: the file in the images folder and whether the cell shows it open.</summary>
@@ -403,6 +405,7 @@ public static class InkStore
         public string? Id { get; set; }
         public string? Name { get; set; }
         public bool Visible { get; set; } = true;
+        public int Opacity { get; set; } = 100;
         public List<StrokeDto>? Strokes { get; set; }
         public List<ImageDto>? Images { get; set; }
     }
@@ -491,6 +494,7 @@ public static class InkStore
             Id = l.Id,
             Name = l.Name,
             Visible = l.Visible,
+            Opacity = l.Opacity,
             Strokes = l.Strokes.Select(s => new StrokeDto
             {
                 Color = s.Color, Width = s.Width, Sharpness = s.Sharpness, Ruler = s.Ruler,
@@ -510,6 +514,7 @@ public static class InkStore
             Id = string.IsNullOrWhiteSpace(l.Id) ? InkOps.NewId() : l.Id!,
             Name = InkOps.CleanName(l.Name) is { Length: > 0 } name ? name : InkOps.DefaultLayerName(n + 1),
             Visible = l.Visible,
+            Opacity = SketchOps.ClampSharpness(l.Opacity),
             Strokes = (l.Strokes ?? [])
                 .Where(s => s.Points is { Length: >= 2 } && s.Points.All(double.IsFinite))
                 .Select(s => new SketchStroke(s.Color ?? SketchOps.DefaultColor, s.Width, s.Sharpness,

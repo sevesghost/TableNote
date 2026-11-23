@@ -125,7 +125,7 @@ If TableNote stops responding for more than 2 seconds, an orange line says for h
 Draw button or Table → Draw on the table :: turns drawing on; Done or Esc turns it off (the layers stay on the table)
 Pen / Eraser / Ruler / Move (P / E / R / M) :: write freehand / erase lines on the active layer / straight line (Shift: 15° steps) / move a picture
 Colour :: pick a swatch or type #RRGGBB and press Enter
-Size and Sharpness :: line width; sharpness 0–100 (100 a crisp line, lower a softer, blurred edge)
+Size and Sharpness :: line width; sharpness 0–100 % of the active layer (100 clear, 50 half faded) for its drawing and pictures
 Clear all :: empties the active layer after asking
 Ctrl+Z / Ctrl+Y while drawing :: undo / redo the drawing (not the table)
 Layers :: tick to show / hide, click a name to draw on it; + Layer, Rename, Delete layer (up to 10); View → Note layers shows or hides them anytime
@@ -278,7 +278,7 @@ X (มุมหน้าต่าง) :: เลื่อน 10 นาทีท�
 ปุ่ม วาดเขียน หรือ ตาราง → วาดเขียนบนตาราง :: เปิดโหมดวาด กด เสร็จ หรือ Esc เพื่อหยุด (เลเยอร์ยังแสดงบนตาราง)
 ปากกา / ยางลบ / ไม้บรรทัด / ย้าย (P / E / R / M) :: เขียนอิสระ / ลบเส้นในเลเยอร์ที่เลือก / เส้นตรง (Shift ล็อกมุมทีละ 15°) / ย้ายรูปภาพ
 สี :: คลิกเลือกสี หรือพิมพ์ #RRGGBB แล้วกด Enter
-ขนาดและความคมชัด :: ความหนาของเส้น ความคมชัด 0–100 (100 = เส้นคม ค่าน้อยลง = ขอบนุ่มฟุ้ง)
+ขนาดและความคมชัด :: ความหนาของเส้น ความคมชัด 0–100% ของเลเยอร์ที่เลือก (100 = ชัด 50 = จางครึ่งหนึ่ง) ทั้งเส้นและรูปภาพ
 ลบทั้งหมด :: ถามก่อนแล้วล้างเลเยอร์ที่เลือก
 Ctrl+Z / Ctrl+Y ระหว่างวาด :: ย้อนกลับ / ทำซ้ำภาพวาด (ไม่ใช่ตาราง)
 เลเยอร์ :: ติ๊กเพื่อเปิด/ปิด คลิกชื่อเพื่อวาดบนเลเยอร์นั้น + เลเยอร์ เปลี่ยนชื่อ ลบเลเยอร์ (สูงสุด 10) มุมมอง → เลเยอร์โน้ต เปิด/ปิดได้ทุกเวลา
@@ -320,7 +320,7 @@ tablenote.log :: บันทึกการทำงานของโปรแ
 @"TableNote " + Version + @" — built 23 Nov 2026 (Bangkok time, UTC+7)
 
 23 Nov 2026 — 2.6.1.1
-New: draw on the table in layers (Draw on the toolbar): pen, eraser, ruler (Shift keeps 15° steps), Clear all, pen colour (11 swatches or any #RRGGBB), size, sharpness 0–100 (100 crisp, lower a softer edge), undo / redo, and pictures you can move and resize. Up to 10 layers, each shown or hidden with a tick, also from View → Note layers.
+New: draw on the table in layers (Draw on the toolbar): pen, eraser, ruler (Shift keeps 15° steps), Clear all, pen colour (11 swatches or any #RRGGBB), size, sharpness 0–100 % per layer (100 clear, lower more faded), undo / redo, and pictures you can move and resize. Up to 10 layers, each shown or hidden with a tick, also from View → Note layers.
 New: pictures in cells: right-click a cell → Insert picture in cell…; the Picture ▾ / ▸ button in the cell shows or hides it. Kept in layers.json and the images folder next to note.json.
 
 22 Nov 2026 — 2.6.1
@@ -394,7 +394,7 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 " + BuildNote + @"
 
 23 พ.ย. 2026 — 2.6.1.1
-ใหม่: วาดเขียนบนตารางเป็นเลเยอร์ (ปุ่ม วาดเขียน): ปากกา ยางลบ ไม้บรรทัด (กด Shift ล็อกมุมทีละ 15°) ลบทั้งหมด สีปากกา (11 สี หรือพิมพ์ #RRGGBB) ขนาด ความคมชัด 0–100 (100 = คม ค่าน้อยลง = ขอบนุ่มฟุ้ง) ย้อนกลับ / ทำซ้ำ และรูปภาพที่ย้ายและย่อ/ขยายได้ สูงสุด 10 เลเยอร์ เปิด/ปิดแต่ละเลเยอร์ด้วยช่องติ๊ก หรือที่ มุมมอง → เลเยอร์โน้ต
+ใหม่: วาดเขียนบนตารางเป็นเลเยอร์ (ปุ่ม วาดเขียน): ปากกา ยางลบ ไม้บรรทัด (กด Shift ล็อกมุมทีละ 15°) ลบทั้งหมด สีปากกา (11 สี หรือพิมพ์ #RRGGBB) ขนาด ความคมชัด 0–100% ของแต่ละเลเยอร์ (100 = ชัด ค่าน้อยลง = จางลง) ย้อนกลับ / ทำซ้ำ และรูปภาพที่ย้ายและย่อ/ขยายได้ สูงสุด 10 เลเยอร์ เปิด/ปิดแต่ละเลเยอร์ด้วยช่องติ๊ก หรือที่ มุมมอง → เลเยอร์โน้ต
 ใหม่: ภาพในช่อง: คลิกขวาที่ช่อง → ใส่ภาพในช่อง… แล้วกดปุ่ม ภาพ ▾ / ▸ ในช่องเพื่อเปิด/ปิดภาพ เก็บใน layers.json และโฟลเดอร์ images ข้าง note.json
 
 22 พ.ย. 2026 — 2.6.1

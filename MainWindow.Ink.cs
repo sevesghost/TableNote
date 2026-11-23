@@ -46,11 +46,11 @@ public partial class MainWindow
     private readonly List<(string Color, Border Swatch)> _inkSwatches = [];
     private readonly TextBox _inkHex = new() { Width = 84, FontSize = 12, MinHeight = 0, Height = 26, Padding = new Thickness(5, 2), VerticalContentAlignment = VerticalAlignment.Center };
     private readonly Border _inkCurrent = new() { Width = 20, Height = 20, CornerRadius = new CornerRadius(10), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center };
-    private readonly Slider _inkSize = new() { Minimum = SketchOps.MinWidth, Maximum = SketchOps.MaxWidth, Width = 100, TickFrequency = 1, IsSnapToTickEnabled = true, SmallChange = 1, LargeChange = 5, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Slider _inkSize = new() { Minimum = SketchOps.MinWidth, Maximum = SketchOps.MaxWidth, Width = 90, TickFrequency = 1, IsSnapToTickEnabled = true, SmallChange = 1, LargeChange = 5, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _inkSizeText = new() { MinWidth = 22, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _inkSizeLabel = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) };
-    private readonly Slider _inkSharp = new() { Minimum = 0, Maximum = 100, Width = 110, TickFrequency = 1, IsSnapToTickEnabled = true, SmallChange = 1, LargeChange = 10, VerticalAlignment = VerticalAlignment.Center };
-    private readonly TextBlock _inkSharpText = new() { MinWidth = 22, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Slider _inkSharp = new() { Minimum = 0, Maximum = 100, Width = 100, TickFrequency = 1, IsSnapToTickEnabled = true, SmallChange = 1, LargeChange = 10, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _inkSharpText = new() { MinWidth = 34, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private readonly WrapPanel _inkLayerChips = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _inkInfo = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.Parse("#6B5E48")), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
     private Button _inkUndoButton = null!;
@@ -184,8 +184,12 @@ public partial class MainWindow
             _inkSharp.PropertyChanged += (_, e) =>
             {
                 if (e.Property != RangeBase.ValueProperty || _inkLoading) return;
-                _ink.Sharpness = SketchOps.ClampSharpness((int)Math.Round(_inkSharp.Value));
-                _inkSharpText.Text = _ink.Sharpness.ToString();
+                // 2.6.1.1: clarity of the active layer (100 % clear, lower more faded), shown at once.
+                var layer = _ink.ActiveLayer;
+                layer.Opacity = SketchOps.ClampSharpness((int)Math.Round(_inkSharp.Value));
+                _inkSharpText.Text = layer.Opacity + "%";
+                _inkOverlay.InvalidateVisual();
+                RefreshLayerChips();
                 ScheduleInkSave();
             };
         }
@@ -193,16 +197,13 @@ public partial class MainWindow
         row1.Children.Add(_inkHex);
         row1.Children.Add(_inkCurrent);
         row1.Children.Add(InkSep());
-        row1.Children.Add(_inkSizeLabel);
-        row1.Children.Add(_inkSize);
-        row1.Children.Add(_inkSizeText);
+        // Label, slider and value stay together when the bar wraps.
+        row1.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { _inkSizeLabel, _inkSize, _inkSizeText } });
         row1.Children.Add(InkSep());
         var sharpLabel = InkLabel(Localizer.T("sketch.sharpness"));
         ToolTip.SetTip(sharpLabel, Localizer.T("sketch.sharpness_tip"));
         ToolTip.SetTip(_inkSharp, Localizer.T("sketch.sharpness_tip"));
-        row1.Children.Add(sharpLabel);
-        row1.Children.Add(_inkSharp);
-        row1.Children.Add(_inkSharpText);
+        row1.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { sharpLabel, _inkSharp, _inkSharpText } });
 
         var row2 = new WrapPanel { Orientation = Orientation.Horizontal };
         _inkUndoButton = InkButton("↩", "sketch.undo_tip", InkUndo);
@@ -241,8 +242,8 @@ public partial class MainWindow
     private void RefreshInkBar()
     {
         _inkLoading = true;
-        _inkSharp.Value = _ink.Sharpness;
-        _inkSharpText.Text = _ink.Sharpness.ToString();
+        _inkSharp.Value = _ink.ActiveLayer.Opacity;
+        _inkSharpText.Text = _ink.ActiveLayer.Opacity + "%";
         _inkLoading = false;
         SetInkColor(_ink.PenColor, save: false, keepTool: true);
         SetInkTool(_inkOverlay.Tool);
@@ -264,7 +265,6 @@ public partial class MainWindow
         _inkSize.Value = tool == SketchTool.Eraser ? _ink.EraserWidth : _ink.PenWidth;
         _inkSizeText.Text = _inkSize.Value.ToString("0");
         _inkLoading = false;
-        _inkSharp.IsEnabled = tool is SketchTool.Pen or SketchTool.Ruler;
         _inkSize.IsEnabled = tool != SketchTool.Move;
         SayInk(Localizer.T(tool switch
         {
@@ -295,7 +295,7 @@ public partial class MainWindow
 
     internal void SetInkHex(string text) { _inkHex.Text = text; ApplyInkHex(); }
     internal void SetInkSize(double v) => _inkSize.Value = v;
-    internal void SetInkSharpness(int v) => _inkSharp.Value = v;
+    internal void SetLayerClarity(int v) => _inkSharp.Value = v;
 
     private void ApplyInkHex()
     {
@@ -313,7 +313,7 @@ public partial class MainWindow
             var eye = new CheckBox { IsChecked = layer.Visible, MinHeight = 0, MinWidth = 0, Padding = new Thickness(2, 0), VerticalAlignment = VerticalAlignment.Center };
             ToolTip.SetTip(eye, Localizer.T("ink.layer_visible_tip"));
             eye.IsCheckedChanged += (_, _) => SetLayerVisible(index, eye.IsChecked == true);
-            var name = new TextBlock { Text = layer.Name, FontSize = 12, Foreground = InkFg, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+            var name = new TextBlock { Text = layer.Opacity < 100 ? layer.Name + " · " + layer.Opacity + "%" : layer.Name, FontSize = 12, Foreground = InkFg, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
             var chip = new Border
             {
                 Background = index == _ink.Active ? InkLayerOn : Brushes.Transparent,
@@ -338,6 +338,10 @@ public partial class MainWindow
         if (index < 0 || index >= _ink.Layers.Count) return;
         _ink.Active = index;
         _inkOverlay.Selected = null;
+        _inkLoading = true;
+        _inkSharp.Value = _ink.Layers[index].Opacity; // the slider shows this layer's clarity
+        _inkSharpText.Text = _ink.Layers[index].Opacity + "%";
+        _inkLoading = false;
         if (!_ink.Layers[index].Visible) SayInk(Localizer.T("ink.layer_hidden"));
         RefreshLayerChips();
         _inkOverlay.InvalidateVisual();
@@ -409,6 +413,10 @@ public partial class MainWindow
 
     private void AfterInkStructure()
     {
+        _inkLoading = true;
+        _inkSharp.Value = _ink.ActiveLayer.Opacity;
+        _inkSharpText.Text = _ink.ActiveLayer.Opacity + "%";
+        _inkLoading = false;
         _inkOverlay.Refresh();
         RefreshLayerChips();
         UpdateInkButtons();
@@ -753,7 +761,7 @@ public partial class MainWindow
         {
             var index = i;
             var layer = _ink.Layers[i];
-            var item = new MenuItem { Header = (layer.Visible ? "✓ " : "") + layer.Name, FontFamily = AppFonts.Thai };
+            var item = new MenuItem { Header = (layer.Visible ? "✓ " : "") + layer.Name + (layer.Opacity < 100 ? " · " + layer.Opacity + "%" : ""), FontFamily = AppFonts.Thai };
             item.Click += (_, _) => SetLayerVisible(index, !_ink.Layers[index].Visible);
             menu.Items.Add(item);
         }

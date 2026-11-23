@@ -765,7 +765,7 @@
   "sketch.size": "Size",
   "sketch.eraser_size": "Eraser size",
   "sketch.sharpness": "Sharpness",
-  "sketch.sharpness_tip": "0–100: 100 is a crisp line, lower values give a softer, blurred edge",
+  "sketch.sharpness_tip": "0–100 % for this layer: 100 is clear, lower makes the drawing and pictures of the layer fainter",
   "sketch.undo_tip": "Undo (Ctrl+Z)",
   "sketch.redo_tip": "Redo (Ctrl+Y)",
   "sketch.clear": "Clear all",

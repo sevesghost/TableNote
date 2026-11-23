@@ -415,7 +415,7 @@ Click **Draw** on the toolbar (or **Table → Draw on the table**). A drawing ba
 | **Move** | M | Drag a picture to move it; drag its bottom-right corner to resize it (Shift: any shape). **Delete** removes it. |
 
 - **Colour:** click a swatch, or type `#RRGGBB` and press Enter. **Size:** 1–60 (the eraser has its own size).
-- **Sharpness 0–100:** 100 draws a crisp line; lower values draw a softer edge that fades out.
+- **Sharpness 0–100 %:** how clear the active layer is: 100 % clear, 50 % half faded, lower still fainter. It applies to the whole layer (drawing and pictures) at once, each layer has its own, and the layer's name shows it when it is below 100 %.
 - **Clear all** empties the active layer after asking. **↩ / ↪** or **Ctrl+Z / Ctrl+Y** undo and redo the drawing while drawing is on.
 - The mouse wheel still scrolls the table; the drawing moves with it. It stays where it was drawn on the table: moving, sorting or hiding rows does not move it.
 

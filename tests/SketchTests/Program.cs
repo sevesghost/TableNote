@@ -101,6 +101,7 @@ var d1 = new InkDocument { PenColor = "#DC2626", PenWidth = 7, Sharpness = 40, E
 d1.ActiveLayer.Strokes.Add(new SketchStroke("#16A34A", 5, 35, [1.04, 2.06, 30, 40, 55, 60]));
 InkOps.AddLayer(d1, "ภาพ");
 d1.ActiveLayer.Visible = false;
+d1.ActiveLayer.Opacity = 35;
 d1.ActiveLayer.Images.Add(new SketchImage("img1", "img-1.png", 5, 6, 70, 80));
 d1.ActiveLayer.Strokes.Add(new SketchStroke("#000000", 2, 100, [0, 0, 80, 80], ruler: true));
 d1.CellImages[CellDetailOps.Key("r1", "c1")] = new CellImage("img-2.jpg", true);
@@ -109,6 +110,7 @@ InkStore.Save(file, d1);
 var d2 = InkStore.Load(file, out var w2);
 Ok(w2 == null && d2.Layers.Count == 2 && d2.Active == 1 && d2.PenColor == "#DC2626" && d2.PenWidth == 7 && d2.Sharpness == 40 && d2.EraserWidth == 30,
     "layers and settings come back");
+Ok(d2.Layers[1].Opacity == 35 && d2.Layers[0].Opacity == 100, "layer clarity comes back (100 when missing)");
 Ok(d2.Layers[0].Visible && !d2.Layers[1].Visible && d2.Layers[1].Name == "ภาพ" && d2.Layers[0].Id == d1.Layers[0].Id, "names, ids and shown / hidden come back");
 Ok(d2.Layers[0].Strokes.Single().Points.SequenceEqual([1.0, 2.1, 30, 40, 55, 60]) && d2.Layers[1].Strokes.Single().Ruler &&
    d2.Layers[1].Images.Single() == new SketchImage("img1", "img-1.png", 5, 6, 70, 80), "strokes (to 0.1 px) and pictures come back");
@@ -175,7 +177,7 @@ void Drag(double x0, double y0, double x1, double y1, RawInputModifiers mods = R
 var cellsBefore = string.Join("|", Doc(window).Rows.Select(r => string.Join(",", r)));
 window.SetInkColor("#DC2626");
 window.SetInkSize(5);
-window.SetInkSharpness(100);
+window.SetLayerClarity(100);
 Drag(150, 80, 450, 140);
 var strokes = window.Ink.ActiveLayer.Strokes;
 Ok(strokes.Count == 1 && strokes[0].Color == "#DC2626" && strokes[0].Width == 5 && strokes[0].PointCount >= 8, "the pen writes on the table (layer 1)");
@@ -238,6 +240,24 @@ if (frameHidden != null && frameShown != null)
     var shown = Pixel(frameShown, (int)redAt.X, (int)redAt.Y);
     Ok(shown.R > 150 && shown.G < 120 && !(hidden.R > 150 && hidden.G < 120), "the red line shows only while its layer is on", $"shown {shown}, hidden {hidden}");
 }
+// clarity of a layer: 100 % clear, 50 % faded (the drawing itself is unchanged)
+window.SelectInkLayer(0);
+window.SetLayerClarity(50);
+Pump(window, 20);
+var frameHalf = Shot(window, "ink-layer1-50");
+if (frameShown != null && frameHalf != null)
+{
+    var full = Pixel(frameShown, (int)redAt.X, (int)redAt.Y);
+    var half = Pixel(frameHalf, (int)redAt.X, (int)redAt.Y);
+    Ok(half.R > 150 && half.G > full.G + 50 && half.G < 230, "at 50 % the red line is fainter but still there", $"100 %: {full}, 50 %: {half}");
+}
+Ok(window.Ink.Layers[0].Opacity == 50 && window.Ink.Layers[1].Opacity == 100 && window.Ink.Layers[0].Strokes.All(s => s.Color == "#DC2626"),
+    "clarity belongs to the layer; the strokes keep their colour");
+var chipText = window.FindControl<Border>("InkBar")!.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
+Ok(chipText.Contains("เลเยอร์ 1 · 50%") && chipText.Contains("50%"), "the layer chip and the slider show 50%", string.Join(" | ", chipText));
+window.SelectInkLayer(1);
+Ok(chipText.Count > 0 && window.FindControl<Border>("InkBar")!.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "100%"),
+    "picking layer 2 shows its own clarity on the slider");
 window.SetLayerVisible(1, true);
 Pump(window, 20);
 Shot(window, "ink-both-layers");
@@ -271,6 +291,7 @@ Ok(window.Ink.CellImages[key].Open, "and opens again");
 
 window.SaveInkNow();
 var saved = InkStore.Load(file, out _);
+Ok(saved.Layers[0].Opacity == 50, "the layer's clarity is saved");
 Ok(saved.Layers.Count == 2 && saved.Layers[0].Strokes.Count == n + 1 && saved.Layers[1].Images.Count == 1 && !saved.Layers[1].Visible &&
    saved.CellImages.ContainsKey(key), "layers, pictures and the cell picture are saved");
 window.RemoveCellImage(2, 1);

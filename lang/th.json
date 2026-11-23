@@ -765,7 +765,7 @@
   "sketch.size": "ขนาด",
   "sketch.eraser_size": "ขนาดยางลบ",
   "sketch.sharpness": "ความคมชัด",
-  "sketch.sharpness_tip": "0–100: 100 = เส้นคมชัด ค่าน้อยลง = ขอบเส้นนุ่มและฟุ้งขึ้น",
+  "sketch.sharpness_tip": "0–100% ของเลเยอร์นี้: 100% = ชัดเต็มที่ ลดลง = เส้นและรูปภาพในเลเยอร์จางลง",
   "sketch.undo_tip": "ย้อนกลับ (Ctrl+Z)",
   "sketch.redo_tip": "ทำซ้ำ (Ctrl+Y)",
   "sketch.clear": "ลบทั้งหมด",
