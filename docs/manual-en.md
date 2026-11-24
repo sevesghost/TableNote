@@ -427,5 +427,38 @@ Click **Draw** on the toolbar (or **Table → Draw on the table**). A drawing ba
 
 Everything is saved by itself in `layers.json` next to `note.json`; the pictures are copied into the `images` folder beside it. Layers and cell pictures are not included in image export, print or the wallpaper yet.
 
+## 18. Calendar
+
+Click **Calendar** on the toolbar (or press **F9**, or **Table → Calendar…**, or **Calendar** in the tray menu). The calendar shows a month; every task with a due date is on its day, with its time and title, coloured like the table:
+
+| Colour | Meaning |
+|---|---|
+| Light red | Overdue |
+| Yellow | Due today |
+| Faded, struck through | Done |
+| 🔁 in italics | A coming round of a repeating task (added to the table when the round before is done) |
+
+Point at a day or a task to see its details: status, repeat, advance reminders, the row number and the detail text. ◀ ▶ (or PageUp / PageDown) change the month, **Today** (or Home) comes back to today.
+
+**Filling in a day.** Click a day. A pop-up table opens with the tasks due that day — they are the same rows as in the main table:
+
+1. Click **+ Row**. A row is added to the main table, due that day at 09:00 (today: the next whole hour).
+2. Type the title and the detail. Press **Enter** to keep a cell. The main table changes at once; **Ctrl+Z** undoes it.
+3. Change the **Time** if needed (leave it empty for all day), and set the status, **⏰** advance reminders or **🔁** repeat as in the table.
+
+The selected row can also be moved to another day (**Move to**), taken off the calendar (**Remove the date** — the row stays in the table) or deleted (**− Row**). **↗** opens the main table with that row selected; from the table, right-click a row number → **Show in calendar** to go back to its day.
+
+Reminders for these tasks come as for every task. A time that has already passed when you set it from the calendar does not pop a reminder; the task shows as overdue until it is done.
+
+**Rows you wrote before.** Rows that already have a due date are on the calendar by themselves — use ◀ ▶ or **Go to…** to reach their month. For rows without a date, click **Put existing rows… (N)** at the top right of the calendar:
+
+1. The list shows each row with no date, or with a date that can't be read. If a date is written in the row — in its title, in a column of dates, or in its text — it is shown in green, and the row is ticked.
+2. Tick the rows you want. Keep **Use the date found in a row** on to put those rows on their own dates; the other rows go on the **Date** below, at the **Time** below (empty = all day).
+3. Click **Put on the calendar**. **Ctrl+Z** takes it back.
+
+You can also open this list from a day's pop-up (**+ Existing rows…** puts rows on that day) or right-click a row number in the table → **Put on the calendar…**.
+
+**Calendar on the wallpaper.** At the bottom of the calendar, **On the wallpaper** has three choices: **Off**, **Bottom right, with the table**, **Bottom right, calendar only**. When you press **Wallpaper**, the calendar is drawn at the bottom right of the screen: today in large, the month, and what is overdue or comes next. It follows the table like the rest of the wallpaper. Use **Tray → Calendar** to open the calendar while the table stays on the wallpaper.
+
 ---
 *This guide is based on the TableNote 2.6.0 code as of 21 Nov 2026 (Thailand time, UTC+7).*

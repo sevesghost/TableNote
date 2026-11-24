@@ -4,14 +4,15 @@
 
 A lightweight, Excel-like task table for Windows with due-date and advance reminders, built with Avalonia on .NET 10.
 
-Current version: **2.6.1.1** (23 November 2026). The interface is English by default; switch to Thai in **View → Language**. English manual: [`docs/manual-en.md`](docs/manual-en.md).
+Current version: **2.7.0** (24 November 2026). The interface is English by default; switch to Thai in **View → Language**. English manual: [`docs/manual-en.md`](docs/manual-en.md).
 
 ## What is TableNote?
 
-TableNote is a small editable table for keeping track of tasks. Each row is a task. A new note gets the columns Title, Detail, Status, and Due in the current interface language (a new note created in Thai gets หัวข้อ, รายละเอียด, สถานะ, กำหนดส่ง). Notes you already have keep their column names. TableNote shows a reminder popup with a sound when a task is due, and it can also remind you ahead of time. It can put the table on your desktop wallpaper, and it keeps running in the system tray so reminders keep working.
+TableNote is a small editable table for keeping track of tasks. Each row is a task. A new note gets the columns Title, Detail, Status, and Due in the current interface language (a new note created in Thai gets หัวข้อ, รายละเอียด, สถานะ, กำหนดส่ง). Notes you already have keep their column names. TableNote shows a reminder popup with a sound when a task is due, and it can also remind you ahead of time. A calendar shows the same rows by day, and you fill in a day's tasks in its pop-up table. It can put the table (and the calendar, bottom right) on your desktop wallpaper, and it keeps running in the system tray so reminders keep working.
 
 ## Features
 
+- **Calendar (2.7.0):** **Calendar** on the toolbar (F9, **Table → Calendar…**, or the tray menu) shows the month with every row that has a due date on its day — time and title, coloured like the table — and the details when you point at a day. Click a day for its pop-up table: the table's own rows due that day; **+ Row** adds one, and what you type there is in the table at once, and the other way round. Reminders work as for every row. The calendar can also sit on the wallpaper at the bottom right. See [Calendar](#calendar).
 - **Draw on the table, in layers (2.6.1.1):** **Draw** on the toolbar turns drawing on: pen, eraser, ruler (Shift for 15° steps), Clear all, pen colour, size, sharpness 0–100 % per layer (clear to faded), undo / redo, and pictures you can move and resize. Up to 10 layers, each shown or hidden with a tick (also **View → Note layers**). **Pictures in cells:** right-click a cell → **Insert picture in cell…**; the cell's **Picture ▾ / ▸** button shows or hides it. Kept in `layers.json` and `images/` next to `note.json`.
 - **Faster start (2.6.1):** the exe carries its code compiled ahead of time, so TableNote opens about 3 to 4 times sooner and uses less CPU and memory after it starts; table cells are lighter. `tablenote.log` records how long each step of a start took. See [docs/performance.md](docs/performance.md).
 - **Wallpaper mode (2.6.0, Windows):** **Wallpaper** on the toolbar draws the table over your own wallpaper, full screen, where the window was. The editor goes to the tray. Click the tray icon or press Ctrl+Shift+E to edit again, and your own wallpaper comes back. See [Wallpaper mode](#wallpaper-mode).
@@ -105,6 +106,7 @@ The in-app Help (**Help → Help** in the menu bar, or Help / วิธีใช
 | F6 | Delete the selected rows (asks first when they have text) |
 | F7 | Add column |
 | F8 | Delete the selected columns |
+| F9 | Open the calendar (also **Calendar** on the toolbar) |
 | Click / drag a row number | Select whole rows (Shift+click extends); drag the ⋮⋮ grip beside the number to move them |
 | Click / drag a column header | Select whole columns (Shift+click extends); double-click or F2 renames the column |
 | Right-click a row number / header / cell | Insert rows or columns (as many as are selected), delete them, Insert copied |
@@ -143,12 +145,32 @@ Click a days cell (or press Space) to open its pop-up:
 
 History starts on the day the table gets a days column and is saved in `note.json` (`rowHistory`, by row id, at most 100 entries per row). Changes to one cell within 10 minutes are one entry, and typing a new row's first values is not listed (its status changes are). Ctrl+Z of an edit is recorded as another change; notes are not part of Ctrl+Z. Exports and Copy give the start date (`yyyy-MM-dd`); image export, print and the wallpaper show the days.
 
+## Calendar
+
+**Calendar** on the toolbar (or F9, **Table → Calendar…**, or **Calendar** in the tray menu) opens a month of six weeks. Every row with a due date is on its day: its time and title, coloured like the table (light red overdue, yellow due today, faded and struck through when done, or the row's own colour); a day with more than fits says **+ N more**. Point at a day or an item for the details: status, repeat, advance reminders, the row number and the detail text. Coming rounds of a repeating task are shown on their days with 🔁 (the row of the next round is still added when the round before is done). ◀ ▶ or PageUp / PageDown change the month, **Today** or Home goes back to today, the arrows move the selected day. **Hide done** and **Week starts on** (Sunday or Monday) are at the bottom.
+
+The calendar keeps nothing of its own: its items are the table's rows, so a change in the table shows in the open calendar at once, and a change in the calendar is a change in the table.
+
+**A day's pop-up table.** Click a day (or press Enter). The pop-up lists the table's rows due that day, with the table's columns and a **Time** (empty = all day):
+
+- Type in a cell: it is in the table at once, one Ctrl+Z step each (Ctrl+Z / Ctrl+Y work in the calendar and the pop-up too). Enter keeps it and goes down, Esc puts it back.
+- **+ Row** adds a row to the table due that day, at 09:00 (today: the next whole hour). The empty rows at the end of the table are used first, then a new last row.
+- **− Row** deletes the selected row from the table (asks when it has text). **Remove the date** takes it off the calendar and keeps it in the table. **Move to** puts it on another day at the same time.
+- Status, **⏰** advance reminders and **🔁** repeat work as in the table (Done adds the next round). The reminders come as for every row; a time that has already passed when you set it from the calendar does not pop a reminder (the row shows as overdue until it is done).
+- **↗** brings the editor forward with the row selected. The other way: right-click a row number → **Show in calendar** opens the calendar on that row's day with the row selected.
+- ◀ ▶ at the top go to the day before / after.
+
+**Rows written before the calendar.** Nothing to move: every row that has a due date is on the calendar by itself (◀ ▶ or **Go to…** for other months). Rows with text but no due date (or one that can't be read) are counted on **Put existing rows… (N)** at the top right of the calendar. It lists them, with any date written in the row — in its title, in a column of dates, or inside its text (`15/12/2569`, `2026-12-15`, `5 ม.ค. 2570 9.30 น.`, `Jan 5, 2026`) — and puts the ticked ones on that date, or on the date you pick (at the time you pick; empty = all day), as one Ctrl+Z step. The same list opens from a day's pop-up (**+ Existing rows…**, on that day) and from a row's right-click menu (**Put on the calendar…**, with that row ticked). A table without a due date column gets an **Add the due date column** button in the calendar.
+
+**On the wallpaper.** At the bottom of the calendar (or **View → Calendar on the wallpaper**): **Off**, **Bottom right, with the table** or **Bottom right, calendar only**. While the table is on the wallpaper, a card at the bottom right of the screen (above the taskbar) shows today in large, the month with a dot under each day with rows due, and what is overdue or comes next. It is redrawn with the table. **Tray → Calendar** opens the calendar without leaving the wallpaper.
+
 ## Wallpaper mode
 
 **Wallpaper** on the toolbar (or **File → Set as wallpaper**) puts the table on your desktop wallpaper (Windows):
 
 - The picture is full screen. Your own wallpaper stays, and a card with the alert boxes and the table sits on it where the editor window was, at the window's size at most and at its zoom. Rows that don't fit are counted as **+ N more rows**.
 - Only the monitor the window is on changes. With **Span** (one picture across all monitors) the table is drawn across all of them.
+- **Calendar on the wallpaper (2.7.0):** with **View → Calendar on the wallpaper** (or the calendar's **On the wallpaper**) a calendar card sits at the bottom right of that monitor, with the table or alone. See [Calendar](#calendar).
 - The editor goes to the tray. The picture follows the table: a task marked done from a reminder, a task that turns overdue or due today, and a new day redraw it.
 - Back to editing: click the tray icon, choose **Edit table** in the tray menu, press Ctrl+Shift+E, or start TableNote again. Your own wallpaper comes back at once. **Quit** in the tray menu puts it back too; the next start draws the table again.
 - At sign-out with **Launch at sign-in** on, the table stays on the wallpaper and is redrawn at the next sign-in; with it off, your wallpaper is put back.
@@ -181,6 +203,7 @@ Due dates are exported as `yyyy-MM-dd`, or `yyyy-MM-dd HH:mm` when a time is set
 - Or set the `TABLENOTE_DATA` environment variable to a full file path.
 - Layers and pictures (2.6.1.1): `layers.json` next to `note.json` (the layers, their drawing and pictures, the pen settings and the pictures in cells; the file before is kept as `layers.json.prev`), and the picture files in an `images` folder beside it. `note.json` and its format are unchanged. At most 10 layers, 100 pictures on layers, 400,000 points, 20 MB per picture.
 - Wallpaper mode (Windows): `%LOCALAPPDATA%\TableNote\wallpaper\`, or a `wallpaper` folder next to `note.json` when `TABLENOTE_DATA` is set.
+- Calendar (2.7.0): nothing of its own in `note.json` (its items are the rows with a due date). Its settings are in `settings.json`: `calendarWallpaper` (`corner` / `only`), `calendarWeekStart` (`1` = Monday) and `calendarHideDone`, each written only when it is not the default.
 
 Advance reminders are stored in a top-level `reminders` field keyed by row id, for example `{"<rowId>": {"offsets": [60, 15], "acked": [...]}}` (offsets are saved largest first). A wrongly typed value (for example `"offsets": ["15"]`) is dropped on its own and logged to `tablenote.log` next to `note.json`; the rest of the table is kept.
 
@@ -227,6 +250,7 @@ Source layout:
 - `Platform/`: Windows wallpaper (IDesktopWallpaper), hotkey, taskbar, start-again signal, and autostart.
 - `Services/`: reminder timer, popup, ⏰ dialog, and sound.
 - `MainWindow.axaml(.cs)`: main UI.
+- `CalendarWindow.cs`, `CalendarDayDialog.cs`, `MainWindow.Calendar.cs` (2.7.0): the calendar, a day's pop-up table and how they edit the table; `Core/Calendar.cs` (rows by day, adding and moving rows) and `Core/CalendarImage.cs` (the card on the wallpaper).
 - `Assets/Brand/`: the Table Note logo shown on the loading screen (`SplashWindow.cs`).
 - `Assets/`: fonts (Noto Sans Thai with the Latin of Noto Sans and a few Noto symbols merged in, so Thai, digits and Latin share one design; rebuilt with `tools/fonts/merge_noto.py`) and tray icon.
 
