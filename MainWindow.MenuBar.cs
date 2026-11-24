@@ -245,6 +245,8 @@ public partial class MainWindow
         _helpMenu.Items.Add(_helpItem);
         _helpMenu.Items.Add(_logItem);
 
+        AddCalendarMenuItems(); // 2.7.0: Table → Calendar…, View → Calendar on the wallpaper
+
         MainMenu.Items.Add(_fileMenu);
         MainMenu.Items.Add(_tableMenu);
         MainMenu.Items.Add(_columnMenu);
@@ -383,6 +385,7 @@ public partial class MainWindow
         _spotAddStatusItem.Header = Localizer.T("menu.spot.add_status");
         ApplySpecialColumnSpots();
 
+        ApplyCalendarMenuTexts(); // 2.7.0
         foreach (var refresh in _menuTextRefresh) refresh();
         FillLanguageMenu();
         if (_columnMenu.Items.Count > 0) RefreshColumnMenu();

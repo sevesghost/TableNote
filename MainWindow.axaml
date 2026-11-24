@@ -164,6 +164,8 @@
         <Button x:Name="WallpaperButton" Classes="tool" Content="Wallpaper"/>
         <!-- 2.6.1.1: draw on the table in layers (MainWindow.Ink.cs); the bar below shows while drawing. -->
         <Button x:Name="SketchButton" Classes="tool" Content="Draw"/>
+        <!-- 2.7.0: the calendar of the rows' due dates (MainWindow.Calendar.cs, CalendarWindow.cs). -->
+        <Button x:Name="CalendarButton" Classes="tool" Content="Calendar"/>
       </WrapPanel>
     </ScrollViewer>
 

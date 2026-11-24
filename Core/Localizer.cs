@@ -165,6 +165,13 @@ public sealed class AppSettings
     public int ReminderVolume { get; set; } = ReminderSounds.DefaultVolume;
     /// <summary>2.6.0: the activity bar at the bottom (what TableNote is doing). On unless hidden; written only when off.</summary>
     public bool ShowActivity { get; set; } = true;
+    /// <summary>2.7.0: the calendar on the wallpaper (off unless chosen; written only when on).</summary>
+    public CalendarWallpaper CalendarWallpaper { get; set; } = CalendarWallpaper.Off;
+    /// <summary>2.7.0: the calendar's weeks start on Sunday (0, the default) or Monday (1; written only then).</summary>
+    public int CalendarWeekStart { get; set; }
+    /// <summary>2.7.0: the calendar leaves out done rows (written only when on).</summary>
+    public bool CalendarHideDone { get; set; }
+    public CalendarPrefs CalendarPrefs => new(CalendarWallpaper, CalendarOps.NormalizeWeekStart(CalendarWeekStart), CalendarHideDone);
     public const int MinScale = 80, MaxScale = 200, ScaleStep = 10;
     public static int ClampScale(int s) => s < MinScale || s > MaxScale ? 100 : (int)Math.Round(s / (double)ScaleStep) * ScaleStep;
 
@@ -198,6 +205,17 @@ public sealed class AppSettings
                     s.ReminderVolume = ReminderSounds.ClampVolume(vol);
                 else if (prop.NameEquals("showActivity") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.False)
                     s.ShowActivity = false;
+                else if (prop.NameEquals("calendarWallpaper") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                    s.CalendarWallpaper = (prop.Value.GetString() ?? "").Trim().ToLowerInvariant() switch
+                    {
+                        "corner" => CalendarWallpaper.Corner,
+                        "only" => CalendarWallpaper.Only,
+                        _ => CalendarWallpaper.Off // unknown words: off
+                    };
+                else if (prop.NameEquals("calendarWeekStart") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number && prop.Value.TryGetInt32(out var ws))
+                    s.CalendarWeekStart = CalendarOps.NormalizeWeekStart(ws);
+                else if (prop.NameEquals("calendarHideDone") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.True)
+                    s.CalendarHideDone = true;
             }
         }
         catch (Exception ex)
@@ -224,7 +242,16 @@ public sealed class AppSettings
                 : "";
             var volume = ReminderVolume != ReminderSounds.DefaultVolume ? $",\n  \"reminderVolume\": {ReminderSounds.ClampVolume(ReminderVolume)}" : "";
             var activity = ShowActivity ? "" : ",\n  \"showActivity\": false";
-            File.WriteAllText(tmp, $"{{\n  \"language\": \"{Language}\",\n  \"uiScale\": {Scale}{tip}{sound}{volume}{activity}\n}}\n");
+            // 2.7.0: calendar settings, each only when it is not the default.
+            var calendar = CalendarWallpaper switch
+            {
+                CalendarWallpaper.Corner => ",\n  \"calendarWallpaper\": \"corner\"",
+                CalendarWallpaper.Only => ",\n  \"calendarWallpaper\": \"only\"",
+                _ => ""
+            };
+            if (CalendarOps.NormalizeWeekStart(CalendarWeekStart) == 1) calendar += ",\n  \"calendarWeekStart\": 1";
+            if (CalendarHideDone) calendar += ",\n  \"calendarHideDone\": true";
+            File.WriteAllText(tmp, $"{{\n  \"language\": \"{Language}\",\n  \"uiScale\": {Scale}{tip}{sound}{volume}{activity}{calendar}\n}}\n");
             File.Move(tmp, p, overwrite: true);
         }
         catch (Exception ex) { AppLog.Write("settings", "save failed: " + ex.Message); }

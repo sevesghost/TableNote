@@ -121,7 +121,12 @@ public static class WallpaperImage
     /// <summary>The whole wallpaper as PNG: background colour, the user's picture as Windows fits it, the card.</summary>
     /// <param name="at">Card position inside <see cref="WallpaperScene.Area"/>, in pixels.</param>
     /// <param name="scale">Pixels per card DIP (monitor scale × zoom).</param>
-    public static byte[] Compose(WallpaperScene scene, Control? card, PixelPoint at, double scale)
+    public static byte[] Compose(WallpaperScene scene, Control? card, PixelPoint at, double scale) =>
+        Compose(scene, card, at, scale, null);
+
+    /// <param name="more">2.7.0: further cards (the calendar at the bottom right), each at its position in pixels,
+    /// drawn over the table card at the same scale.</param>
+    public static byte[] Compose(WallpaperScene scene, Control? card, PixelPoint at, double scale, IReadOnlyList<(Control Card, PixelPoint At)>? more)
     {
         var width = Math.Max(1, scene.Area.Width);
         var height = Math.Max(1, scene.Area.Height);
@@ -165,6 +170,13 @@ public static class WallpaperImage
             var host = new LayoutTransformControl { LayoutTransform = new ScaleTransform(scale, scale), Child = card };
             Canvas.SetLeft(host, at.X);
             Canvas.SetTop(host, at.Y);
+            canvas.Children.Add(host);
+        }
+        foreach (var (extra, where) in more ?? [])
+        {
+            var host = new LayoutTransformControl { LayoutTransform = new ScaleTransform(scale, scale), Child = extra };
+            Canvas.SetLeft(host, where.X);
+            Canvas.SetTop(host, where.Y);
             canvas.Children.Add(host);
         }
         canvas.Measure(new Size(width, height));

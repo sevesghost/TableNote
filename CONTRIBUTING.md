@@ -28,6 +28,7 @@ dotnet run -c Release --project tests/SoundTests
 dotnet run -c Release --project tests/RowColTests
 dotnet run -c Release --project tests/ActivityTests
 dotnet run -c Release --project tests/SketchTests
+dotnet run -c Release --project tests/CalendarTests
 ```
 
 Every folder under `tests/` is a console program; run them all before a pull request (`tests/ViewImageTests` needs a display, for example `xvfb-run`).

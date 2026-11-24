@@ -2,9 +2,9 @@ namespace TableNote;
 
 public static class AppInfo
 {
-    public const string Version = "2.6.1.1";
+    public const string Version = "2.7.0";
     public const string ConfirmedCommit = "rewrite-" + Version;
-    public const string BuildNote = "วันบิลด์: 23 พฤศจิกายน 2026 (เวลาไทย UTC+7) — วาดเขียนบนตารางเป็นเลเยอร์ รูปภาพ และภาพในช่อง";
+    public const string BuildNote = "วันบิลด์: 24 พฤศจิกายน 2026 (เวลาไทย UTC+7) — ปฏิทิน ตารางของวัน และปฏิทินบนวอลเปเปอร์";
 
     public static string HelpText => Localizer.Current == "th" ? HelpTextTh : HelpTextEn;
     public static string LogText => Localizer.Current == "th" ? LogTextTh : LogTextEn;
@@ -137,10 +137,26 @@ Right-click a cell → Insert picture in cell… :: or Table → Picture in the 
 Picture ▾ / ▸ in the cell :: shows or hides the picture under the cell's text; click the picture to see it whole
 Right-click again :: Change picture…, Show / Hide picture, Remove picture…
 
+# Calendar
+Calendar on the toolbar, F9, Table → Calendar… or the tray menu :: the month with every row that has a due date on its day: time and title, coloured like the table (overdue, today, done); 🔁 = a coming round of a repeating task
+Hover a day or an item :: the details: status, repeat, advance reminders, the row number and the detail text
+Click a day (or Enter) :: its pop-up table: the table's own rows due that day, with the table's columns and a time
++ Row in the pop-up :: adds a row to the table, due that day (09:00; today: the next whole hour); an empty time = all day
+Typing in the pop-up :: is in the table at once (Ctrl+Z undoes it); a change in the table shows in the calendar too
+⏰ / 🔁 / status :: advance reminders, repeat and status, as in the table; the reminders come as usual
+↗ :: shows the row in the table; the other way: right-click a row number → Show in calendar
+Move to / Remove the date :: another day (same time) / off the calendar (the row stays in the table)
+◀ ▶, PageUp / PageDown, Home :: another month, back to today; the arrows move the selected day
+On the wallpaper :: Off / bottom right with the table / calendar only — drawn while the table is on the wallpaper
+A day that has passed :: a row put there from the calendar does not pop a reminder; it shows as overdue until it is done
+Rows written before :: a row with a due date is on the calendar by itself. Rows without one: Put existing rows… (top right of the calendar), + Existing rows… in a day, or right-click a row number → Put on the calendar… A date written in the row (in its title, a date column…) is offered as its day
+Go to… :: jumps to another month (pick any day in it)
+
 # Wallpaper mode (Windows)
 Wallpaper button or File → Set as wallpaper :: the table is drawn over your own wallpaper, full screen; the editor goes to the tray
 The picture follows the table :: tasks marked done, tasks turning overdue, a new day
 Back to editing :: click the tray icon, Tray → Edit table, Ctrl+Shift+E, or start TableNote again (your own wallpaper comes back)
+Calendar on the wallpaper :: View → Calendar on the wallpaper (or in the calendar): at the bottom right of the screen, with the table or alone; Tray → Calendar opens the calendar without leaving the wallpaper
 
 # Size and language
 Ctrl + / Ctrl − / Ctrl 0 :: larger / smaller / 100% (80–200%)
@@ -156,7 +172,7 @@ When done rows are hidden, you can choose to include them.
 Windows :: %APPDATA%\TableNote\note.json
 Linux :: ~/.local/share/TableNote/note.json
 TableNote saves by itself about 1.5 seconds after you stop typing.
-settings.json :: language, zoom and sound, next to note.json
+settings.json :: language, zoom, sound and the calendar's settings, next to note.json
 layers.json and images/ :: the note layers, pictures and pictures in cells, next to note.json
 tablenote.log :: what the program did; 2 files, at most 512 KB in all
 Backups :: older formats as note.v2.bak, note.v3.bak, note.v4.bak …; broken files as note.json*.bak (the newest 5)
@@ -290,10 +306,26 @@ Ctrl+Z / Ctrl+Y ระหว่างวาด :: ย้อนกลับ / ท
 ปุ่ม ภาพ ▾ / ▸ ในช่อง :: เปิดหรือปิดภาพใต้ข้อความในช่อง คลิกภาพเพื่อดูเต็ม
 คลิกขวาอีกครั้ง :: เปลี่ยนภาพ… แสดง / ซ่อนภาพ เอาภาพออก…
 
+# ปฏิทิน
+ปุ่ม ปฏิทิน, F9, ตาราง → ปฏิทิน… หรือเมนูที่ถาด :: ดูทั้งเดือน ทุกแถวที่มีกำหนดส่งแสดงในวันของมัน พร้อมเวลาและหัวข้อ สีเหมือนในตาราง (เลยกำหนด วันนี้ เสร็จแล้ว) 🔁 = รอบถัดไปของงานที่ทำซ้ำ
+ชี้ที่วันหรือที่งาน :: ดูรายละเอียด: สถานะ ทำซ้ำ เตือนล่วงหน้า เลขแถว และรายละเอียด
+คลิกวัน (หรือกด Enter) :: เปิดตารางของวันนั้นเป็นป๊อปอัพ คือแถวของตารางหลักที่กำหนดส่งวันนั้น มีคอลัมน์เหมือนตารางหลักและช่องเวลา
++ แถว ในป๊อปอัพ :: เพิ่มแถวในตารางหลัก กำหนดส่งวันนั้น (09:00 ถ้าเป็นวันนี้ใช้ชั่วโมงถัดไป) เว้นเวลาว่าง = ทั้งวัน
+พิมพ์ในป๊อปอัพ :: ตารางหลักเปลี่ยนทันที (Ctrl+Z ย้อนได้) และแก้ในตารางหลัก ปฏิทินก็เปลี่ยนตาม
+⏰ / 🔁 / สถานะ :: เตือนล่วงหน้า ทำซ้ำ และสถานะ เหมือนในตาราง การแจ้งเตือนทำงานตามปกติ
+↗ :: ไปที่แถวนั้นในตาราง ส่วนทางกลับ: คลิกขวาเลขแถว → ดูในปฏิทิน
+ย้ายไปวันที่ / เอาวันที่ออก :: ย้ายไปวันอื่น (เวลาเดิม) / เอาออกจากปฏิทิน (แถวยังอยู่ในตาราง)
+◀ ▶, PageUp / PageDown, Home :: เดือนก่อน / ถัดไป กลับวันนี้ ลูกศรเลื่อนวันที่เลือก
+บนวอลเปเปอร์ :: ไม่แสดง / มุมขวาล่าง คู่กับตาราง / เฉพาะปฏิทิน — แสดงเมื่อตารางอยู่บนวอลเปเปอร์
+วันที่ผ่านไปแล้ว :: แถวที่ใส่จากปฏิทินจะไม่เด้งเตือน แต่แสดงเป็นเลยกำหนดจนกว่าจะตั้งเป็นเสร็จ
+แถวที่เขียนไว้ก่อน :: แถวที่มีกำหนดส่งขึ้นในปฏิทินเอง แถวที่ยังไม่มี: ปุ่ม ใส่แถวเดิม… (มุมขวาบนของปฏิทิน), + แถวเดิม… ในตารางของวัน หรือคลิกขวาเลขแถว → ใส่ในปฏิทิน… ถ้าในแถวมีวันที่เขียนไว้ (ในหัวข้อ คอลัมน์วันที่ ฯลฯ) จะเสนอวันนั้นให้
+ไปวันที่… :: ข้ามไปเดือนอื่น (เลือกวันไหนก็ได้ในเดือนนั้น)
+
 # โหมดวอลเปเปอร์ (Windows)
 ปุ่ม วอลเปเปอร์ หรือ ไฟล์ → ตั้งเป็นวอลเปเปอร์ :: วาดตารางทับวอลเปเปอร์ของคุณแบบเต็มจอ แล้วหน้าแก้ไขไปอยู่ที่ถาด
 ภาพอัปเดตตามตาราง :: งานที่เสร็จ งานที่เลยกำหนด และวันใหม่
 กลับมาแก้ไข :: คลิกไอคอนที่ถาด, ถาด → แก้ไขตาราง, Ctrl+Shift+E หรือเปิดโปรแกรมอีกครั้ง (วอลเปเปอร์เดิมกลับมาเอง)
+ปฏิทินบนวอลเปเปอร์ :: มุมมอง → ปฏิทินบนวอลเปเปอร์ (หรือตั้งในหน้าต่างปฏิทิน) วางไว้มุมขวาล่างของจอ คู่กับตารางหรือเฉพาะปฏิทิน ถาด → ปฏิทิน เปิดปฏิทินได้โดยไม่ต้องออกจากวอลเปเปอร์
 
 # ขนาดตัวอักษรและภาษา
 Ctrl + / Ctrl − / Ctrl 0 :: ขยาย / ย่อ / กลับ 100% (80–200%)
@@ -309,7 +341,7 @@ Ctrl+ล้อเมาส์ หรือปุ่ม A− 100% A+ :: ขยา
 Windows :: %APPDATA%\TableNote\note.json
 Linux :: ~/.local/share/TableNote/note.json
 บันทึกอัตโนมัติหลังหยุดพิมพ์ประมาณ 1.5 วินาที
-settings.json :: ภาษา ขนาด และเสียง อยู่ข้าง note.json
+settings.json :: ภาษา ขนาด เสียง และค่าของปฏิทิน อยู่ข้าง note.json
 layers.json และ images/ :: เลเยอร์โน้ต รูปภาพ และภาพในช่อง อยู่ข้าง note.json
 tablenote.log :: บันทึกการทำงานของโปรแกรม เก็บ 2 ไฟล์ รวมไม่เกิน 512 KB
 ไฟล์สำรอง :: รูปแบบเก่าเป็น note.v2.bak, note.v3.bak, note.v4.bak … ไฟล์เสียเก็บเป็น note.json*.bak ล่าสุด 5 ไฟล์
@@ -317,7 +349,13 @@ tablenote.log :: บันทึกการทำงานของโปรแ
 ").Replace("{VERSION}", Version);
 
     public static string LogTextEn { get; } =
-@"TableNote " + Version + @" — built 23 Nov 2026 (Bangkok time, UTC+7)
+@"TableNote " + Version + @" — built 24 Nov 2026 (Bangkok time, UTC+7)
+
+24 Nov 2026 — 2.7.0
+New: Calendar (toolbar, F9, Table → Calendar…, the tray menu): the month with every row that has a due date on its day, coloured like the table, with the details when you point at it; coming rounds of repeating tasks show with 🔁.
+New: click a day for its pop-up table: the table's own rows due that day. + Row adds a row to the table due that day, and what you type there is in the table at once (Ctrl+Z undoes it). Time, status, ⏰, 🔁, Move to and Remove the date are there too; ↗ shows the row in the table, and a row's right-click menu → Show in calendar goes the other way.
+New: the calendar on the wallpaper, at the bottom right of the screen (with the table, or alone): today, the month and what is overdue or comes next. Choose it in the calendar or View → Calendar on the wallpaper.
+Rows written before the calendar: those with a due date are on it by themselves. For the others, Put existing rows… (calendar), + Existing rows… (a day) or a row's menu → Put on the calendar… put them on a day; a date written in a row (title, a date column, its text) is offered as its day.
 
 23 Nov 2026 — 2.6.1.1
 New: draw on the table in layers (Draw on the toolbar): pen, eraser, ruler (Shift keeps 15° steps), Clear all, pen colour (11 swatches or any #RRGGBB), size, sharpness 0–100 % per layer (100 clear, lower more faded), undo / redo, and pictures you can move and resize. Up to 10 layers, each shown or hidden with a tick, also from View → Note layers.
@@ -392,6 +430,12 @@ Popup left open no longer says 'missed'; wrong field types no longer wipe the ta
 @"ตารางโน้ต
 รุ่นที่แสดง: " + Version + @"
 " + BuildNote + @"
+
+24 พ.ย. 2026 — 2.7.0
+ใหม่: ปฏิทิน (ปุ่ม ปฏิทิน, F9, ตาราง → ปฏิทิน…, เมนูที่ถาด) ดูทั้งเดือน ทุกแถวที่มีกำหนดส่งแสดงในวันของมัน สีเหมือนในตาราง ชี้เพื่อดูรายละเอียด รอบถัดไปของงานที่ทำซ้ำแสดงด้วย 🔁
+ใหม่: คลิกวันเพื่อเปิดตารางของวันนั้นเป็นป๊อปอัพ คือแถวของตารางหลักที่กำหนดส่งวันนั้น + แถว เพิ่มแถวในตารางหลัก พิมพ์แล้วตารางหลักเปลี่ยนทันที (Ctrl+Z ย้อนได้) มีเวลา สถานะ ⏰ 🔁 ย้ายไปวันที่ และเอาวันที่ออก ปุ่ม ↗ ไปที่แถวในตาราง และคลิกขวาเลขแถว → ดูในปฏิทิน เพื่อไปกลับ
+ใหม่: ปฏิทินบนวอลเปเปอร์ ที่มุมขวาล่างของจอ (คู่กับตาราง หรือเฉพาะปฏิทิน): วันนี้ เดือนนี้ และงานที่เลยกำหนดหรือกำลังจะถึง เลือกได้ในหน้าต่างปฏิทิน หรือ มุมมอง → ปฏิทินบนวอลเปเปอร์
+แถวที่เขียนไว้ก่อนมีปฏิทิน: แถวที่มีกำหนดส่งขึ้นในปฏิทินเอง แถวอื่นใส่ได้ด้วย ใส่แถวเดิม… (ในปฏิทิน), + แถวเดิม… (ในตารางของวัน) หรือคลิกขวาเลขแถว → ใส่ในปฏิทิน… ถ้าในแถวมีวันที่เขียนไว้ (หัวข้อ คอลัมน์วันที่ หรือในข้อความ) จะเสนอวันนั้นให้
 
 23 พ.ย. 2026 — 2.6.1.1
 ใหม่: วาดเขียนบนตารางเป็นเลเยอร์ (ปุ่ม วาดเขียน): ปากกา ยางลบ ไม้บรรทัด (กด Shift ล็อกมุมทีละ 15°) ลบทั้งหมด สีปากกา (11 สี หรือพิมพ์ #RRGGBB) ขนาด ความคมชัด 0–100% ของแต่ละเลเยอร์ (100 = ชัด ค่าน้อยลง = จางลง) ย้อนกลับ / ทำซ้ำ และรูปภาพที่ย้ายและย่อ/ขยายได้ สูงสุด 10 เลเยอร์ เปิด/ปิดแต่ละเลเยอร์ด้วยช่องติ๊ก หรือที่ มุมมอง → เลเยอร์โน้ต

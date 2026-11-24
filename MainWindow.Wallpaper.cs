@@ -109,16 +109,32 @@ public partial class MainWindow
         return new PixelRect(x, y, (int)Math.Round(width * scale), (int)Math.Round(height * scale));
     }
 
-    /// <summary>The card (alert boxes and table) at the window's place and size, scaled like the window.</summary>
+    /// <summary>The card (alert boxes and table) at the window's place and size, scaled like the window.
+    /// 2.7.0: with the calendar on the wallpaper, the calendar card at the bottom right of that monitor too
+    /// (or only it: <see cref="CalendarWallpaper.Only"/>).</summary>
     private byte[]? RenderWallpaper(WallpaperScene scene)
     {
         var scale = Math.Max(0.5, scene.Screen.Scaling * (_settings.Scale / 100.0));
         var box = WallpaperGeometry.CardBox(scene.Window, scene.Screen.WorkArea);
         var background = Background ?? new SolidColorBrush(Color.Parse("#FFF6C2"));
-        var card = WallpaperImage.BuildCard(_session.Doc, WallpaperOptions(), new Size(box.Width / scale, box.Height / scale),
-            background, PartColorStore.Get);
-        return WallpaperImage.Compose(scene, card, new PixelPoint(box.X - scene.Area.X, box.Y - scene.Area.Y), scale);
+        var mode = _settings.CalendarWallpaper;
+        var card = mode == CalendarWallpaper.Only ? null
+            : WallpaperImage.BuildCard(_session.Doc, WallpaperOptions(), new Size(box.Width / scale, box.Height / scale), background, PartColorStore.Get);
+        List<(Control, PixelPoint)>? more = null;
+        if (mode != CalendarWallpaper.Off && CalendarOps.CanShow(_session.Doc))
+        {
+            var calendar = CalendarImage.BuildCard(_session.Doc, DateTime.Now, _settings.CalendarPrefs, background);
+            calendar.Measure(Size.Infinity);
+            var size = calendar.DesiredSize;
+            var corner = CalendarOps.CornerBox(scene.Screen.WorkArea, (int)Math.Ceiling(size.Width * scale), (int)Math.Ceiling(size.Height * scale),
+                (int)Math.Round(CalendarWallpaperMargin * scene.Screen.Scaling));
+            more = [(calendar, new PixelPoint(corner.X - scene.Area.X, corner.Y - scene.Area.Y))];
+        }
+        return WallpaperImage.Compose(scene, card, new PixelPoint(box.X - scene.Area.X, box.Y - scene.Area.Y), scale, more);
     }
+
+    /// <summary>2.7.0: room between the calendar card and the screen's edge / the taskbar, in DIPs.</summary>
+    private const double CalendarWallpaperMargin = 18;
 
     /// <summary>Same colours, collapsed columns and row heights as image export; rows follow hide-done.</summary>
     private ViewImageOptions WallpaperOptions()
@@ -221,6 +237,7 @@ public partial class MainWindow
                     ? DueDates.IsOverdue(d, now) ? 'o' : DueDates.IsDueToday(d, now) ? 't' : '-'
                     : ' ');
         key.Append('|').Append(Localizer.Current).Append('|').Append(_settings.Scale);
+        key.Append('|').Append(_settings.CalendarPrefs); // 2.7.0: the calendar card (on / only, week start, done rows)
         foreach (var s in WallpaperScreens()) key.Append('|').Append(s.Bounds).Append(s.WorkArea).Append(s.Scaling);
         var w = doc.Window;
         key.Append('|').Append(w.X).Append(',').Append(w.Y).Append(',').Append(w.Width).Append(',').Append(w.Height);

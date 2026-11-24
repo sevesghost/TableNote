@@ -112,6 +112,45 @@ public static class DueDates
         return dt;
     }
 
+    // 2.7.0: a date written inside other text ("ส่ง 15/12/2569 14:30", "นัด 5 ม.ค. 2570", "Meeting Jan 5, 2026"), so the
+    // calendar can offer the dates of rows written before it existed. A year is required: "1/2" is no date here.
+    private static readonly Regex NumericInText = new(
+        @"(?<![\d./:-])(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}/(?:\d{4}|\d{2})|\d{1,2}[.-]\d{1,2}[.-]\d{4})(?:[ T]+\d{1,2}:\d{2})?(?![\d/:-]|\.\d)",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex ThaiMonthInText = new(
+        @"(?<!\d)\d{1,2}\s*(?:มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม|ม\.ค\.|ก\.พ\.|มี\.ค\.|เม\.ย\.|พ\.ค\.|มิ\.ย\.|ก\.ค\.|ส\.ค\.|ก\.ย\.|ต\.ค\.|พ\.ย\.|ธ\.ค\.)\s*(?:พ\.ศ\.\s*|ค\.ศ\.\s*)?\d{4}(?:\s+\d{1,2}[:.]\d{2}(?:\s*น\.)?)?",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex EnglishMonthInText = new(
+        @"\b(?:\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?,?\s+\d{4}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})\b",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// 2.7.0: the first date written somewhere in <paramref name="text"/> (with a year: numbers like 15/12/2569 or
+    /// 2026-12-15, a Thai or English month name), read like a due date (B.E. years become C.E.). For old rows that
+    /// have their date in another column or in their text.
+    /// </summary>
+    public static bool FindIn(string? text, out DateTime local, out bool hasTime)
+    {
+        local = default;
+        hasTime = false;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var matches = new[] { NumericInText, ThaiMonthInText, EnglishMonthInText }
+            .SelectMany(re => re.Matches(text).Cast<Match>())
+            .OrderBy(m => m.Index);
+        foreach (var m in matches)
+        {
+            // "5 ม.ค. พ.ศ. 2569 9.30 น." → "5 ม.ค. 2569 9:30"
+            var s = m.Value.Replace("พ.ศ.", " ").Replace("ค.ศ.", " ").Replace("น.", " ");
+            s = Regex.Replace(s, @"(\d{1,2})\.(\d{2})\s*$", "$1:$2");
+            s = Regex.Replace(s, @"\s+", " ").Trim();
+            if (!TryParse(s, out var found) || found.Year < 1900 || found.Year > 2200) continue;
+            local = found;
+            hasTime = HasTime(s);
+            return true;
+        }
+        return false;
+    }
+
     public static bool IsOverdue(DateTime due, DateTime now) => due < now;
     public static bool IsDueToday(DateTime due, DateTime now) => due.Date == now.Date;
 

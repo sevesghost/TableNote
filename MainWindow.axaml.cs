@@ -129,6 +129,7 @@ public partial class MainWindow : Window
         ExportButton.Click += async (_, _) => await ExportAsync();
         InitWallpaper();
         InitInk(); // 2.6.1.1: drawing and pictures in layers over the table, pictures in cells
+        InitCalendar(); // 2.7.0: after the row-menu features, so "Show in calendar" comes last
         ZoomOutButton.Click += (_, _) => SetZoom(_settings.Scale - AppSettings.ScaleStep);
         ZoomInButton.Click += (_, _) => SetZoom(_settings.Scale + AppSettings.ScaleStep);
         ZoomResetButton.Click += (_, _) => SetZoom(100);
@@ -250,6 +251,7 @@ public partial class MainWindow : Window
     private void QuitApp()
     {
         _quitting = true;
+        CloseCalendar(); // 2.7.0
         // Wallpaper mode stays on in note.json (the next start draws the table again), but the user's own wallpaper
         // goes back now, so an exited TableNote never leaves an out-of-date table on the desktop.
         if (_view == ViewMode.Background) RestoreWallpaperOnExit();
@@ -322,6 +324,7 @@ public partial class MainWindow : Window
         // next sign-in, so the picture stays; otherwise the user's wallpaper goes back now.
         if (systemClose && _view == ViewMode.Background && !_session.Doc.LaunchAtLogin) RestoreWallpaperOnExit();
         SaveInkNow(); // 2.6.1.1: layers.json
+        CloseCalendar(); // 2.7.0
         _wallpaperTimer?.Stop();
         WindowsHotkey.Unregister(WindowHandle());
         _reminders.Dispose();
@@ -507,6 +510,7 @@ public partial class MainWindow : Window
             case Key.F6: e.Handled = true; _ = RunStructureAsync(() => DeleteRowsAsync(-1)); break; // 2.6.0: every selected row
             case Key.F7: e.Handled = true; _ = RunStructureAsync(() => SnapshotStep(Localizer.T("undo.add_column"), AddColumnAsync)); break;
             case Key.F8: e.Handled = true; _ = RunStructureAsync(() => DeleteColumnsAsync(-1)); break; // 2.6.0: every selected column
+            case Key.F9: e.Handled = true; OpenCalendar(); break; // 2.7.0
         }
     }
 
@@ -819,6 +823,7 @@ public partial class MainWindow : Window
         _saveTimer.Stop();
         _saveTimer.Start();
         RefreshActivityBar(); // 2.6.0: "edited — saving shortly"
+        NotifyCalendar(); // 2.7.0: the open calendar follows the table
     }
 
     private bool FlushSave()
@@ -949,6 +954,7 @@ public partial class MainWindow : Window
         ToolTip.SetTip(ZoomInButton, T("tip.zoom_in"));
         ApplyWallpaperTexts();
         ApplySketchTexts();
+        ApplyCalendarTexts(); // 2.7.0
         RenderAlertBoxes();
         ApplyColorButtonText();
         ApplyMenuBarTexts();
@@ -1146,6 +1152,7 @@ public partial class MainWindow : Window
         if (FindOpen) RefreshFindMatches(); // 2.6.0: marks follow the changed table (the selection stays)
         Highlight();
         FitColumns();
+        NotifyCalendar(); // 2.7.0
     }
 
     private void ApplyColumnDefinitions(Grid grid)
@@ -1608,7 +1615,8 @@ public partial class MainWindow : Window
         return dueCol >= 0 && DueDates.TryParse(_session.Doc.GetCell(row, dueCol), out var d) && d == due;
     }
 
-    private async Task EditRemindersAsync(string rowId)
+    /// <param name="owner">2.7.0: the window the dialog belongs to (the calendar's day pop-up); the editor by default.</param>
+    private async Task EditRemindersAsync(string rowId, Window? owner = null)
     {
         var row = FindRowById(rowId);
         if (row < 0) return;
@@ -1618,7 +1626,7 @@ public partial class MainWindow : Window
         var title = titleIdx >= 0 ? _session.Doc.GetCell(row, titleIdx).Trim() : "";
         if (title.Length == 0) title = Localizer.T("ui.row_task", row + 1);
         var dlg = new ReminderOptionsDialog(title, ReminderPlan.OffsetsFor(_session.Doc, rowId), dueValid);
-        var result = await dlg.ShowDialog<List<int>?>(this);
+        var result = await dlg.ShowDialog<List<int>?>(owner ?? this);
         if (result == null) return;
         var before = Snapshot.CloneLite(_session.Doc);
         ReminderPlan.SetOffsets(_session.Doc, rowId, result, DateTime.Now);
@@ -1844,6 +1852,7 @@ public partial class MainWindow : Window
 
     private void OnColourClock(object? sender, EventArgs e)
     {
+        NotifyCalendar(); // 2.7.0: overdue / today colours and a new day in the open calendar
         // Wallpaper mode: redraw the wallpaper when a task turns overdue or due today (WallpaperKey).
         if (_view == ViewMode.Background) { ScheduleWallpaperRefresh(); return; }
         var newDay = DaysDateChanged(); // 2.6.0: days counters move on after midnight
@@ -2087,6 +2096,8 @@ public partial class MainWindow : Window
         {
             var edit = new NativeMenuItem(Localizer.T("tray.edit"));
             edit.Click += (_, _) => ShowEditor();
+            var calendar = new NativeMenuItem(Localizer.T("tray.calendar")); // 2.7.0: also while the table is on the wallpaper
+            calendar.Click += (_, _) => OpenCalendar();
             var help = new NativeMenuItem(Localizer.T("tray.help"));
             help.Click += (_, _) => ShowHelp();
             var log = new NativeMenuItem(Localizer.T("tray.log"));
@@ -2113,7 +2124,7 @@ public partial class MainWindow : Window
             var quit = new NativeMenuItem(Localizer.T("tray.quit"));
             quit.Click += (_, _) => QuitApp();
             var menu = new NativeMenu();
-            foreach (var item in new NativeMenuItemBase[] { edit, help, log, export, new NativeMenuItemSeparator(), lang, zin, zout, zreset, new NativeMenuItemSeparator(), center, quit })
+            foreach (var item in new NativeMenuItemBase[] { edit, calendar, help, log, export, new NativeMenuItemSeparator(), lang, zin, zout, zreset, new NativeMenuItemSeparator(), center, quit })
                 menu.Items.Add(item);
             if (_tray != null) { _tray.Menu = menu; _tray.ToolTipText = TrayTip(); return true; }
             _tray = new TrayIcon { ToolTipText = TrayTip(), Menu = menu, IsVisible = true };
