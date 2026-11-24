@@ -140,6 +140,7 @@ public partial class MainWindow
     /// <summary>The table is on the wallpaper: the editor goes to the tray (the mode is saved for the next start).</summary>
     private void EnterWallpaperView()
     {
+        SetDrawMode(false); // 2.6.1.1
         _view = ViewMode.Background;
         _session.Doc.View = ViewMode.Background;
         ShowNotice(null);

@@ -403,5 +403,29 @@ Moving columns or rows, deleting a column, changing column settings, and changin
 - The exported image has screen resolution. For a sharp printout, use **Print** in TableNote.
 - The text colour of row numbers and the background colour of the whole table are not included in the image or printout yet.
 
+## 17. Drawing on the table, layers and pictures
+
+Click **Draw** on the toolbar (or **Table → Draw on the table**). A drawing bar shows under the toolbar, and you write and draw straight on the table with the mouse, a pen or a finger. Click **Done** or press **Esc** to go back to editing the table; what you drew stays on the table.
+
+| Tool | Key | What it does |
+|---|---|---|
+| **Pen** | P | Draws freehand. |
+| **Eraser** | E | Erases the lines it passes over on the active layer. The eraser end of a stylus erases too. |
+| **Ruler** | R | Drag from the start to the end for a straight line. Hold **Shift** to keep the angle on 15° steps. |
+| **Move** | M | Drag a picture to move it; drag its bottom-right corner to resize it (Shift: any shape). **Delete** removes it. |
+
+- **Colour:** click a swatch, or type `#RRGGBB` and press Enter. **Size:** 1–60 (the eraser has its own size).
+- **Sharpness 0–100 %:** how clear the active layer is: 100 % clear, 50 % half faded, lower still fainter. It applies to the whole layer (drawing and pictures) at once, each layer has its own, and the layer's name shows it when it is below 100 %.
+- **Clear all** empties the active layer after asking. **↩ / ↪** or **Ctrl+Z / Ctrl+Y** undo and redo the drawing while drawing is on.
+- The mouse wheel still scrolls the table; the drawing moves with it. It stays where it was drawn on the table: moving, sorting or hiding rows does not move it.
+
+**Layers.** The bar lists the layers. Tick or untick a layer to show or hide it; click its name to draw on it. **+ Layer** adds one (up to 10), **Rename** and **Delete layer** change the active one. When drawing is off, **View → Note layers** shows or hides each layer, or all of them.
+
+**Pictures on a layer.** **+ Picture** puts a PNG, JPEG, BMP, GIF or WebP picture on the active layer; use **Move** to place and size it.
+
+**Pictures in cells.** Right-click a cell and choose **Insert picture in cell…** (or **Table → Picture in the selected cell…**). The cell gets a **Picture ▾** button and shows the picture under its text; click the button (**Picture ▸**) to hide it and again to show it. Click the picture to see it whole. Right-click the cell for **Change picture…**, **Show / Hide picture** and **Remove picture…**.
+
+Everything is saved by itself in `layers.json` next to `note.json`; the pictures are copied into the `images` folder beside it. Layers and cell pictures are not included in image export, print or the wallpaper yet.
+
 ---
 *This guide is based on the TableNote 2.6.0 code as of 21 Nov 2026 (Thailand time, UTC+7).*

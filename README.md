@@ -4,7 +4,7 @@
 
 A lightweight, Excel-like task table for Windows with due-date and advance reminders, built with Avalonia on .NET 10.
 
-Current version: **2.6.1** (22 November 2026). The interface is English by default; switch to Thai in **View → Language**. English manual: [`docs/manual-en.md`](docs/manual-en.md).
+Current version: **2.6.1.1** (23 November 2026). The interface is English by default; switch to Thai in **View → Language**. English manual: [`docs/manual-en.md`](docs/manual-en.md).
 
 ## What is TableNote?
 
@@ -12,6 +12,7 @@ TableNote is a small editable table for keeping track of tasks. Each row is a ta
 
 ## Features
 
+- **Draw on the table, in layers (2.6.1.1):** **Draw** on the toolbar turns drawing on: pen, eraser, ruler (Shift for 15° steps), Clear all, pen colour, size, sharpness 0–100 % per layer (clear to faded), undo / redo, and pictures you can move and resize. Up to 10 layers, each shown or hidden with a tick (also **View → Note layers**). **Pictures in cells:** right-click a cell → **Insert picture in cell…**; the cell's **Picture ▾ / ▸** button shows or hides it. Kept in `layers.json` and `images/` next to `note.json`.
 - **Faster start (2.6.1):** the exe carries its code compiled ahead of time, so TableNote opens about 3 to 4 times sooner and uses less CPU and memory after it starts; table cells are lighter. `tablenote.log` records how long each step of a start took. See [docs/performance.md](docs/performance.md).
 - **Wallpaper mode (2.6.0, Windows):** **Wallpaper** on the toolbar draws the table over your own wallpaper, full screen, where the window was. The editor goes to the tray. Click the tray icon or press Ctrl+Shift+E to edit again, and your own wallpaper comes back. See [Wallpaper mode](#wallpaper-mode).
 - **Activity bar (2.6.0):** a slim bar at the bottom shows what TableNote is doing now — a progress bar while it exports, saves a picture, prepares pages to print or draws the wallpaper; "Saving in a moment…" after an edit — and otherwise the last thing it did with the time, plus when it last saved. **History** lists recent work (opened, saved, reminders, undo, exports, warnings such as "did not respond for 3 s while saving note.json") and opens the folder with `tablenote.log`. ✕ hides it; **View → Activity bar** brings it back (kept in `settings.json`).
@@ -178,6 +179,7 @@ Due dates are exported as `yyyy-MM-dd`, or `yyyy-MM-dd HH:mm` when a time is set
 - Windows: `%APPDATA%\TableNote\note.json`
 - Linux: `~/.local/share/TableNote/note.json`
 - Or set the `TABLENOTE_DATA` environment variable to a full file path.
+- Layers and pictures (2.6.1.1): `layers.json` next to `note.json` (the layers, their drawing and pictures, the pen settings and the pictures in cells; the file before is kept as `layers.json.prev`), and the picture files in an `images` folder beside it. `note.json` and its format are unchanged. At most 10 layers, 100 pictures on layers, 400,000 points, 20 MB per picture.
 - Wallpaper mode (Windows): `%LOCALAPPDATA%\TableNote\wallpaper\`, or a `wallpaper` folder next to `note.json` when `TABLENOTE_DATA` is set.
 
 Advance reminders are stored in a top-level `reminders` field keyed by row id, for example `{"<rowId>": {"offsets": [60, 15], "acked": [...]}}` (offsets are saved largest first). A wrongly typed value (for example `"offsets": ["15"]`) is dropped on its own and logged to `tablenote.log` next to `note.json`; the rest of the table is kept.

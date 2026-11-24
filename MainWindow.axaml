@@ -162,8 +162,14 @@
         <Border Classes="toolsep"/>
         <Button x:Name="ExportButton" Classes="tool" Content="Export" ToolTip.Tip="Save the table as .txt / .csv / .xlsx"/>
         <Button x:Name="WallpaperButton" Classes="tool" Content="Wallpaper"/>
+        <!-- 2.6.1.1: draw on the table in layers (MainWindow.Ink.cs); the bar below shows while drawing. -->
+        <Button x:Name="SketchButton" Classes="tool" Content="Draw"/>
       </WrapPanel>
     </ScrollViewer>
+
+    <!-- 2.6.1.1: the drawing bar (pen, eraser, ruler, move, colour, size, sharpness, pictures, layers), while drawing. -->
+    <Border x:Name="InkBar" DockPanel.Dock="Top" IsVisible="False" Margin="0,0,0,4" Padding="6,2"
+            Background="#F6E7A4" BorderBrush="#E4D08A" BorderThickness="1" CornerRadius="6"/>
 
     <!-- 2.6.0: find (Ctrl+F), shown while it is used. -->
     <Border x:Name="FindBar" DockPanel.Dock="Top" IsVisible="False" Margin="0,0,0,4" Padding="8,3"
@@ -245,6 +251,8 @@
 
         <!-- Horizontal scrolling only out here; rows scroll vertically inside RowsList so that only the
              visible rows are realized (VirtualizingStackPanel). -->
+        <!-- 2.6.1.1: the note layers (InkOverlay) lie over the table in this panel and scroll with it. -->
+        <Panel x:Name="TableLayerHost">
         <ScrollViewer x:Name="TableScroll"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Disabled"
@@ -268,6 +276,7 @@
             </ItemsControl>
           </DockPanel>
         </ScrollViewer>
+        </Panel>
       </DockPanel>
     </LayoutTransformControl>
   </DockPanel>

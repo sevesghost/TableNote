@@ -40,7 +40,7 @@ static class MenuBarHeadless
         var commands = tools.Children.Where(c => c.IsVisible && c is Button or CheckBox).ToList();
         var labels0 = commands.Select(c => c is ContentControl cc ? cc.Content?.ToString() ?? "" : "").ToList();
         ok("toolbar has the everyday commands in order",
-            labels0.SequenceEqual(["+ แถว", "− แถว", "+ คอลัมน์", "สี", "ซ่อนงานเสร็จ", "เรียงตามกำหนด", "A−", "100%", "A+", "ส่งออก", "วอลเปเปอร์"]),
+            labels0.SequenceEqual(["+ แถว", "− แถว", "+ คอลัมน์", "สี", "ซ่อนงานเสร็จ", "เรียงตามกำหนด", "A−", "100%", "A+", "ส่งออก", "วอลเปเปอร์", "วาดเขียน"]),
             string.Join(" | ", labels0));
         var middles = commands.Select(c => c.Bounds.Center.Y).ToList();
         ok("toolbar is one row in a 980 px window",

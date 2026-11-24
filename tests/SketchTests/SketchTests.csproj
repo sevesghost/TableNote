@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 2.6.1.1: layers over the table (draw, erase, ruler, pictures, show / hide), layers.json, and pictures in cells (headless). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../TableNote.csproj" />
+    <PackageReference Include="Avalonia.Headless" Version="12.1.5" />
+  </ItemGroup>
+</Project>

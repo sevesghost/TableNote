@@ -696,6 +696,8 @@ public partial class MainWindow
             foreach (var item in CellStructureMenuItems(row, column)) flyout.Items.Add(item); // 2.6.0: insert copied, insert ▸, delete ▸
         flyout.Items.Add(Item("cell.menu_clear", "Delete", () => ClearSelectedCells(Localizer.T("undo.clear_cells")), !editing));
         flyout.Items.Add(new Separator());
+        foreach (var item in CellImageMenuItems(row, column)) flyout.Items.Add(item); // 2.6.1.1: picture in the cell
+        flyout.Items.Add(new Separator());
         if (box != null)
             flyout.Items.Add(Item("cell.menu_edit", "F2", () => { CollapseTo(row, column); EnterEditMode(box, null); }, !editing));
         flyout.Items.Add(Item("cell.menu_select_all", "Ctrl+A", SelectAll));
